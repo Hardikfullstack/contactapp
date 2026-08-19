@@ -1,0 +1,208 @@
+<resources>
+    <string name="app_name">Connect</string>
+
+    <!-- Onboarding -->
+    <string name="allow_permission">अनुमति दें</string>
+    <string name="permission_description">जारी रखने और सभी सुविधाओं तक पहुँचने के लिए आवश्यक अनुमति सक्षम करें।</string>
+    <string name="smart_notifications">स्मार्ट सूचनाएं</string>
+    <string name="notifications_description">कॉल करने वालों की पहचान करने और सूचित रहने के लिए पहुँच की अनुमति दें।</string>
+    <string name="enable_call_access">कॉल एक्सेस सक्षम करें</string>
+    <string name="call_access_description">कॉल के बाद स्क्रीन से संदेश भेजने के लिए कॉल एक्सेस सक्षम करें।</string>
+    <string name="set_as_default_title">डिफ़ॉल्ट फ़ोन ऐप के रूप में सेट करें</string>
+    <string name="set_as_default_desc">हमारे इन-ऐप कॉल अनुभव का उपयोग करने के लिए, कृपया इस ऐप को अपने डिफ़ॉल्ट फ़ोन हैंडलर के रूप में सेट करें।</string>
+    <string name="agree_continue">सहमत हों और जारी रखें</string>
+    <string name="privacy_policy_notice">जारी रखकर, आप हमारी गोपनीयता नीति से सहमत होते हैं।</string>
+    <string name="select_app_language">ऐप की भाषा चुनें</string>
+    <string name="system_default">सिस्टम डिफ़ॉल्ट</string>
+    <string name="done">हो गया</string>
+
+    <!-- Main Screens -->
+    <string name="recents">हाल के</string>
+    <string name="favorites">पसंदीदा</string>
+    <string name="tools">उपकरण</string>
+    <string name="today">आज</string>
+    <string name="yesterday">कल</string>
+    <string name="older">पुराने</string>
+    <string name="keypad">कीपैड</string>
+    <string name="contacts">संपर्क</string>
+    <string name="settings">सेटिंग्स</string>
+    <string name="phone">फ़ोन</string>
+    <string name="search">खोजें</string>
+    <string name="no_result_found">कोई परिणाम नहीं मिला।</string>
+    <string name="call_log_permission_required">कॉल लॉग अनुमति आवश्यक है</string>
+
+    <!-- Call Status -->
+    <string name="incoming">आने वाली</string>
+    <string name="outgoing">बाहर जाने वाली</string>
+    <string name="rejected">अस्वीकृत</string>
+    <string name="missed">छूटी हुई</string>
+
+    <!-- Keypad Quick Actions -->
+    <string name="create_new_contact">नया संपर्क बनाएं</string>
+    <string name="add_to_contact">संपर्क में जोड़ें</string>
+    <string name="send_message">संदेश भेजें</string>
+
+    <!-- Actions -->
+    <string name="call">कॉल करें</string>
+    <string name="message">संदेश</string>
+    <string name="history">इतिहास</string>
+    <string name="cancel">रद्द करें</string>
+    <string name="save">सहेजें</string>
+    <string name="delete">हटाएं</string>
+    <string name="share">साझा करें</string>
+    <string name="block">ब्लॉक करें</string>
+    <string name="unblock">अनब्लॉक करें</string>
+    <string name="answer">जवाब दें</string>
+    <string name="end_call">समाप्त करें</string>
+
+    <!-- Call Screen -->
+    <string name="ongoing_call">कॉल चालू है</string>
+    <string name="dialing">डायल किया जा रहा है...</string>
+    <string name="incoming_call">आने वाली कॉल</string>
+    <string name="outgoing_call">बाहर जाने वाली कॉल</string>
+    <string name="missed_call">छूटी हुई कॉल</string>
+    <string name="rejected_call">अस्वीकृत कॉल</string>
+    <string name="spam_call">स्पैम कॉल</string>
+    <string name="connecting">कनेक्ट हो रहा है...</string>
+    <string name="on_hold">होल्ड पर</string>
+    <string name="disconnected">डिस्कनेक्ट हो गया</string>
+    <string name="unknown">अज्ञात</string>
+
+    <!-- Contacts Feature -->
+    <string name="add_to_contacts">संपर्क में जोड़ें</string>
+    <string name="name_label">नाम</string>
+    <string name="phone_label">फ़ोन</string>
+    <string name="saving_to_device_only">केवल डिवाइस में सहेजा जा रहा है</string>
+    <string name="more_details">अधिक जानकारी</string>
+    <string name="import_contacts">संपर्क आयात करें</string>
+    <string name="export_contacts">संपर्क निर्यात करें</string>
+    <string name="no_favorites_yet">अभी तक कोई पसंदीदा नहीं है</string>
+    <string name="duplicate_number">डुप्लिकेट नंबर</string>
+    <string name="duplicate_number_warning">\"%1$s\" नाम के संपर्क के पास पहले से ही यह नंबर है। क्या आप वैसे भी सहेजना चाहते हैं?</string>
+    <string name="save_anyway">वैसे भी सहेजें</string>
+    <string name="delete_contact_title">संपर्क हटाएं?</string>
+    <string name="delete_contact_text">यह संपर्क आपके संपर्कों से स्थायी रूप से हटा दिया जाएगा।</string>
+    <string name="call_history_for">%1$s (%2$s) का कॉल इतिहास:\n</string>
+    <string name="call_history_entry">- %1$s: %2$s</string>
+    <string name="block_confirmation">इस संपर्क के कॉल और संदेश ब्लॉक कर दिए जाएंगे।</string>
+    <string name="unblock_confirmation">इस संपर्क के कॉल और संदेश अब ब्लॉक नहीं किए जाएंगे।</string>
+    <string name="export_success">संपर्क सफलतापूर्वक निर्यात किए गए</string>
+    <string name="export_failed">निर्यात विफल रहा</string>
+    <string name="importing_from">%1$s से आयात किया जा रहा है...</string>
+    <string name="import_success">%1$d संपर्क सफलतापूर्वक आयात किए गए</string>
+    <string name="import_failed">आयात विफल रहा</string>
+
+    <!-- Settings Feature -->
+    <string name="call_settings_header">कॉल सेटिंग्स</string>
+    <string name="contact_display_header">संपर्क प्रदर्शन</string>
+    <string name="appearance_header">दिखावट</string>
+    <string name="about_header">के बारे में</string>
+    <string name="system_header">सिस्टम</string>
+    <string name="default_phone_app">डिफ़ॉल्ट फ़ोन ऐप</string>
+    <string name="current_default">वर्तमान डिफ़ॉल्ट</string>
+    <string name="not_set_as_default">डिफ़ॉल्ट के रूप में सेट नहीं है</string>
+    <string name="blocked_numbers">ब्लॉक किए गए नंबर</string>
+    <string name="manage_blocked_numbers">आपके द्वारा ब्लॉक किए गए नंबरों को प्रबंधित करें</string>
+    <string name="no_blocked_numbers">कोई ब्लॉक किया गया नंबर नहीं है</string>
+    <string name="sort_by">क्रमबद्ध करें</string>
+    <string name="theme">थीम</string>
+    <string name="app_version">ऐप संस्करण</string>
+    <string name="privacy_policy">गोपनीयता नीति</string>
+    <string name="language">भाषा</string>
+    <string name="change_app_language">ऐप की भाषा बदलें</string>
+
+    <!-- Filters -->
+    <string name="filter_all">सभी</string>
+    <string name="filter_missed">छूटी हुई कॉल</string>
+    <string name="filter_contacts">संपर्क</string>
+    <string name="filter_incoming">आने वाली कॉल</string>
+    <string name="filter_outgoing">बाहर जाने वाली कॉल</string>
+    <string name="filter_spam">स्पैम कॉल</string>
+
+    <!-- Fake Call Feature -->
+    <string name="fake_call">फेक कॉल</string>
+    <string name="fake_call_setup">फेक कॉल सेटअप</string>
+    <string name="caller_name">कॉल करने वाले का नाम</string>
+    <string name="caller_number">कॉल करने वाले का नंबर</string>
+    <string name="schedule_call">फेक कॉल शेड्यूल करें</string>
+    <string name="call_scheduled">%1$s में फेक कॉल शेड्यूल की गई</string>
+    <string name="pick_time">समय चुनें</string>
+    <string name="seconds">%1$d सेकंड</string>
+    <string name="minutes">%1$d मिनट</string>
+
+    <!-- Call Announcer Feature -->
+    <string name="call_announcer">कॉल उद्घोषक</string>
+    <string name="call_announcer_settings">कॉल उद्घोषक सेटिंग्स</string>
+    <string name="enable_announcer">कॉल उद्घोषक सक्षम करें</string>
+    <string name="announcer_repeat">घोषणा दोहराव</string>
+    <string name="announcer_delay">घोषणाओं के बीच देरी</string>
+    <string name="announcer_message_prefix">संदेश उपसर्ग</string>
+    <string name="incoming_call_from">%1$s से इनकमिंग कॉल</string>
+    <string name="times_1">1 बार</string>
+    <string name="times_2">2 बार</string>
+    <string name="times_3">3 बार</string>
+    <string name="continuous">लगातार</string>
+
+    <!-- Call Wallpaper Feature -->
+    <string name="call_wallpaper">कॉल वॉलपेपर</string>
+    <string name="select_wallpaper">वॉलपेपर चुनें</string>
+    <string name="preview_wallpaper">वॉलपेपर पूर्वावलोकन</string>
+    <string name="apply_wallpaper">वॉलपेपर लागू करें</string>
+    <string name="custom_image">गैलरी</string>
+    <string name="custom_color">कस्टम रंग</string>
+    <string name="pick_color">रंग चुनें</string>
+    <string name="color_picker_title">पृष्ठभूमि का रंग चुनें</string>
+    <string name="select">चुनें</string>
+    <string name="none_wallpaper">कोई नहीं (ठोस)</string>
+    <string name="wallpaper_applied">वॉलपेपर सफलतापूर्वक लागू किया गया</string>
+
+    <!-- Call Analytics -->
+    <string name="call_analytics">कॉल एनालिटिक्स</string>
+    <string name="talk_time">टॉक टाइम</string>
+    <string name="total_calls">कुल कॉल</string>
+    <string name="daily_activity">दैनिक गतिविधि</string>
+    <string name="top_contacts">शीर्ष संपर्क</string>
+    <string name="calls_count">%1$d कॉल</string>
+
+    <!-- Fake Call Setup -->
+    <string name="caller_info">कॉल करने वाले की जानकारी</string>
+    <string name="schedule_timer">शेड्यूल टाइमर</string>
+    <string name="sec_10">10 सेकंड</string>
+    <string name="sec_30">30 सेकंड</string>
+    <string name="min_1">1 मिनट</string>
+    <string name="min_5">5 मिनट</string>
+    <string name="test_call">टेस्ट कॉल</string>
+
+    <!-- Headers -->
+    <string name="general_header">सामान्य</string>
+    <string name="announcement_settings_header">घोषणा सेटिंग्स</string>
+    <string name="blink_speed_header">ब्लिंक स्पीड</string>
+
+    <!-- Flash Alert Feature -->
+    <string name="flash_alert">फ़्लैश अलर्ट</string>
+    <string name="flash_alert_settings">फ़्लैश अलर्ट सेटिंग्स</string>
+    <string name="enable_flash_alert">फ़्लैश अलर्ट सक्षम करें</string>
+    <string name="blink_speed">ब्लिंक स्पीड</string>
+    <string name="slow">धीमा</string>
+    <string name="medium">मध्यम</string>
+    <string name="fast">तेज़</string>
+
+    <!-- Tools Grid -->
+    <string name="tool_call_analytics">कॉल एनालिटिक्स</string>
+    <string name="tool_call_analytics_desc">अपने कॉल इतिहास, अवधि और आवृत्ति को ट्रैक करें</string>
+    <string name="tool_fake_call">फेक कॉल</string>
+    <string name="tool_fake_call_desc">जरूरत पड़ने पर फेक कॉल प्राप्त करें</string>
+    <string name="tool_call_announcer">कॉल उद्घोषक</string>
+    <string name="tool_call_announcer_desc">एसओएस संपर्क</string>
+    <string name="tool_flash_alert">फ़्लैश अलर्ट</string>
+    <string name="tool_flash_alert_desc">इनकमिंग कॉल के लिए चमकती रोशनी प्राप्त करें</string>
+    <string name="tool_call_wallpaper">कॉल वॉलपेपर</string>
+    <string name="tool_call_wallpaper_desc">अपने डायलर के लिए एक कस्टम पृष्ठभूमि सेट करें</string>
+    <string name="tool_call_themes">कॉल थीम्स</string>
+    <string name="tool_call_themes_desc">अपने कॉल बटन स्टाइल को निजीकृत करें</string>
+    <string name="tool_set_ringtone">रिंगटोन सेट करें</string>
+    <string name="tool_set_ringtone_desc">अपनी रिंगटोन ध्वनियों को कस्टमाइज़ करें</string>
+    <string name="tool_import_export">आयात/निर्यात</string>
+    <string name="tool_import_export_desc">संपर्कों को आसानी से अपने डिवाइस पर स्थानांतरित करें</string>
+    <string name="pro_label">प्रो</string>
+</resources>

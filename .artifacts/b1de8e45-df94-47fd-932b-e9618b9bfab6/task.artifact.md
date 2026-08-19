@@ -1,0 +1,10 @@
+- [x] Update `SearchViewModel.kt` to sort results alphabetically
+- [x] Add search icon and callback to `RecentsScreen.kt`
+- [x] Update `MainNavigation.kt` to wire up search from Recents
+- [x] Verify alphabetical search functionality from both screens
+- [x] Update `ToolsScreen.kt`:
+    - [x] Add "PRO" badge to the header
+    - [x] Create `ToolCard` component
+    - [x] Implement grid layout for tool items
+    - [x] Add `FloatingActionButton` for Keypad
+- [x] Verify grid layout and theming (Light/Dark)

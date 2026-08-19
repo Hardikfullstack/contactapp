@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.7"
+        android:scaleY="0.7">
+
+        <!-- User Silhouette (Head) -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,44m-16,0a16,16 0,1 1,32 0a16,16 0,1 1,-32 0" />
+
+        <!-- User Silhouette (Shoulders) -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M24,84 c0,-11 13.5,-20 30,-20 s30,9 30,20 v4 H24 Z" />
+
+    </group>
+
+</vector>

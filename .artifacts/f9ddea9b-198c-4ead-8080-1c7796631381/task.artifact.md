@@ -1,0 +1,6 @@
+- [x] Add Coil dependency to `gradle/libs.versions.toml` and `app/build.gradle.kts`
+- [x] Update `CallLogItem` domain model to include `photoUri`
+- [x] Update `CallLogRepositoryImpl` to fetch contact photo URIs
+- [x] Update `CallItem` UI component to display profile pictures
+- [x] Update `ContactItem` UI component to display profile pictures
+- [x] Verify profile pictures appear in Recents, Contacts, and Favorites

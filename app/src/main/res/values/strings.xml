@@ -1,0 +1,264 @@
+<resources>
+    <string name="app_name">Connect</string>
+
+    <!-- Onboarding -->
+    <string name="allow_permission">Allow Permission</string>
+    <string name="permission_description">Enable the necessary permissions to continue and access all features.</string>
+    <string name="smart_notifications">Smart Notifications</string>
+    <string name="notifications_description">Allow access to identify callers and stay informed.</string>
+    <string name="enable_call_access">Enable Call Access</string>
+    <string name="call_access_description">Enable call access to send messages from the after-call screen.</string>
+    <string name="set_as_default_title">Set as Default Phone App</string>
+    <string name="set_as_default_desc">To use our in-app call experience, please set this app as your default phone handler.</string>
+    <string name="agree_continue">Agree &amp; Continue</string>
+    <string name="privacy_policy_notice">By continuing, you agree to our Privacy Policy.</string>
+    <string name="select_app_language">Select app Language</string>
+    <string name="system_default">System Default</string>
+    <string name="done">Done</string>
+
+    <!-- Main Screens -->
+    <string name="recents">Recents</string>
+    <string name="favorites">Favorites</string>
+    <string name="tools">Tools</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="older">Older</string>
+    <string name="keypad">Keypad</string>
+    <string name="contacts">Contacts</string>
+    <string name="settings">Settings</string>
+    <string name="phone">Phone</string>
+    <string name="search">Search</string>
+    <string name="no_result_found">No Result found.</string>
+    <string name="call_log_permission_required">Call Log permission required</string>
+
+    <!-- Call Status -->
+    <string name="incoming">Incoming</string>
+    <string name="outgoing">Outgoing</string>
+    <string name="rejected">Rejected</string>
+    <string name="missed">Missed</string>
+    <string name="incoming_call">Incoming call</string>
+    <string name="outgoing_call">Outgoing call</string>
+    <string name="missed_call">Missed call</string>
+    <string name="rejected_call">Rejected call</string>
+    <string name="spam_call">Spam call</string>
+
+    <!-- Keypad Quick Actions -->
+    <string name="create_new_contact">Create new contact</string>
+    <string name="add_to_contact">Add to a contact</string>
+    <string name="send_message">Send a message</string>
+
+    <!-- Actions -->
+    <string name="call">Call</string>
+    <string name="message">Message</string>
+    <string name="history">History</string>
+    <string name="cancel">CANCEL</string>
+    <string name="save">Save</string>
+    <string name="delete">DELETE</string>
+    <string name="share">Share</string>
+    <string name="block">Block</string>
+    <string name="unblock">Unblock</string>
+    <string name="answer">Answer</string>
+    <string name="end_call">End</string>
+    <string name="decline_call">Decline</string>
+
+    <!-- Call Screen -->
+    <string name="ongoing_call">Ongoing Call</string>
+    <string name="dialing">Dialing...</string>
+    <string name="incoming_call_status">Incoming Call</string>
+    <string name="connecting">Connecting...</string>
+    <string name="on_hold">On Hold</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="unknown">Unknown</string>
+
+    <!-- Contacts Feature -->
+    <string name="add_to_contacts">Add to contacts</string>
+    <string name="name_label">Name</string>
+    <string name="phone_label">Phone</string>
+    <string name="saving_to_device_only">Saving to device only</string>
+    <string name="more_details">More details</string>
+    <string name="import_contacts">Import Contacts</string>
+    <string name="export_contacts">Export Contacts</string>
+    <string name="no_favorites_yet">No favorites yet</string>
+    <string name="duplicate_number">Duplicate Number</string>
+    <string name="duplicate_number_warning">A contact named \"%1$s\" already has this number. Do you want to save anyway?</string>
+    <string name="save_anyway">SAVE ANYWAY</string>
+    <string name="delete_contact_title">Delete Contact?</string>
+    <string name="delete_contact_text">This contact will be permanently deleted from your contacts.</string>
+    <string name="clear_history">Clear History</string>
+    <string name="clear_history_title">Clear Call History?</string>
+    <string name="clear_history_text">All call history with %1$s will be deleted. %1$s will remain in your contacts.</string>
+    <string name="delete_call_title">Delete This Call?</string>
+    <string name="delete_call_text">This call entry will be removed from the history.</string>
+    <string name="call_history_for">Call History for %1$s (%2$s):\n</string>
+    <string name="call_history_entry">- %1$s: %2$s</string>
+    <string name="block_confirmation">Calls and messages from this contact will be blocked.</string>
+    <string name="unblock_confirmation">Calls and messages from this contact will no longer be blocked.</string>
+    <string name="export_success">Contacts exported successfully</string>
+    <string name="export_failed">Export failed</string>
+    <string name="importing_from">Importing from %1$s...</string>
+    <string name="import_success">Imported %1$d contacts successfully</string>
+    <string name="import_failed">Import failed</string>
+
+    <!-- Settings Feature -->
+    <string name="call_settings_header">CALL SETTINGS</string>
+    <string name="contact_display_header">CONTACT DISPLAY</string>
+    <string name="appearance_header">APPEARANCE</string>
+    <string name="about_header">ABOUT</string>
+    <string name="system_header">SYSTEM</string>
+    <string name="default_phone_app">Default Phone App</string>
+    <string name="current_default">Current default</string>
+    <string name="not_set_as_default">Not set as default</string>
+    <string name="blocked_numbers">Blocked Numbers</string>
+    <string name="manage_blocked_numbers">Manage numbers you\u0027ve blocked</string>
+    <string name="no_blocked_numbers">No blocked numbers</string>
+    <string name="sort_by">Sort by</string>
+    <string name="theme">Theme</string>
+    <string name="app_version">App Version</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="language">Language</string>
+    <string name="change_app_language">Change app language</string>
+
+    <!-- Filters -->
+    <string name="filter_all">All</string>
+    <string name="filter_missed">Missed Call</string>
+    <string name="filter_contacts">Contacts</string>
+    <string name="filter_incoming">Incoming Call</string>
+    <string name="filter_outgoing">Outgoing Call</string>
+    <string name="filter_spam">Spam Call</string>
+
+    <!-- Fake Call Feature -->
+    <string name="fake_call">Fake Call</string>
+    <string name="fake_call_setup">Fake Call Setup</string>
+    <string name="caller_name">Caller Name</string>
+    <string name="caller_number">Caller Number</string>
+    <string name="schedule_call">Schedule Fake Call</string>
+    <string name="call_scheduled">Fake call scheduled in %1$s</string>
+    <string name="call_scheduled_at">Fake call scheduled for %1$s</string>
+    <string name="custom_time">Custom Time</string>
+    <string name="pick_time">Pick Time</string>
+    <string name="seconds">%1$d seconds</string>
+    <string name="minutes">%1$d minutes</string>
+
+    <!-- Call Announcer Feature -->
+    <string name="call_announcer">Call Announcer</string>
+    <string name="call_announcer_settings">Call Announcer Settings</string>
+    <string name="enable_announcer">Enable Call Announcer</string>
+    <string name="announcer_repeat">Announcement Repetition</string>
+    <string name="announcer_delay">Delay between announcements</string>
+    <string name="announcer_message_prefix">Message Prefix</string>
+    <string name="incoming_call_from">Incoming call from %1$s</string>
+    <string name="times_1">1 time</string>
+    <string name="times_2">2 times</string>
+    <string name="times_3">3 times</string>
+    <string name="continuous">Continuous</string>
+
+    <!-- Call Wallpaper Feature -->
+    <string name="call_wallpaper">Call Wallpaper</string>
+    <string name="select_wallpaper">Select Wallpaper</string>
+    <string name="preview_wallpaper">Preview Wallpaper</string>
+    <string name="apply_wallpaper">Apply Wallpaper</string>
+    <string name="custom_image">Gallery</string>
+    <string name="custom_color">Custom Color</string>
+    <string name="pick_color">Pick Color</string>
+    <string name="color_picker_title">Choose Background Color</string>
+    <string name="select">Select</string>
+    <string name="none_wallpaper">None (Solid)</string>
+    <string name="wallpaper_applied">Wallpaper applied successfully</string>
+    <string name="built_in_wallpapers">Wallpapers</string>
+
+    <!-- Call Analytics -->
+    <string name="call_analytics">Call Analytics</string>
+    <string name="talk_time">Talk Time</string>
+    <string name="total_calls">Total Calls</string>
+    <string name="daily_activity">Daily Activity</string>
+    <string name="top_contacts">Top Contacts</string>
+    <string name="calls_count">%1$d calls</string>
+    <string name="avg_duration">Avg Duration</string>
+    <string name="missed_calls">Missed Calls</string>
+    <string name="call_breakdown">Call Breakdown</string>
+    <string name="no_call_history">No call history yet</string>
+    <string name="no_call_history_desc">Make or receive a few calls to see your analytics here.</string>
+    <string name="refresh">Refresh</string>
+    <string name="recent_activity">Recent Activity</string>
+    <string name="no_recent_activity">No recent activity</string>
+
+    <!-- Fake Call Setup -->
+    <string name="caller_info">Caller Information</string>
+    <string name="schedule_timer">Schedule Timer</string>
+    <string name="sec_10">10 Sec</string>
+    <string name="sec_30">30 Sec</string>
+    <string name="min_1">1 Min</string>
+    <string name="min_5">5 Min</string>
+    <string name="test_call">Test Call</string>
+    <string name="fake_call_notification_channel">Fake Calls</string>
+    <string name="fake_call_notification_channel_desc">Wakes up the incoming call screen for scheduled fake calls, even if the app is closed</string>
+
+    <!-- Flash Alert -->
+    <string name="general_header">GENERAL</string>
+    <string name="announcement_settings_header">ANNOUNCEMENT SETTINGS</string>
+    <string name="blink_speed_header">BLINK SPEED</string>
+
+    <!-- Flash Alert Feature -->
+    <string name="flash_alert">Flash Alert</string>
+    <string name="flash_alert_settings">Flash Alert Settings</string>
+    <string name="enable_flash_alert">Enable Flash Alert</string>
+    <string name="blink_speed">Blink Speed</string>
+    <string name="slow">Slow</string>
+    <string name="medium">Medium</string>
+    <string name="fast">Fast</string>
+
+    <!-- Tools Grid -->
+    <string name="tool_call_analytics">Call Analytics</string>
+    <string name="tool_call_analytics_desc">Track your call history, durations, and frequency</string>
+    <string name="tool_fake_call">Fake Call</string>
+    <string name="tool_fake_call_desc">Get a fake call when you need it</string>
+    <string name="tool_call_announcer">Call Announcer</string>
+    <string name="tool_call_announcer_desc">SOS contacts</string>
+    <string name="tool_flash_alert">Flash Alert</string>
+    <string name="tool_flash_alert_desc">Get a flashing light for incoming calls</string>
+    <string name="tool_call_wallpaper">Call Wallpaper</string>
+    <string name="tool_call_wallpaper_desc">Set a custom background for your dialer</string>
+    <string name="tool_call_themes">Call Themes</string>
+    <string name="tool_call_themes_desc">Personalize your call button style</string>
+    <string name="call_themes_desc">Choose the accent color, avatar frame, and button shape for your call screen. This is independent of your Call Wallpaper background.</string>
+    <string name="button_shape">Button Shape</string>
+    <string name="accent_color">Accent Color</string>
+    <string name="shape_circle">Circle</string>
+    <string name="shape_rounded_square">Rounded Square</string>
+    <string name="shape_square">Square</string>
+    <string name="shape_pill">Pill</string>
+    <string name="shape_leaf">Leaf</string>
+    <string name="shape_arch">Arch</string>
+    <string name="shape_clover">Clover</string>
+    <string name="shape_cookie">Cookie</string>
+    <string name="premium">Premium</string>
+    <string name="tool_set_ringtone">Set Ringtone</string>
+    <string name="tool_set_ringtone_desc">Customize your ringtone sounds</string>
+    <string name="silent">Silent</string>
+    <string name="default_ringtone">Default</string>
+    <string name="ringtone_for_contact">Ringtone for %1$s</string>
+    <string name="tool_auto_reply">Auto-Reply</string>
+    <string name="tool_auto_reply_desc">Text back callers automatically when you decline</string>
+    <string name="enable_auto_reply">Enable Auto-Reply</string>
+    <string name="auto_reply_permission_note">SMS permission is required for auto-reply to work.</string>
+    <string name="auto_reply_message_header">MESSAGE</string>
+    <string name="auto_reply_message_label">Reply message</string>
+    <string name="spam_detected_banner">%1$d suspected spam calls detected</string>
+    <string name="clear_spam_calls">Clear All</string>
+    <string name="clear_spam_title">Delete Spam Calls?</string>
+    <string name="clear_spam_text">This will permanently delete all %1$d suspected spam call entries from your call history.</string>
+    <string name="ringtone_updated">Ringtone updated</string>
+    <string name="write_settings_permission_title">Allow Ringtone Changes</string>
+    <string name="write_settings_permission_desc">To set your phone\'s ringtone, allow Connect to modify system settings.</string>
+    <string name="open_settings">Open Settings</string>
+    <string name="apply">Apply</string>
+    <string name="tool_import_export">Import/Export</string>
+    <string name="tool_import_export_desc">Easily transfer contacts to and from your device</string>
+    <string name="fake_call_active_notification_channel">Active Fake Call</string>
+    <string name="fake_call_active_notification_channel_desc">Shows a persistent notification while a fake call is active</string>
+    <string name="report_spam">Report as Spam</string>
+    <string name="answer_call">Answer</string>
+    <string name="decline_call_short">Decline</string>
+    <string name="spam_warning">Suspected Spam</string>
+    <string name="pro_label">PRO</string>
+</resources>

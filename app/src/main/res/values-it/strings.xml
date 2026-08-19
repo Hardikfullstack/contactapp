@@ -1,0 +1,148 @@
+<resources>
+    <string name="app_name">Connect</string>
+
+    <!-- Onboarding -->
+    <string name="allow_permission">Concedi permessi</string>
+    <string name="permission_description">Attiva i permessi necessari per continuare e accedere a tutte le funzionalità.</string>
+    <string name="smart_notifications">Notifiche intelligenti</string>
+    <string name="notifications_description">Consenti l\u0027accesso per identificare i chiamanti e rimanere informati.</string>
+    <string name="enable_call_access">Attiva accesso chiamate</string>
+    <string name="call_access_description">Attiva l\u0027accesso alle chiamate per inviare messaggi dalla schermata post-chiamata.</string>
+    <string name="agree_continue">Accetta e continua</string>
+    <string name="privacy_policy_notice">Continuando, accetti la nostra Informativa sulla privacy.</string>
+    <string name="select_app_language">Seleziona la lingua dell\u0027app</string>
+    <string name="done">Fatto</string>
+
+    <!-- Main Screens -->
+    <string name="recents">Recenti</string>
+    <string name="favorites">Preferiti</string>
+    <string name="tools">Strumenti</string>
+    <string name="today">Oggi</string>
+    <string name="yesterday">Ieri</string>
+    <string name="older">Precedenti</string>
+    <string name="keypad">Tastierino</string>
+    <string name="contacts">Contatti</string>
+    <string name="settings">Impostazioni</string>
+    <string name="phone">Telefono</string>
+    <string name="search">Cerca</string>
+    <string name="no_result_found">Nessun risultato trovato.</string>
+
+    <!-- Call Status -->
+    <string name="incoming">In entrata</string>
+    <string name="outgoing">In uscita</string>
+    <string name="rejected">Rifiutata</string>
+    <string name="missed">Persa</string>
+
+    <!-- Keypad Quick Actions -->
+    <string name="create_new_contact">Crea nuovo contatto</string>
+    <string name="add_to_contact">Aggiungi a un contatto</string>
+    <string name="send_message">Invia un messaggio</string>
+
+    <!-- Actions -->
+    <string name="call">Chiama</string>
+    <string name="message">Messaggio</string>
+    <string name="history">Cronologia</string>
+    <string name="cancel">ANNULLA</string>
+    <string name="save">Salva</string>
+    <string name="delete">ELIMINA</string>
+
+    <!-- Contacts Feature -->
+    <string name="add_to_contacts">Aggiungi ai contatti</string>
+    <string name="name_label">Nome</string>
+    <string name="phone_label">Telefono</string>
+    <string name="saving_to_device_only">Salvataggio solo sul dispositivo</string>
+    <string name="more_details">Più dettagli</string>
+    <string name="import_contacts">Importa contatti</string>
+    <string name="export_contacts">Esporta contatti</string>
+    <string name="no_favorites_yet">Nessun preferito</string>
+    <string name="duplicate_number">Numero duplicato</string>
+    <string name="duplicate_number_warning">Un contatto di nome \"%1$s\" ha già questo numero. Vuoi salvare comunque?</string>
+    <string name="save_anyway">SALVA COMUNQUE</string>
+    <string name="delete_contact_title">Eliminare il contatto?</string>
+    <string name="delete_contact_text">Questo contatto verrà eliminato permanentemente dai tuoi contatti.</string>
+    <string name="export_success">Contatti esportati con successo</string>
+    <string name="export_failed">Esportazione fallita</string>
+    <string name="importing_from">Importazione da %1$s...</string>
+
+    <!-- Settings Feature -->
+    <string name="call_settings_header">IMPOSTAZIONI CHIAMATA</string>
+    <string name="contact_display_header">VISUALIZZAZIONE CONTATTI</string>
+    <string name="appearance_header">ASPETTO</string>
+    <string name="about_header">INFORMAZIONI</string>
+    <string name="system_header">SISTEMA</string>
+    <string name="default_phone_app">App telefono predefinita</string>
+    <string name="current_default">Predefinita attuale</string>
+    <string name="not_set_as_default">Non impostata come predefinita</string>
+    <string name="blocked_numbers">Numeri bloccati</string>
+    <string name="manage_blocked_numbers">Gestisci i numeri che hai bloccato</string>
+    <string name="no_blocked_numbers">Nessun numero bloccato</string>
+    <string name="sort_by">Ordina per</string>
+    <string name="theme">Tema</string>
+    <string name="app_version">Versione app</string>
+    <string name="privacy_policy">Informativa sulla privacy</string>
+    <string name="language">Lingua</string>
+    <string name="change_app_language">Cambia lingua dell\u0027app</string>
+
+    <!-- Call Announcer Feature -->
+    <string name="call_announcer">Annunciatore chiamate</string>
+    <string name="call_announcer_settings">Impostazioni annunciatore</string>
+    <string name="enable_announcer">Abilita annunciatore chiamate</string>
+    <string name="announcer_repeat">Ripetizione annuncio</string>
+    <string name="announcer_delay">Ritardo tra gli annunci</string>
+    <string name="announcer_message_prefix">Prefisso messaggio</string>
+    <string name="incoming_call_from">Chiamata in arrivo da %1$s</string>
+    <string name="times_1">1 volta</string>
+    <string name="times_2">2 volte</string>
+    <string name="times_3">3 volte</string>
+    <string name="continuous">Continuo</string>
+
+    <!-- Call Analytics -->
+    <string name="call_analytics">Analisi chiamate</string>
+    <string name="talk_time">Tempo di conversazione</string>
+    <string name="total_calls">Chiamate totali</string>
+    <string name="daily_activity">Attività quotidiana</string>
+    <string name="top_contacts">Contatti principali</string>
+    <string name="calls_count">%1$d chiamate</string>
+
+    <!-- Fake Call Setup -->
+    <string name="caller_info">Informazioni chiamante</string>
+    <string name="schedule_timer">Programma timer</string>
+    <string name="sec_10">10 Sec</string>
+    <string name="sec_30">30 Sec</string>
+    <string name="min_1">1 Min</string>
+    <string name="min_5">5 Min</string>
+    <string name="test_call">Chiamata di prova</string>
+
+    <!-- Headers -->
+    <string name="general_header">GENERALE</string>
+    <string name="announcement_settings_header">IMPOSTAZIONI ANNUNCIO</string>
+    <string name="blink_speed_header">VELOCITÀ LAMPEGGIO</string>
+
+    <!-- Flash Alert Feature -->
+    <string name="flash_alert">Avviso Flash</string>
+    <string name="flash_alert_settings">Impostazioni Avviso Flash</string>
+    <string name="enable_flash_alert">Abilita Avviso Flash</string>
+    <string name="blink_speed">Velocità lampeggio</string>
+    <string name="slow">Lento</string>
+    <string name="medium">Medio</string>
+    <string name="fast">Veloce</string>
+
+    <!-- Tools Grid -->
+    <string name="tool_call_analytics">Analisi Chiamate</string>
+    <string name="tool_call_analytics_desc">Monitora cronologia, durata e frequenza chiamate</string>
+    <string name="tool_fake_call">Finta Chiamata</string>
+    <string name="tool_fake_call_desc">Ricevi una finta chiamata quando ne hai bisogno</string>
+    <string name="tool_call_announcer">Annunciatore Chiamate</string>
+    <string name="tool_call_announcer_desc">Contatti SOS</string>
+    <string name="tool_flash_alert">Avviso Flash</string>
+    <string name="tool_flash_alert_desc">Ottieni un flash lampeggiante per le chiamate</string>
+    <string name="tool_call_wallpaper">Sfondo Chiamata</string>
+    <string name="tool_call_wallpaper_desc">Imposta uno sfondo personalizzato per il tastierino</string>
+    <string name="tool_call_themes">Temi Chiamata</string>
+    <string name="tool_call_themes_desc">Personalizza lo stile dei pulsanti di chiamata</string>
+    <string name="tool_set_ringtone">Imposta Suoneria</string>
+    <string name="tool_set_ringtone_desc">Personalizza i suoni della tua suoneria</string>
+    <string name="tool_import_export">Importa/Esporta</string>
+    <string name="tool_import_export_desc">Trasferisci facilmente i contatti da e verso il dispositivo</string>
+    <string name="pro_label">PRO</string>
+</resources>

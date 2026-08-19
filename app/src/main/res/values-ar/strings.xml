@@ -1,0 +1,207 @@
+<resources>
+    <string name="app_name">Connect</string>
+
+    <!-- Onboarding -->
+    <string name="allow_permission">السماح بالإذن</string>
+    <string name="permission_description">تمكين الأذونات اللازمة للمتابعة والوصول إلى جميع الميزات.</string>
+    <string name="smart_notifications">إشعارات ذكية</string>
+    <string name="notifications_description">السماح بالوصول لتحديد المتصلين والبقاء على اطلاع.</string>
+    <string name="enable_call_access">تمكين الوصول إلى المكالمات</string>
+    <string name="call_access_description">تمكين الوصول إلى المكالمات لإرسال الرسائل من شاشة ما بعد المكالمة.</string>
+    <string name="set_as_default_title">تعيين كتطبيق افتراضي للهاتف</string>
+    <string name="set_as_default_desc">لاستخدام تجربة الاتصال داخل التطبيق، يرجى تعيين هذا التطبيق كمعالج افتراضي للهاتف.</string>
+    <string name="agree_continue">الموافقة والمتابعة</string>
+    <string name="privacy_policy_notice">بالمتابعة، فإنك توافق على سياسة الخصوصية الخاصة بنا.</string>
+    <string name="select_app_language">اختر لغة التطبيق</string>
+    <string name="system_default">النظام الافتراضي</string>
+    <string name="done">تم</string>
+
+    <!-- Main Screens -->
+    <string name="recents">الأخيرة</string>
+    <string name="favorites">المفضلة</string>
+    <string name="tools">أدوات</string>
+    <string name="today">اليوم</string>
+    <string name="yesterday">أمس</string>
+    <string name="older">قديم</string>
+    <string name="keypad">لوحة الرقم</string>
+    <string name="contacts">جهات الاتصال</string>
+    <string name="settings">الإعدادات</string>
+    <string name="phone">الهاتف</string>
+    <string name="search">بحث</string>
+    <string name="no_result_found">لم يتم العثور على نتائج.</string>
+    <string name="call_log_permission_required">مطلوب إذن سجل المكالمات</string>
+
+    <!-- Call Status -->
+    <string name="incoming">واردة</string>
+    <string name="outgoing">صادرة</string>
+    <string name="rejected">مرفوضة</string>
+    <string name="missed">فائتة</string>
+    <string name="incoming_call">مكالمة واردة</string>
+    <string name="outgoing_call">مكالمة صادرة</string>
+    <string name="missed_call">مكالمة فائتة</string>
+    <string name="rejected_call">مكالمة مرفوضة</string>
+    <string name="spam_call">مكالمة سبام</string>
+
+    <!-- Keypad Quick Actions -->
+    <string name="create_new_contact">إنشاء جهة اتصال جديدة</string>
+    <string name="add_to_contact">إضافة إلى جهة اتصال</string>
+    <string name="send_message">إرسال رسالة</string>
+
+    <!-- Actions -->
+    <string name="call">اتصال</string>
+    <string name="message">رسالة</string>
+    <string name="history">السجل</string>
+    <string name="cancel">إلغاء</string>
+    <string name="save">حفظ</string>
+    <string name="delete">حذف</string>
+    <string name="share">مشاركة</string>
+    <string name="block">حظر</string>
+    <string name="unblock">إلغاء الحظر</string>
+    <string name="answer">رد</string>
+    <string name="end_call">إنهاء</string>
+
+    <!-- Call Screen -->
+    <string name="ongoing_call">مكالمة جارية</string>
+    <string name="dialing">جاري الاتصال...</string>
+    <string name="incoming_call_status">مكالمة واردة</string>
+    <string name="connecting">جاري التوصيل...</string>
+    <string name="on_hold">قيد الانتظار</string>
+    <string name="disconnected">تم الفصل</string>
+    <string name="unknown">غير معروف</string>
+
+    <!-- Contacts Feature -->
+    <string name="add_to_contacts">إضافة إلى جهات الاتصال</string>
+    <string name="name_label">الاسم</string>
+    <string name="phone_label">الهاتف</string>
+    <string name="saving_to_device_only">الحفظ على الجهاز فقط</string>
+    <string name="more_details">المزيد من التفاصيل</string>
+    <string name="import_contacts">استيراد جهات الاتصال</string>
+    <string name="export_contacts">تصدير جهات الاتصال</string>
+    <string name="no_favorites_yet">لا توجد مفضلات بعد</string>
+    <string name="duplicate_number">رقم مكرر</string>
+    <string name="duplicate_number_warning">جهة اتصال باسم \"%1$s\" لديها هذا الرقم بالفعل. هل تريد الحفظ على أي حال؟</string>
+    <string name="save_anyway">حفظ على أي حال</string>
+    <string name="delete_contact_title">حذف جهة الاتصال؟</string>
+    <string name="delete_contact_text">سيتم حذف جهة الاتصال هذه نهائيًا من جهات الاتصال الخاصة بك.</string>
+    <string name="block_confirmation">سيتم حظر المكالمات والرسائل من جهة الاتصال هذه.</string>
+    <string name="unblock_confirmation">لن يتم حظر المكالمات والرسائل من جهة الاتصال هذه بعد الآن.</string>
+    <string name="export_success">تم تصدير جهات الاتصال بنجاح</string>
+    <string name="export_failed">فشل التصدير</string>
+    <string name="importing_from">جارٍ الاستيراد من %1$s...</string>
+    <string name="call_history_for">سجل المكالمات لـ %1$s (%2$s):\n</string>
+    <string name="call_history_entry">- %1$s: %2$s</string>
+
+    <!-- Settings Feature -->
+    <string name="call_settings_header">إعدادات المكالمات</string>
+    <string name="contact_display_header">عرض جهات الاتصال</string>
+    <string name="appearance_header">المظهر</string>
+    <string name="about_header">حول</string>
+    <string name="system_header">النظام</string>
+    <string name="default_phone_app">تطبيق الهاتف الافتراضي</string>
+    <string name="current_default">الافتراضي الحالي</string>
+    <string name="not_set_as_default">غير محدد كافتراضي</string>
+    <string name="blocked_numbers">الأرقام المحظورة</string>
+    <string name="manage_blocked_numbers">إدارة الأرقام التي قمت بحظرها</string>
+    <string name="no_blocked_numbers">لا توجد أرقام محظورة</string>
+    <string name="sort_by">فرز حسب</string>
+    <string name="theme">المظهر</string>
+    <string name="app_version">إصدار التطبيق</string>
+    <string name="privacy_policy">سياسة الخصوصية</string>
+    <string name="language">اللغة</string>
+    <string name="change_app_language">تغيير لغة التطبيق</string>
+
+    <!-- Filters -->
+    <string name="filter_all">الكل</string>
+    <string name="filter_missed">مكالمة فائتة</string>
+    <string name="filter_contacts">جهات الاتصال</string>
+    <string name="filter_incoming">مكالمة واردة</string>
+    <string name="filter_outgoing">مكالمة صادرة</string>
+    <string name="filter_spam">مكالمة سبام</string>
+
+    <!-- Fake Call Feature -->
+    <string name="fake_call">مكالمة وهمية</string>
+    <string name="fake_call_setup">إعداد مكالمة وهمية</string>
+    <string name="caller_name">اسم المتصل</string>
+    <string name="caller_number">رقم المتصل</string>
+    <string name="schedule_call">جدولة مكالمة وهمية</string>
+    <string name="call_scheduled">تم جدولة مكالمة وهمية خلال %1$s</string>
+    <string name="pick_time">اختر الوقت</string>
+    <string name="seconds">%1$d ثواني</string>
+    <string name="minutes">%1$d دقائق</string>
+
+    <!-- Call Announcer Feature -->
+    <string name="call_announcer">معلن المكالمات</string>
+    <string name="call_announcer_settings">إعدادات معلن المكالمات</string>
+    <string name="enable_announcer">تمكين معلن المكالمات</string>
+    <string name="announcer_repeat">تكرار الإعلان</string>
+    <string name="announcer_delay">التأخير بين الإعلانات</string>
+    <string name="announcer_message_prefix">بادئة الرسالة</string>
+    <string name="incoming_call_from">مكالمة واردة من %1$s</string>
+    <string name="times_1">مرة واحدة</string>
+    <string name="times_2">مرتين</string>
+    <string name="times_3">3 مرات</string>
+    <string name="continuous">مستمر</string>
+
+    <!-- Call Wallpaper Feature -->
+    <string name="call_wallpaper">خلفية المكالمة</string>
+    <string name="select_wallpaper">اختر خلفية</string>
+    <string name="preview_wallpaper">معاينة الخلفية</string>
+    <string name="apply_wallpaper">تطبيق الخلفية</string>
+    <string name="custom_image">المعرض</string>
+    <string name="custom_color">لون مخصص</string>
+    <string name="pick_color">اختر لوناً</string>
+    <string name="color_picker_title">اختر لون الخلفية</string>
+    <string name="select">اختيار</string>
+    <string name="none_wallpaper">لا شيء (لون سادة)</string>
+    <string name="wallpaper_applied">تم تطبيق الخلفية بنجاح</string>
+
+    <!-- Call Analytics -->
+    <string name="call_analytics">تحليلات المكالمات</string>
+    <string name="talk_time">وقت التحدث</string>
+    <string name="total_calls">إجمالي المكالمات</string>
+    <string name="daily_activity">النشاط اليومي</string>
+    <string name="top_contacts">أهم جهات الاتصال</string>
+    <string name="calls_count">%1$d مكالمات</string>
+
+    <!-- Fake Call Setup -->
+    <string name="caller_info">معلومات المتصل</string>
+    <string name="schedule_timer">جدولة المؤقت</string>
+    <string name="sec_10">10 ثوانٍ</string>
+    <string name="sec_30">30 ثانية</string>
+    <string name="min_1">دقيقة واحدة</string>
+    <string name="min_5">5 دقائق</string>
+    <string name="test_call">مكالمة تجريبية</string>
+
+    <!-- Headers -->
+    <string name="general_header">عام</string>
+    <string name="announcement_settings_header">إعدادات الإعلانات</string>
+    <string name="blink_speed_header">سرعة الوميض</string>
+
+    <!-- Flash Alert Feature -->
+    <string name="flash_alert">تنبیه الفلاش</string>
+    <string name="flash_alert_settings">إعدادات تنبيه الفلاش</string>
+    <string name="enable_flash_alert">تمكين تنبيه الفلاش</string>
+    <string name="blink_speed">سرعة الوميض</string>
+    <string name="slow">بطيء</string>
+    <string name="medium">متوسط</string>
+    <string name="fast">سريع</string>
+
+    <!-- Tools Grid -->
+    <string name="tool_call_analytics">تحليلات المكالمات</string>
+    <string name="tool_call_analytics_desc">تتبع سجل المكالمات والمدد والتردد</string>
+    <string name="tool_fake_call">مكالمة وهمية</string>
+    <string name="tool_fake_call_desc">احصل على مكالمة وهمية عند الحاجة</string>
+    <string name="tool_call_announcer">معلن المكالمات</string>
+    <string name="tool_call_announcer_desc">جهات اتصال الطوارئ</string>
+    <string name="tool_flash_alert">تنبيه الفلاش</string>
+    <string name="tool_flash_alert_desc">احصل على ضوء وامض للمكالمات الواردة</string>
+    <string name="tool_call_wallpaper">خلفية المكالمات</string>
+    <string name="tool_call_wallpaper_desc">تعيين خلفية مخصصة للوحة الاتصال</string>
+    <string name="tool_call_themes">سمات المكالمات</string>
+    <string name="tool_call_themes_desc">تخصيص نمط أزرار المكالمات</string>
+    <string name="tool_set_ringtone">تعيين نغمة الرنين</string>
+    <string name="tool_set_ringtone_desc">تخصيص أصوات نغمات الرنين</string>
+    <string name="tool_import_export">استيراد/تصدير</string>
+    <string name="tool_import_export_desc">نقل جهات الاتصال بسهولة من وإلى جهازك</string>
+    <string name="pro_label">برو</string>
+</resources>

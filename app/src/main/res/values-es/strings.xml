@@ -1,0 +1,197 @@
+<resources>
+    <string name="app_name">Connect</string>
+
+    <!-- Onboarding -->
+    <string name="allow_permission">Permitir permisos</string>
+    <string name="permission_description">Habilite los permisos necesarios para continuar y acceder a todas las funciones.</string>
+    <string name="smart_notifications">Notificaciones inteligentes</string>
+    <string name="notifications_description">Permita el acceso para identificar a las personas que llaman y mantenerse informado.</string>
+    <string name="enable_call_access">Habilitar acceso a llamadas</string>
+    <string name="call_access_description">Habilite el acceso a llamadas para enviar mensajes desde la pantalla posterior a la llamada.</string>
+    <string name="set_as_default_title">Establecer como aplicación de teléfono predeterminada</string>
+    <string name="set_as_default_desc">Para utilizar nuestra experiencia de llamada en la aplicación, configure esta aplicación como su controlador de teléfono predeterminado.</string>
+    <string name="agree_continue">Aceptar y continuar</string>
+    <string name="privacy_policy_notice">Al continuar, acepta nuestra Política de privacidad.</string>
+    <string name="select_app_language">Seleccionar idioma de la aplicación</string>
+    <string name="done">Listo</string>
+
+    <!-- Main Screens -->
+    <string name="recents">Recientes</string>
+    <string name="favorites">Favoritos</string>
+    <string name="tools">Herramientas</string>
+    <string name="today">Hoy</string>
+    <string name="yesterday">Ayer</string>
+    <string name="older">Anteriores</string>
+    <string name="keypad">Teclado</string>
+    <string name="contacts">Contactos</string>
+    <string name="settings">Ajustes</string>
+    <string name="phone">Teléfono</string>
+    <string name="search">Buscar</string>
+    <string name="no_result_found">No se encontraron resultados.</string>
+
+    <!-- Call Status -->
+    <string name="incoming">Entrante</string>
+    <string name="outgoing">Saliente</string>
+    <string name="rejected">Rechazada</string>
+    <string name="missed">Perdida</string>
+    <string name="incoming_call">Llamada entrante</string>
+    <string name="outgoing_call">Llamada saliente</string>
+    <string name="missed_call">Llamada perdida</string>
+    <string name="rejected_call">Llamada rechazada</string>
+    <string name="spam_call">Llamada de spam</string>
+
+    <!-- Keypad Quick Actions -->
+    <string name="create_new_contact">Crear nuevo contacto</string>
+    <string name="add_to_contact">Añadir a un contacto</string>
+    <string name="send_message">Enviar un mensaje</string>
+
+    <!-- Actions -->
+    <string name="call">Llamar</string>
+    <string name="message">Mensaje</string>
+    <string name="history">Historial</string>
+    <string name="cancel">CANCELAR</string>
+    <string name="save">Guardar</string>
+    <string name="delete">ELIMINAR</string>
+    <string name="share">Compartir</string>
+    <string name="block">Bloquear</string>
+    <string name="unblock">Desbloquear</string>
+    <string name="answer">Responder</string>
+    <string name="end_call">Finalizar</string>
+
+    <!-- Call Screen -->
+    <string name="ongoing_call">Llamada en curso</string>
+    <string name="dialing">Marcando...</string>
+    <string name="incoming_call_status">Llamada entrante</string>
+    <string name="connecting">Conectando...</string>
+    <string name="on_hold">En espera</string>
+    <string name="disconnected">Desconectada</string>
+    <string name="unknown">Desconocido</string>
+
+    <!-- Misc -->
+    <string name="call_log_permission_required">Se requiere permiso del registro de llamadas</string>
+
+    <!-- Contacts Feature -->
+    <string name="add_to_contacts">Añadir a contactos</string>
+    <string name="name_label">Nombre</string>
+    <string name="phone_label">Teléfono</string>
+    <string name="saving_to_device_only">Guardando solo en el dispositivo</string>
+    <string name="more_details">Más detalles</string>
+    <string name="import_contacts">Importar contactos</string>
+    <string name="export_contacts">Exportar contactos</string>
+    <string name="no_favorites_yet">Aún no hay favoritos</string>
+    <string name="duplicate_number">Número duplicado</string>
+    <string name="duplicate_number_warning">Un contacto llamado \"%1$s\" ya tiene este número. ¿Desea guardar de todos modos?</string>
+    <string name="save_anyway">GUARDAR DE TODOS MODOS</string>
+    <string name="delete_contact_title">¿Eliminar contacto?</string>
+    <string name="delete_contact_text">Este contacto se eliminará permanentemente de sus contactos.</string>
+    <string name="block_confirmation">Las llamadas y mensajes de este contacto serán bloqueados.</string>
+    <string name="unblock_confirmation">Las llamadas y mensajes de este contacto ya no serán bloqueados.</string>
+    <string name="export_success">Contactos exportados con éxito</string>
+    <string name="export_failed">Error al exportar</string>
+    <string name="importing_from">Importando desde %1$s...</string>
+    <string name="import_success">%1$d contactos importados con éxito</string>
+    <string name="import_failed">Error al importar</string>
+
+    <!-- Settings Feature -->
+    <string name="call_settings_header">AJUSTES DE LLAMADA</string>
+    <string name="contact_display_header">PANTALLA DE CONTACTOS</string>
+    <string name="appearance_header">APARIENCIA</string>
+    <string name="about_header">ACERCA DE</string>
+    <string name="system_header">SISTEMA</string>
+    <string name="default_phone_app">Aplicación de teléfono predeterminada</string>
+    <string name="current_default">Predeterminada actual</string>
+    <string name="not_set_as_default">No establecida como predeterminada</string>
+    <string name="blocked_numbers">Números bloqueados</string>
+    <string name="manage_blocked_numbers">Gestionar números que has bloqueado</string>
+    <string name="no_blocked_numbers">No hay números bloqueados</string>
+    <string name="sort_by">Ordenar por</string>
+    <string name="theme">Tema</string>
+    <string name="app_version">Versión de la aplicación</string>
+    <string name="privacy_policy">Política de privacidad</string>
+    <string name="language">Idioma</string>
+    <string name="change_app_language">Cambiar idioma de la aplicación</string>
+
+    <!-- Filters -->
+    <string name="filter_all">Todos</string>
+    <string name="filter_missed">Llamada perdida</string>
+    <string name="filter_contacts">Contactos</string>
+    <string name="filter_incoming">Llamada entrante</string>
+    <string name="filter_outgoing">Llamada saliente</string>
+    <string name="filter_spam">Llamada de spam</string>
+
+    <!-- Call Announcer Feature -->
+    <string name="call_announcer">Anunciador de Llamadas</string>
+    <string name="call_announcer_settings">Ajustes del Anunciador</string>
+    <string name="enable_announcer">Activar Anunciador</string>
+    <string name="announcer_repeat">Repetición de Anuncio</string>
+    <string name="announcer_delay">Retraso entre anuncios</string>
+    <string name="announcer_message_prefix">Prefijo de Mensaje</string>
+    <string name="incoming_call_from">Llamada entrante de %1$s</string>
+    <string name="times_1">1 vez</string>
+    <string name="times_2">2 veces</string>
+    <string name="times_3">3 veces</string>
+    <string name="continuous">Continuo</string>
+
+    <!-- Call Wallpaper Feature -->
+    <string name="call_wallpaper">Fondo de Pantalla de Llamada</string>
+    <string name="select_wallpaper">Seleccionar Fondo</string>
+    <string name="preview_wallpaper">Vista previa de fondo</string>
+    <string name="apply_wallpaper">Aplicar Fondo</string>
+    <string name="custom_image">Galería</string>
+    <string name="custom_color">Color personalizado</string>
+    <string name="pick_color">Elegir color</string>
+    <string name="color_picker_title">Elegir color de fondo</string>
+    <string name="select">Seleccionar</string>
+    <string name="none_wallpaper">Ninguno (Sólido)</string>
+    <string name="wallpaper_applied">Fondo aplicado con éxito</string>
+
+    <!-- Call Analytics -->
+    <string name="call_analytics">Análisis de Llamadas</string>
+    <string name="talk_time">Tiempo de charla</string>
+    <string name="total_calls">Llamadas totales</string>
+    <string name="daily_activity">Actividad diaria</string>
+    <string name="top_contacts">Contactos principales</string>
+    <string name="calls_count">%1$d llamadas</string>
+
+    <!-- Fake Call Setup -->
+    <string name="caller_info">Información del llamante</string>
+    <string name="schedule_timer">Programar temporizador</string>
+    <string name="sec_10">10 Seg</string>
+    <string name="sec_30">30 Seg</string>
+    <string name="min_1">1 Min</string>
+    <string name="min_5">5 Min</string>
+    <string name="test_call">Llamada de prueba</string>
+
+    <!-- Headers -->
+    <string name="general_header">GENERAL</string>
+    <string name="announcement_settings_header">AJUSTES DE ANUNCIO</string>
+    <string name="blink_speed_header">VELOCIDAD DE PARPADEO</string>
+
+    <!-- Flash Alert Feature -->
+    <string name="flash_alert">Alerta de Flash</string>
+    <string name="flash_alert_settings">Ajustes de Alerta de Flash</string>
+    <string name="enable_flash_alert">Activar Alerta de Flash</string>
+    <string name="blink_speed">Velocidad de parpadeo</string>
+    <string name="slow">Lento</string>
+    <string name="medium">Medio</string>
+    <string name="fast">Rápido</string>
+
+    <!-- Tools Grid -->
+    <string name="tool_call_analytics">Análisis de Llamadas</string>
+    <string name="tool_call_analytics_desc">Siga su historial, duraciones y frecuencia de llamadas</string>
+    <string name="tool_fake_call">Llamada Falsa</string>
+    <string name="tool_fake_call_desc">Recibe una llamada falsa cuando la necesites</string>
+    <string name="tool_call_announcer">Anunciador de Llamadas</string>
+    <string name="tool_call_announcer_desc">Contactos SOS</string>
+    <string name="tool_flash_alert">Alerta de Flash</string>
+    <string name="tool_flash_alert_desc">Obtén una luz parpadeante para llamadas entrantes</string>
+    <string name="tool_call_wallpaper">Fondo de Pantalla de Llamada</string>
+    <string name="tool_call_wallpaper_desc">Establece un fondo personalizado para tu marcador</string>
+    <string name="tool_call_themes">Temas de Llamada</string>
+    <string name="tool_call_themes_desc">Personaliza el estilo de tu botón de llamada</string>
+    <string name="tool_set_ringtone">Establecer Tono</string>
+    <string name="tool_set_ringtone_desc">Personaliza tus sonidos de llamada</string>
+    <string name="tool_import_export">Importar/Exportar</string>
+    <string name="tool_import_export_desc">Transfiere contactos fácilmente desde y hacia tu dispositivo</string>
+    <string name="pro_label">PRO</string>
+</resources>

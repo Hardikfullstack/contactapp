@@ -1,0 +1,148 @@
+<resources>
+    <string name="app_name">Connect</string>
+
+    <!-- Onboarding -->
+    <string name="allow_permission">Izinkan Izin</string>
+    <string name="permission_description">Aktifkan izin yang diperlukan untuk melanjutkan dan mengakses semua fitur.</string>
+    <string name="smart_notifications">Notifikasi Pintar</string>
+    <string name="notifications_description">Izinkan akses untuk mengidentifikasi penelepon dan tetap terinformasi.</string>
+    <string name="enable_call_access">Aktifkan Akses Panggilan</string>
+    <string name="call_access_description">Aktifkan akses panggilan untuk mengirim pesan dari layar setelah panggilan.</string>
+    <string name="agree_continue">Setuju &amp; Lanjutkan</string>
+    <string name="privacy_policy_notice">Dengan melanjutkan, Anda menyetujui Kebijakan Privasi kami.</string>
+    <string name="select_app_language">Pilih Bahasa Aplikasi</string>
+    <string name="done">Selesai</string>
+
+    <!-- Main Screens -->
+    <string name="recents">Terbaru</string>
+    <string name="favorites">Favorit</string>
+    <string name="tools">Alat</string>
+    <string name="today">Hari ini</string>
+    <string name="yesterday">Kemarin</string>
+    <string name="older">Lebih lama</string>
+    <string name="keypad">Papan Tombol</string>
+    <string name="contacts">Kontak</string>
+    <string name="settings">Pengaturan</string>
+    <string name="phone">Telepon</string>
+    <string name="search">Cari</string>
+    <string name="no_result_found">Hasil tidak ditemukan.</string>
+
+    <!-- Call Status -->
+    <string name="incoming">Masuk</string>
+    <string name="outgoing">Keluar</string>
+    <string name="rejected">Ditolak</string>
+    <string name="missed">Tak Terjawab</string>
+
+    <!-- Keypad Quick Actions -->
+    <string name="create_new_contact">Buat kontak baru</string>
+    <string name="add_to_contact">Tambah ke kontak</string>
+    <string name="send_message">Kirim pesan</string>
+
+    <!-- Actions -->
+    <string name="call">Panggil</string>
+    <string name="message">Pesan</string>
+    <string name="history">Riwayat</string>
+    <string name="cancel">BATAL</string>
+    <string name="save">Simpan</string>
+    <string name="delete">HAPUS</string>
+
+    <!-- Contacts Feature -->
+    <string name="add_to_contacts">Tambah ke kontak</string>
+    <string name="name_label">Nama</string>
+    <string name="phone_label">Telepon</string>
+    <string name="saving_to_device_only">Menyimpan ke perangkat saja</string>
+    <string name="more_details">Lebih detail</string>
+    <string name="import_contacts">Impor Kontak</string>
+    <string name="export_contacts">Ekspor Kontak</string>
+    <string name="no_favorites_yet">Belum ada favorit</string>
+    <string name="duplicate_number">Nomor Duplikat</string>
+    <string name="duplicate_number_warning">Kontak bernama \"%1$s\" sudah memiliki nomor ini. Ingin tetap menyimpan?</string>
+    <string name="save_anyway">TETAP SIMPAN</string>
+    <string name="delete_contact_title">Hapus Kontak?</string>
+    <string name="delete_contact_text">Kontak ini akan dihapus secara permanen dari kontak Anda.</string>
+    <string name="export_success">Kontak berhasil diekspor</string>
+    <string name="export_failed">Ekspor gagal</string>
+    <string name="importing_from">Mengimpor dari %1$s...</string>
+
+    <!-- Settings Feature -->
+    <string name="call_settings_header">PENGATURAN PANGGILAN</string>
+    <string name="contact_display_header">TAMPILAN KONTAK</string>
+    <string name="appearance_header">TAMPILAN</string>
+    <string name="about_header">TENTANG</string>
+    <string name="system_header">SISTEM</string>
+    <string name="default_phone_app">Aplikasi Telepon Default</string>
+    <string name="current_default">Default saat ini</string>
+    <string name="not_set_as_default">Tidak disetel sebagai default</string>
+    <string name="blocked_numbers">Nomor Diblokir</string>
+    <string name="manage_blocked_numbers">Kelola nomor yang telah Anda blokir</string>
+    <string name="no_blocked_numbers">Tidak ada nomor yang diblokir</string>
+    <string name="sort_by">Urutkan berdasarkan</string>
+    <string name="theme">Tema</string>
+    <string name="app_version">Versi Aplikasi</string>
+    <string name="privacy_policy">Kebijakan Privasi</string>
+    <string name="language">Bahasa</string>
+    <string name="change_app_language">Ubah bahasa aplikasi</string>
+
+    <!-- Call Announcer Feature -->
+    <string name="call_announcer">Penyiar Panggilan</string>
+    <string name="call_announcer_settings">Pengaturan Penyiar</string>
+    <string name="enable_announcer">Aktifkan Penyiar Panggilan</string>
+    <string name="announcer_repeat">Pengulangan Pengumuman</string>
+    <string name="announcer_delay">Penundaan antar pengumuman</string>
+    <string name="announcer_message_prefix">Awalan Pesan</string>
+    <string name="incoming_call_from">Panggilan masuk dari %1$s</string>
+    <string name="times_1">1 kali</string>
+    <string name="times_2">2 kali</string>
+    <string name="times_3">3 kali</string>
+    <string name="continuous">Terus menerus</string>
+
+    <!-- Call Analytics -->
+    <string name="call_analytics">Analitik Panggilan</string>
+    <string name="talk_time">Waktu Bicara</string>
+    <string name="total_calls">Total Panggilan</string>
+    <string name="daily_activity">Aktivitas Harian</string>
+    <string name="top_contacts">Kontak Teratas</string>
+    <string name="calls_count">%1$d panggilan</string>
+
+    <!-- Fake Call Setup -->
+    <string name="caller_info">Informasi Penelepon</string>
+    <string name="schedule_timer">Jadwalkan Timer</string>
+    <string name="sec_10">10 Detik</string>
+    <string name="sec_30">30 Detik</string>
+    <string name="min_1">1 Menit</string>
+    <string name="min_5">5 Menit</string>
+    <string name="test_call">Panggilan Tes</string>
+
+    <!-- Headers -->
+    <string name="general_header">UMUM</string>
+    <string name="announcement_settings_header">PENGATURAN PENGUMUMAN</string>
+    <string name="blink_speed_header">KECEPATAN KEDIP</string>
+
+    <!-- Flash Alert Feature -->
+    <string name="flash_alert">Peringatan Flash</string>
+    <string name="flash_alert_settings">Pengaturan Peringatan Flash</string>
+    <string name="enable_flash_alert">Aktifkan Peringatan Flash</string>
+    <string name="blink_speed">Kecepatan Kedip</string>
+    <string name="slow">Lambat</string>
+    <string name="medium">Sedang</string>
+    <string name="fast">Cepat</string>
+
+    <!-- Tools Grid -->
+    <string name="tool_call_analytics">Analitik Panggilan</string>
+    <string name="tool_call_analytics_desc">Lacak riwayat, durasi, dan frekuensi panggilan</string>
+    <string name="tool_fake_call">Panggilan Palsu</string>
+    <string name="tool_fake_call_desc">Dapatkan panggilan palsu saat Anda butuhkan</string>
+    <string name="tool_call_announcer">Penyiar Panggilan</string>
+    <string name="tool_call_announcer_desc">Kontak SOS</string>
+    <string name="tool_flash_alert">Peringatan Flash</string>
+    <string name="tool_flash_alert_desc">Dapatkan lampu kilat untuk panggilan masuk</string>
+    <string name="tool_call_wallpaper">Wallpaper Panggilan</string>
+    <string name="tool_call_wallpaper_desc">Atur latar belakang khusus untuk dialer Anda</string>
+    <string name="tool_call_themes">Tema Panggilan</string>
+    <string name="tool_call_themes_desc">Personalisasi gaya tombol panggilan Anda</string>
+    <string name="tool_set_ringtone">Atur Nada Dering</string>
+    <string name="tool_set_ringtone_desc">Sesuaikan suara nada dering Anda</string>
+    <string name="tool_import_export">Impor/Ekspor</string>
+    <string name="tool_import_export_desc">Transfer kontak dengan mudah dari dan ke perangkat</string>
+    <string name="pro_label">PRO</string>
+</resources>
