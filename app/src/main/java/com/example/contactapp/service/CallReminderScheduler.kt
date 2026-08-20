@@ -48,6 +48,7 @@ object CallReminderScheduler {
             putExtra(CallReminderReceiver.EXTRA_CONTACT_NAME, reminder.contactName)
             putExtra(CallReminderReceiver.EXTRA_CONTACT_NUMBER, reminder.contactNumber)
             putExtra(CallReminderReceiver.EXTRA_CONTACT_PHOTO, reminder.photoUri)
+            putExtra(CallReminderReceiver.EXTRA_NOTE, reminder.note)
         }
         return PendingIntent.getBroadcast(
             context, requestCode(reminder.id), intent,

@@ -26,11 +26,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.service.FakeCallReceiver
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.theme.PrimaryGreen
+import com.example.contactapp.util.CallReliabilityUtils
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -38,12 +40,17 @@ import java.util.Calendar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FakeCallSetupScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: FakeCallSetupViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var number by remember { mutableStateOf("") }
     var selectedDelaySec by remember { mutableIntStateOf(10) }
+
+    var shakeCallerName by remember { mutableStateOf(viewModel.getShakeCallerName()) }
+    var shakeCallerNumber by remember { mutableStateOf(viewModel.getShakeCallerNumber()) }
+    var shakeEnabled by remember { mutableStateOf(viewModel.isShakeTriggerEnabled()) }
 
     val now = remember { LocalTime.now() }
     var useCustomTime by remember { mutableStateOf(false) }
@@ -180,7 +187,132 @@ fun FakeCallSetupScreen(
                         }
                     }
                 }
-                
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Quick Trigger Profile — the "Set it and Forget it" shake-to-fake-call setup.
+                // Saved once here; after that the shake listener runs in the background without
+                // the app ever needing to be opened again.
+                Text(
+                    text = stringResource(R.string.quick_trigger_profile),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                SettingsCard {
+                    Text(
+                        text = stringResource(R.string.quick_trigger_profile_desc),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedTextField(
+                        value = shakeCallerName,
+                        onValueChange = { shakeCallerName = it },
+                        label = { Text(stringResource(R.string.default_caller_name)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = shakeCallerNumber,
+                        onValueChange = { shakeCallerNumber = it },
+                        label = { Text(stringResource(R.string.default_caller_number)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+                        ),
+                        singleLine = true
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.enable_shake_trigger),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.enable_shake_trigger_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Switch(
+                            checked = shakeEnabled,
+                            onCheckedChange = { checked ->
+                                if (checked && (shakeCallerName.isBlank() || shakeCallerNumber.isBlank())) {
+                                    Toast.makeText(context, context.getString(R.string.fill_shake_profile_first), Toast.LENGTH_SHORT).show()
+                                    return@Switch
+                                }
+                                shakeEnabled = checked
+                            }
+                        )
+                    }
+
+                    if (shakeEnabled && !CallReliabilityUtils.isIgnoringBatteryOptimizations(context)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.shake_battery_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(onClick = {
+                                context.startActivity(CallReliabilityUtils.batteryOptimizationIntent(context))
+                            }) {
+                                Text(stringResource(R.string.fix))
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            if (shakeEnabled && (shakeCallerName.isBlank() || shakeCallerNumber.isBlank())) {
+                                Toast.makeText(context, context.getString(R.string.fill_shake_profile_first), Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            viewModel.saveShakeProfile(shakeCallerName, shakeCallerNumber, shakeEnabled)
+                            Toast.makeText(context, context.getString(R.string.shake_profile_saved), Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    ) {
+                        Text(text = stringResource(R.string.save_quick_trigger_profile))
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
             }
 

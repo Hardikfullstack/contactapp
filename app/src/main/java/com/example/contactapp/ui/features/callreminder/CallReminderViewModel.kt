@@ -30,13 +30,14 @@ class CallReminderViewModel @Inject constructor(
     val contacts: StateFlow<List<Contact>> = contactRepository.fetchContacts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addReminder(contact: Contact, timeMillis: Long) {
+    fun addReminder(contact: Contact, timeMillis: Long, note: String? = null) {
         val reminder = CallReminder(
             id = System.currentTimeMillis(),
             contactName = contact.name,
             contactNumber = contact.number,
             photoUri = contact.photoUri,
-            timeMillis = timeMillis
+            timeMillis = timeMillis,
+            note = note?.trim()?.ifBlank { null }
         )
         preferenceManager.setCallReminders(preferenceManager.getCallReminders() + reminder)
         CallReminderScheduler.schedule(context, reminder)

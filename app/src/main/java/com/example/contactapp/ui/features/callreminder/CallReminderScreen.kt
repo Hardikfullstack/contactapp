@@ -143,6 +143,15 @@ private fun ReminderRow(reminder: CallReminder, onCancel: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (!reminder.note.isNullOrBlank()) {
+                    Text(
+                        text = reminder.note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
             }
 
             IconButton(onClick = onCancel) {

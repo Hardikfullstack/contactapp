@@ -8,7 +8,10 @@ data class CallReminder(
     val contactName: String,
     val contactNumber: String,
     val photoUri: String?,
-    val timeMillis: Long
+    val timeMillis: Long,
+    /** Optional free-text reason for the call-back — entirely optional, defaults to null for old
+     *  persisted reminders that predate this field (Gson leaves missing fields at their default). */
+    val note: String? = null
 )
 
 object CallReminderCodec {

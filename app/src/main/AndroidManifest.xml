@@ -19,8 +19,12 @@
     <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
     <uses-permission android:name="android.permission.READ_SYNC_STATS" />
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
 
     <application
         android:name=".ContactApplication"
@@ -128,6 +132,30 @@
                 <action android:name="android.telecom.ConnectionService" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".service.ShakeDetectionService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Listens to the accelerometer to detect a shake gesture that triggers the user's own saved Fake Call profile" />
+        </service>
+
+        <receiver
+            android:name=".service.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".service.ShakeWatchdogReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

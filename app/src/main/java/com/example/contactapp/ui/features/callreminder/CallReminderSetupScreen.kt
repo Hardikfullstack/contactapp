@@ -51,6 +51,7 @@ fun CallReminderSetupScreen(
 
     var query by remember { mutableStateOf("") }
     var selectedContact by remember { mutableStateOf<Contact?>(null) }
+    var note by remember { mutableStateOf("") }
 
     val now = remember { LocalTime.now() }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
@@ -169,6 +170,29 @@ fun CallReminderSetupScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = stringResource(R.string.reminder_note_label),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                SettingsCard {
+                    OutlinedTextField(
+                        value = note,
+                        onValueChange = { note = it },
+                        placeholder = { Text(stringResource(R.string.reminder_note_placeholder)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        minLines = 2,
+                        maxLines = 4
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
             }
 
@@ -195,7 +219,7 @@ fun CallReminderSetupScreen(
                             Toast.makeText(context, context.getString(R.string.reminder_time_must_be_future), Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        viewModel.addReminder(contact, targetMillis)
+                        viewModel.addReminder(contact, targetMillis, note)
                         Toast.makeText(context, context.getString(R.string.reminder_scheduled), Toast.LENGTH_SHORT).show()
                         onBack()
                     },
