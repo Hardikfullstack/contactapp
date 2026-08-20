@@ -39,11 +39,13 @@ fun CallButtonShape.toComposeShape(): Shape = when (this) {
     CallButtonShape.CIRCLE -> CircleShape
     CallButtonShape.ROUNDED_SQUARE -> RoundedCornerShape(20.dp)
     CallButtonShape.SQUARE -> RoundedCornerShape(4.dp)
-    CallButtonShape.PILL -> RoundedCornerShape(50)
     CallButtonShape.LEAF -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 50)
-    CallButtonShape.ARCH -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 0, bottomEndPercent = 0)
     CallButtonShape.CLOVER -> scallopShape(lobes = 4, innerRatio = 0.55f)
     CallButtonShape.COOKIE -> scallopShape(lobes = 12, innerRatio = 0.86f)
+    CallButtonShape.FLOWER -> scallopShape(lobes = 6, innerRatio = 0.72f)
+    CallButtonShape.BADGE -> scallopShape(lobes = 8, innerRatio = 0.78f)
+    CallButtonShape.SUN -> scallopShape(lobes = 10, innerRatio = 0.85f)
+    CallButtonShape.STAMP -> scallopShape(lobes = 16, innerRatio = 0.92f)
 }
 
 /** Blends toward white for a soft glossy highlight on filled call buttons. */

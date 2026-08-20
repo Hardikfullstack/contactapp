@@ -53,6 +53,7 @@ fun ToolsScreen(
     onSetRingtoneClick: () -> Unit,
     onAutoReplyClick: () -> Unit,
     onKeypadClick: () -> Unit,
+    onCallReminderClick: () -> Unit,
     viewModel: ToolsViewModel = hiltViewModel()
 ) {
     val toolItems = listOf(
@@ -111,6 +112,13 @@ fun ToolsScreen(
             icon = Icons.AutoMirrored.Outlined.Chat,
             iconBackground = Color(0xFF009688),
             onClick = onAutoReplyClick
+        ),
+        ToolItem(
+            title = stringResource(R.string.tool_call_reminder),
+            description = stringResource(R.string.tool_call_reminder_desc),
+            icon = Icons.Outlined.NotificationsActive,
+            iconBackground = Color(0xFFFF5722),
+            onClick = onCallReminderClick
         )
     )
 

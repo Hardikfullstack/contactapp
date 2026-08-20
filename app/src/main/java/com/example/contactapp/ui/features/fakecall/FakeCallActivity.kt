@@ -32,14 +32,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.WindowCompat
-import coil3.compose.AsyncImage
 import com.example.contactapp.R
 import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.service.CallAnnouncerManager
@@ -51,6 +49,7 @@ import com.example.contactapp.service.SpamManager
 import com.example.contactapp.service.cancelActiveCallNotification
 import com.example.contactapp.service.postActiveCallNotification
 import com.example.contactapp.ui.components.CallWallpaperBackground
+import com.example.contactapp.ui.components.ContactAvatarImage
 import com.example.contactapp.ui.components.SwipeUpCallButton
 import com.example.contactapp.ui.components.lightened
 import com.example.contactapp.ui.components.toComposeShape
@@ -99,6 +98,7 @@ class FakeCallActivity : ComponentActivity() {
         val name = intent.getStringExtra("caller_name") ?: "Unknown"
         val number = intent.getStringExtra("caller_number") ?: "0000000000"
         val photoUri = intent.getStringExtra("caller_photo")
+        val autoAnswer = intent.getBooleanExtra(EXTRA_AUTO_ANSWER, false)
 
         // The call screen is now on screen (whether launched directly or via the
         // full-screen-intent notification) — the notification has done its job.
@@ -108,13 +108,19 @@ class FakeCallActivity : ComponentActivity() {
         // stale state/connection from a previous fake call first (see FakeCallManager.startRinging).
         FakeCallManager.startRinging(FakeCallManager.FakeCallInfo(name, number, photoUri))
 
-        // Start flashing for fake call
-        flashAlertManager.startBlinking()
-        // Telecom does not auto-ring self-managed connections — this app has to play the
-        // ringtone itself, same as it owns the incoming-call UI.
-        ringtonePlayer.startRinging(number)
-        // Same announcer behavior as a real incoming call (STATE_RINGING) — see ContactCallService.
-        callAnnouncerManager.announceCall(name)
+        if (autoAnswer) {
+            // Came from tapping Answer on the notification (FakeCallActionReceiver) — skip
+            // straight to the active state instead of ringing first just to immediately stop.
+            FakeCallManager.answerFromUi()
+        } else {
+            // Start flashing for fake call
+            flashAlertManager.startBlinking()
+            // Telecom does not auto-ring self-managed connections — this app has to play the
+            // ringtone itself, same as it owns the incoming-call UI.
+            ringtonePlayer.startRinging(number)
+            // Same announcer behavior as a real incoming call (STATE_RINGING) — see ContactCallService.
+            callAnnouncerManager.announceCall(name)
+        }
 
         setContent {
             val fakeCallState by FakeCallManager.callState.collectAsState()
@@ -173,7 +179,7 @@ class FakeCallActivity : ComponentActivity() {
             )
             val callTheme = CallTheme(
                 accentColor = CallAccentColors.findById(callAccentColorId).color,
-                buttonShape = CallButtonShape.valueOf(callButtonShapeName)
+                buttonShape = CallButtonShape.safeValueOf(callButtonShapeName)
             )
 
             val insetsController = remember { WindowCompat.getInsetsController(window, window.decorView) }
@@ -203,6 +209,10 @@ class FakeCallActivity : ComponentActivity() {
         ringtonePlayer.stopRinging()
         callAnnouncerManager.stopAnnouncing()
         cancelActiveCallNotification(this)
+    }
+
+    companion object {
+        const val EXTRA_AUTO_ANSWER = "auto_answer"
     }
 }
 
@@ -264,11 +274,9 @@ fun FakeCallContent(
                 contentAlignment = Alignment.Center
             ) {
                 if (photoUri != null) {
-                    AsyncImage(
-                        model = photoUri,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                    ContactAvatarImage(
+                        photoUri = photoUri,
+                        modifier = Modifier.fillMaxSize()
                     )
                 } else {
                     Box(

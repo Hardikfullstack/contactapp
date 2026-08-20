@@ -37,3 +37,7 @@ app/release/
 *.dm
 baseline-prof.txt
 logcat_dump.txt
+
+# Artifacts & Plans
+.artifacts/
+*.artifact.md

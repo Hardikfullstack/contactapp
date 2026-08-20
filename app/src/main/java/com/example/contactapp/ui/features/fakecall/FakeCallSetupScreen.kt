@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,70 +61,94 @@ fun FakeCallSetupScreen(
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
                 .statusBarsPadding()
-                .verticalScroll(scrollState)
         ) {
             CommonHeader(
                 title = stringResource(R.string.fake_call_setup),
                 onBackClick = onBack
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(scrollState)
+            ) {
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // Caller Info Section
-            Text(
-                text = stringResource(R.string.caller_info),
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            SettingsCard {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.caller_name)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
+                // Caller Info Section
+                Text(
+                    text = stringResource(R.string.caller_info),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                OutlinedTextField(
-                    value = number,
-                    onValueChange = { number = it },
-                    label = { Text(stringResource(R.string.caller_number)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+                SettingsCard {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text(stringResource(R.string.caller_name)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
                     )
+
+                    OutlinedTextField(
+                        value = number,
+                        onValueChange = { number = it },
+                        label = { Text(stringResource(R.string.caller_number)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Timer Section
+                Text(
+                    text = stringResource(R.string.schedule_timer),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                SettingsCard {
+                    val options = listOf(
+                        stringResource(R.string.sec_10) to 10,
+                        stringResource(R.string.sec_30) to 30,
+                        stringResource(R.string.min_1) to 60,
+                        stringResource(R.string.min_5) to 300
+                    )
 
-            // Timer Section
-            Text(
-                text = stringResource(R.string.schedule_timer),
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+                    options.forEach { (label, value) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = !useCustomTime && selectedDelaySec == value,
+                                onClick = {
+                                    selectedDelaySec = value
+                                    useCustomTime = false
+                                }
+                            )
+                            Text(text = label, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    }
 
-            SettingsCard {
-                val options = listOf(
-                    stringResource(R.string.sec_10) to 10,
-                    stringResource(R.string.sec_30) to 30,
-                    stringResource(R.string.min_1) to 60,
-                    stringResource(R.string.min_5) to 300
-                )
-
-                options.forEach { (label, value) ->
+                    // Custom time-of-day option — schedules for that clock time today, or tomorrow
+                    // if that time has already passed.
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -131,73 +156,60 @@ fun FakeCallSetupScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = !useCustomTime && selectedDelaySec == value,
+                            selected = useCustomTime,
                             onClick = {
-                                selectedDelaySec = value
-                                useCustomTime = false
+                                useCustomTime = true
+                                showTimePicker = true
                             }
                         )
-                        Text(text = label, modifier = Modifier.padding(start = 12.dp))
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
-                }
-
-                // Custom time-of-day option — schedules for that clock time today, or tomorrow
-                // if that time has already passed.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = useCustomTime,
-                        onClick = {
+                        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                            Text(text = stringResource(R.string.custom_time))
+                            if (useCustomTime) {
+                                Text(
+                                    text = formatClockTime(customHour, customMinute),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        IconButton(onClick = {
                             useCustomTime = true
                             showTimePicker = true
+                        }) {
+                            Icon(Icons.Default.Schedule, contentDescription = stringResource(R.string.pick_time))
                         }
-                    )
-                    Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                        Text(text = stringResource(R.string.custom_time))
-                        if (useCustomTime) {
-                            Text(
-                                text = formatClockTime(customHour, customMinute),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    IconButton(onClick = {
-                        useCustomTime = true
-                        showTimePicker = true
-                    }) {
-                        Icon(Icons.Default.Schedule, contentDescription = stringResource(R.string.pick_time))
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(32.dp))
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Button(
-                onClick = {
-                    val delaySec = if (useCustomTime) secondsUntilClockTime(customHour, customMinute) else selectedDelaySec
-                    val scheduledMsg = if (useCustomTime) {
-                        context.getString(R.string.call_scheduled_at, formatClockTime(customHour, customMinute))
-                    } else {
-                        context.getString(R.string.call_scheduled, "$selectedDelaySec seconds")
-                    }
-                    val testCallName = context.getString(R.string.test_call)
-                    scheduleFakeCall(context, name.ifBlank { testCallName }, number.ifBlank { "1234567890" }, delaySec, scheduledMsg)
-                    onBack()
-                },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .imePadding()
                     .padding(24.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
             ) {
-                Text(text = stringResource(R.string.schedule_call), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = {
+                        val delaySec = if (useCustomTime) secondsUntilClockTime(customHour, customMinute) else selectedDelaySec
+                        val scheduledMsg = if (useCustomTime) {
+                            context.getString(R.string.call_scheduled_at, formatClockTime(customHour, customMinute))
+                        } else {
+                            context.getString(R.string.call_scheduled, "$selectedDelaySec seconds")
+                        }
+                        val testCallName = context.getString(R.string.test_call)
+                        scheduleFakeCall(context, name.ifBlank { testCallName }, number.ifBlank { "1234567890" }, delaySec, scheduledMsg)
+                        onBack()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                ) {
+                    Text(text = stringResource(R.string.schedule_call), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

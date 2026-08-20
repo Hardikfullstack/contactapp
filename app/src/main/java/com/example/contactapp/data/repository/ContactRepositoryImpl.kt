@@ -27,6 +27,22 @@ class ContactRepositoryImpl @Inject constructor(
 
     private val gson = Gson()
 
+    /**
+     * The Google account new/restored contacts get attached to, so they're actually syncable
+     * (and so a contact can later receive data — like a profile photo — set on the Google side).
+     * Without GET_ACCOUNTS granted, AccountManager can throw or silently return no accounts;
+     * either way this must not crash contact creation — it should just fall back to null, which
+     * ContentProviderOperation treats as a local-only, non-syncing contact.
+     */
+    private fun findPrimaryAccount(): android.accounts.Account? {
+        return try {
+            val accounts = AccountManager.get(context).accounts
+            accounts.find { it.type == "com.google" } ?: accounts.firstOrNull()
+        } catch (e: SecurityException) {
+            null
+        }
+    }
+
     override fun fetchContacts(): Flow<List<Contact>> = contactFlow {
         queryContacts(null, null)
     }
@@ -198,10 +214,7 @@ class ContactRepositoryImpl @Inject constructor(
     private suspend fun restoreToSystem(detailed: DetailedContact) {
         val ops = ArrayList<ContentProviderOperation>()
 
-        // Find primary account again or null
-        val accountManager = AccountManager.get(context)
-        val accounts = accountManager.accounts
-        val primaryAccount = accounts.find { it.type == "com.google" } ?: accounts.firstOrNull()
+        val primaryAccount = findPrimaryAccount()
 
         ops.add(ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
             .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, primaryAccount?.type)
@@ -333,9 +346,7 @@ class ContactRepositoryImpl @Inject constructor(
 
     override suspend fun saveContact(name: String, number: String) {
         withContext(Dispatchers.IO) {
-            val accountManager = AccountManager.get(context)
-            val accounts = accountManager.accounts
-            val primaryAccount = accounts.find { it.type == "com.google" } ?: accounts.firstOrNull()
+            val primaryAccount = findPrimaryAccount()
 
             val ops = ArrayList<ContentProviderOperation>()
 

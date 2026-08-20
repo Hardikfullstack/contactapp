@@ -23,15 +23,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil3.compose.AsyncImage
 import com.example.contactapp.R
 import com.example.contactapp.ui.components.CommonHeader
+import com.example.contactapp.ui.components.ContactAvatarImage
 import com.example.contactapp.ui.components.HeaderActionButton
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.getAvatarColor
@@ -396,11 +395,9 @@ fun TopCallerItem(caller: TopCaller) {
             contentAlignment = Alignment.Center
         ) {
             if (caller.photoUri != null) {
-                AsyncImage(
-                    model = caller.photoUri,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                ContactAvatarImage(
+                    photoUri = caller.photoUri,
+                    modifier = Modifier.fillMaxSize()
                 )
             } else {
                 Text(

@@ -226,11 +226,39 @@
     <string name="shape_circle">Circle</string>
     <string name="shape_rounded_square">Rounded Square</string>
     <string name="shape_square">Square</string>
-    <string name="shape_pill">Pill</string>
     <string name="shape_leaf">Leaf</string>
-    <string name="shape_arch">Arch</string>
     <string name="shape_clover">Clover</string>
     <string name="shape_cookie">Cookie</string>
+    <string name="shape_flower">Flower</string>
+    <string name="shape_badge">Badge</string>
+    <string name="shape_sun">Sun</string>
+    <string name="shape_stamp">Stamp</string>
+
+    <string name="color_sage">Sage</string>
+    <string name="color_dusty_rose">Dusty Rose</string>
+    <string name="color_sky_blue">Sky Blue</string>
+    <string name="color_peach">Peach</string>
+    <string name="color_lavender_mist">Lavender Mist</string>
+
+    <string name="color_category_greens">GREENS</string>
+    <string name="color_category_blues">BLUES</string>
+    <string name="color_category_purples">PURPLES</string>
+    <string name="color_category_reds_pinks">REDS &amp; PINKS</string>
+    <string name="color_category_warm">WARM &amp; ORANGES</string>
+    <string name="color_category_neutrals">NEUTRALS</string>
+    <string name="premium_tones">PREMIUM TONES</string>
+
+    <string name="color_light_mint">Light Mint</string>
+    <string name="color_deep_mint">Deep Mint</string>
+    <string name="color_cloud_blue">Cloud Blue</string>
+    <string name="color_steel_blue">Steel Blue</string>
+    <string name="color_pale_peach">Pale Peach</string>
+    <string name="color_warm_coral">Warm Coral</string>
+    <string name="color_soft_lavender">Soft Lavender</string>
+    <string name="color_rich_plum">Rich Plum</string>
+    <string name="color_linen">Linen</string>
+    <string name="color_terracotta">Terracotta</string>
+
     <string name="premium">Premium</string>
     <string name="tool_set_ringtone">Set Ringtone</string>
     <string name="tool_set_ringtone_desc">Customize your ringtone sounds</string>
@@ -261,4 +289,28 @@
     <string name="decline_call_short">Decline</string>
     <string name="spam_warning">Suspected Spam</string>
     <string name="pro_label">PRO</string>
+
+    <!-- Call Reminder -->
+    <string name="tool_call_reminder">Call Reminder</string>
+    <string name="tool_call_reminder_desc">Schedule a reminder to call someone back later</string>
+    <string name="call_reminders">Call Reminders</string>
+    <string name="new_call_reminder">New Call Reminder</string>
+    <string name="add_reminder">Add Reminder</string>
+    <string name="no_call_reminders">No reminders scheduled</string>
+    <string name="cancel_reminder">Cancel Reminder</string>
+    <string name="select_contact">SELECT CONTACT</string>
+    <string name="search_contacts">Search contacts</string>
+    <string name="no_contacts_found">No contacts found</string>
+    <string name="selected_contact_label">Selected: %1$s</string>
+    <string name="pick_date_time">DATE &amp; TIME</string>
+    <string name="pick_date">Pick a date</string>
+    <string name="schedule_reminder">Schedule Reminder</string>
+    <string name="select_contact_first">Please select a contact</string>
+    <string name="pick_date_first">Please pick a date</string>
+    <string name="reminder_time_must_be_future">Pick a time in the future</string>
+    <string name="reminder_scheduled">Call reminder scheduled</string>
+    <string name="call_now">Call Now</string>
+    <string name="call_reminder_notification_channel">Call Reminders</string>
+    <string name="call_reminder_notification_channel_desc">Notifies you when it\'s time to call someone back</string>
+    <string name="call_reminder_notification_title">Time to call %1$s</string>
 </resources>

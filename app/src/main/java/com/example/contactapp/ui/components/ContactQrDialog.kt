@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import coil3.compose.AsyncImage
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.util.getAvatarColor
 
@@ -55,11 +54,9 @@ fun ContactQrDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     if (contact.photoUri != null) {
-                        AsyncImage(
-                            model = contact.photoUri,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                        ContactAvatarImage(
+                            photoUri = contact.photoUri,
+                            modifier = Modifier.fillMaxSize()
                         )
                     } else {
                         Text(

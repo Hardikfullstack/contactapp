@@ -184,6 +184,20 @@ class PreferenceManager @Inject constructor(
         _preferenceUpdateEvent.value = System.currentTimeMillis()
     }
 
+    val callRemindersFlow: Flow<List<CallReminder>> = _preferenceUpdateEvent
+        .map { getCallReminders() }
+        .distinctUntilChanged()
+        .onStart { emit(getCallReminders()) }
+
+    fun getCallReminders(): List<CallReminder> {
+        return CallReminderCodec.decode(sharedPreferences.getString(KEY_CALL_REMINDERS, null))
+    }
+
+    fun setCallReminders(reminders: List<CallReminder>) {
+        sharedPreferences.edit().putString(KEY_CALL_REMINDERS, CallReminderCodec.encode(reminders)).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
     companion object {
         private const val PREF_NAME = "contact_app_prefs"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
@@ -200,5 +214,6 @@ class PreferenceManager @Inject constructor(
         private const val KEY_AUTO_REPLY_MESSAGE = "auto_reply_message"
         private const val DEFAULT_AUTO_REPLY_MESSAGE = "Can't talk right now, I'll call you back."
         private const val KEY_SPAM_NUMBERS = "spam_numbers"
+        private const val KEY_CALL_REMINDERS = "call_reminders"
     }
 }

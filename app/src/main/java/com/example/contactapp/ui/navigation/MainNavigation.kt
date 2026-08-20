@@ -39,6 +39,8 @@ import com.example.contactapp.ui.features.callthemes.CallThemeScreen
 import com.example.contactapp.ui.features.ringtone.RingtoneScreen
 import com.example.contactapp.ui.features.autoreply.AutoReplyScreen
 import com.example.contactapp.ui.features.fakecall.FakeCallSetupScreen
+import com.example.contactapp.ui.features.callreminder.CallReminderScreen
+import com.example.contactapp.ui.features.callreminder.CallReminderSetupScreen
 import com.example.contactapp.ui.features.onboarding.LanguageSelectionScreen
 import com.example.contactapp.ui.components.CommonBottomBar
 import com.example.contactapp.ui.components.BottomBarActionItem
@@ -74,6 +76,8 @@ sealed class MainScreen(
     }
     object AutoReply : MainScreen("auto_reply")
     object FakeCallSetup : MainScreen("fake_call_setup")
+    object CallReminder : MainScreen("call_reminder")
+    object CallReminderSetup : MainScreen("call_reminder_setup")
 }
 
 @Composable
@@ -176,7 +180,8 @@ fun MainNavigation(preferenceManager: PreferenceManager) {
                     onCallThemesClick = { navController.navigate(MainScreen.CallThemes.route) },
                     onSetRingtoneClick = { navController.navigate(MainScreen.Ringtone.route) },
                     onAutoReplyClick = { navController.navigate(MainScreen.AutoReply.route) },
-                    onKeypadClick = { navController.navigate(MainScreen.Keypad.route) }
+                    onKeypadClick = { navController.navigate(MainScreen.Keypad.route) },
+                    onCallReminderClick = { navController.navigate(MainScreen.CallReminder.route) }
                 )
             }
             composable(MainScreen.Keypad.route) { 
@@ -252,6 +257,17 @@ fun MainNavigation(preferenceManager: PreferenceManager) {
             }
             composable(MainScreen.FakeCallSetup.route) {
                 FakeCallSetupScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.CallReminder.route) {
+                CallReminderScreen(
+                    onBack = { navController.popBackStack() },
+                    onAddReminder = { navController.navigate(MainScreen.CallReminderSetup.route) }
+                )
+            }
+            composable(MainScreen.CallReminderSetup.route) {
+                CallReminderSetupScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
