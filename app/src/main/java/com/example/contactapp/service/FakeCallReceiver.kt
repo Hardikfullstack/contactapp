@@ -21,6 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -57,11 +58,6 @@ class FakeCallReceiver : BroadcastReceiver() {
         val photoUri = intent.getStringExtra("caller_photo")
         Log.d(TAG, "onReceive: alarm fired for '$name' ($number)")
 
-        scope.launch {
-            val status = spamManager.checkSpamStatus(number)
-            deliverAsNotification(context, name, number, photoUri, status.isSpam())
-        }
-
         try {
             deliverAsTelecomCall(context, name, number, photoUri)
             Log.d(TAG, "onReceive: addNewIncomingCall did not throw (this only means the REQUEST was " +
@@ -70,11 +66,38 @@ class FakeCallReceiver : BroadcastReceiver() {
         } catch (e: Exception) {
             Log.e(TAG, "onReceive: deliverAsTelecomCall FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
         }
+
+        // A plain BroadcastReceiver only gets elevated process priority while onReceive() is
+        // actually running — the instant it returns, this process is eligible to be
+        // deprioritized/frozen again. Telecom's follow-up call into
+        // FakeCallConnectionService.onCreateIncomingConnection() is a SEPARATE, asynchronous
+        // binder transaction that happens after addNewIncomingCall() above returns, so without
+        // goAsync() holding that priority a little longer, an aggressive OEM process manager can
+        // freeze this process in the gap and silently drop Telecom's callback before it ever
+        // reaches app code — indistinguishable from Telecom rejecting the call outright.
+        val pendingResult = goAsync()
+        scope.launch {
+            try {
+                val status = spamManager.checkSpamStatus(number)
+                deliverAsNotification(context, name, number, photoUri, status.isSpam())
+                delay(2000L)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 
     private fun deliverAsTelecomCall(context: Context, name: String, number: String, photoUri: String?) {
         val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
         FakeCallConnectionService.registerPhoneAccount(context)
+
+        val handle = FakeCallConnectionService.phoneAccountHandle(context)
+        val registeredAccount = telecomManager.getPhoneAccount(handle)
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        Log.d(TAG, "deliverAsTelecomCall: account registered=${registeredAccount != null}, " +
+            "enabled=${registeredAccount?.isEnabled}, " +
+            "ignoringBatteryOptimizations=${powerManager.isIgnoringBatteryOptimizations(context.packageName)}, " +
+            "manufacturer=${Build.MANUFACTURER}, sdk=${Build.VERSION.SDK_INT}")
 
         val callInfo = Bundle().apply {
             putString(FakeCallConnectionService.EXTRA_CALLER_NAME, name)
@@ -103,7 +126,15 @@ class FakeCallReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val answerIntent = Intent(context, FakeCallActionReceiver::class.java).apply { action = FakeCallActionReceiver.ACTION_ANSWER }
+        // FakeCallActionReceiver can't rely on FakeCallManager already being seeded (that only
+        // happens once FakeCallActivity itself has launched) — the notification action buttons
+        // must be able to fire before the activity ever exists, so the caller info rides along.
+        val answerIntent = Intent(context, FakeCallActionReceiver::class.java).apply {
+            action = FakeCallActionReceiver.ACTION_ANSWER
+            putExtra("caller_name", name)
+            putExtra("caller_number", number)
+            putExtra("caller_photo", photoUri)
+        }
         val answerPendingIntent = PendingIntent.getBroadcast(
             context, 1, answerIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

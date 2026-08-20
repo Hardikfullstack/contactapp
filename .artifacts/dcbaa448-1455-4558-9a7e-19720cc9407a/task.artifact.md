@@ -1,17 +1,12 @@
-- [x] **Infrastructure & Manifest**
-    - [x] Update `AndroidManifest.xml` with permissions and new services
-    - [x] Add strings for spam and notification actions in `strings.xml`
-- [x] **Spam Management**
-    - [x] Implement `SpamManager.kt` with local blacklist support
-    - [/] Update `CallLogRepository` to support manual spam marking
-- [x] **Notification Management**
-    - [x] Implement `CallNotificationManager.kt`
-    - [x] Add "Answer" and "Decline" actions to incoming call notification
-- [x] **Telecom Services**
-    - [x] Implement `ContactCallScreeningService.kt`
-    - [x] Enhance `ContactCallService.kt` with notification and state logic
-- [x] **UI Enhancements**
-    - [x] Update `InCallActivity.kt` for spam detection and task removal
-    - [x] Update `InCallScreen.kt` to show spam warnings and handle new actions
+- [x] **Infrastructure**
+    - [x] Update `CallAccentColor` to include `categoryResId` in `CallThemes.kt`
+    - [x] Add new category and color strings in `strings.xml`
+- [x] **Data Reorganization**
+    - [x] Reorganize `CallAccentColors.all` into categorized groups in `CallThemes.kt`
+    - [x] Add new Shaded Tones (Light/Deep pairs)
+- [x] **UI Implementation**
+    - [x] Implement category headers in `CallThemeScreen.kt` using `GridItemSpan`
+    - [x] Update `ColorSwatch` or grid logic if needed
 - [x] **Verification**
-    - [x] Verify build and basic calling lifecycle
+    - [x] Verify build passes
+    - [x] Manual verification of headers and grouped colors

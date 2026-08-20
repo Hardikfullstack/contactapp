@@ -20,14 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.example.contactapp.R
 import com.example.contactapp.domain.model.CallLogItem
 import com.example.contactapp.domain.model.CallType
@@ -66,11 +64,9 @@ fun CallItem(
                     modifier = Modifier.size(24.dp)
                 )
             } else if (call.photoUri != null) {
-                AsyncImage(
-                    model = call.photoUri,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                ContactAvatarImage(
+                    photoUri = call.photoUri,
+                    modifier = Modifier.fillMaxSize()
                 )
             } else if (hasContactName) {
                 Text(

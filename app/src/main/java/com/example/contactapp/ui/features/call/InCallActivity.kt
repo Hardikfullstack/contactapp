@@ -95,7 +95,7 @@ class InCallActivity : ComponentActivity() {
             )
             val callTheme = CallTheme(
                 accentColor = CallAccentColors.findById(callAccentColorId).color,
-                buttonShape = CallButtonShape.valueOf(callButtonShapeName)
+                buttonShape = CallButtonShape.safeValueOf(callButtonShapeName)
             )
 
             LaunchedEffect(callState) {

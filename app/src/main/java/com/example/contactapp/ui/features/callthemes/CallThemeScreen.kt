@@ -5,8 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,12 +35,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
+import com.example.contactapp.ui.components.CallWallpaperBackground
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.lightened
 import com.example.contactapp.ui.components.toComposeShape
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.CallAccentColor
 import com.example.contactapp.util.CallButtonShape
+import com.example.contactapp.util.WallpaperSelection
 
 @Composable
 fun CallThemeScreen(
@@ -46,6 +51,9 @@ fun CallThemeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val selectedColor = com.example.contactapp.util.CallAccentColors.findById(uiState.selectedColorId)
+    val wallpaperSelection by viewModel.wallpaperSelectionFlow.collectAsState(
+        initial = viewModel.getCurrentWallpaperSelection()
+    )
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         Column(
@@ -59,7 +67,11 @@ fun CallThemeScreen(
                 onBackClick = onBack
             )
 
-            LivePreview(accentColor = selectedColor.color, shape = uiState.selectedShape)
+            LivePreview(
+                accentColor = selectedColor.color,
+                shape = uiState.selectedShape,
+                wallpaperSelection = wallpaperSelection
+            )
 
             Text(
                 text = stringResource(R.string.button_shape),
@@ -69,40 +81,23 @@ fun CallThemeScreen(
                 modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 12.dp)
             )
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                viewModel.shapes.chunked(4).forEach { rowShapes ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        rowShapes.forEach { shape ->
-                            ShapeOption(
-                                shape = shape,
-                                isSelected = uiState.selectedShape == shape,
-                                accentColor = selectedColor.color,
-                                onClick = { viewModel.selectShape(shape) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        repeat(4 - rowShapes.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
+                lazyItems(viewModel.shapes) { shape ->
+                    ShapeOption(
+                        shape = shape,
+                        isSelected = uiState.selectedShape == shape,
+                        accentColor = selectedColor.color,
+                        onClick = { viewModel.selectShape(shape) },
+                        modifier = Modifier.width(96.dp)
+                    )
                 }
             }
 
-            Text(
-                text = stringResource(R.string.accent_color),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 4.dp)
-            )
+            val groupedColors = viewModel.colors.groupBy { it.categoryResId }
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
@@ -111,13 +106,25 @@ fun CallThemeScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(viewModel.colors) { accentColor ->
-                    ColorSwatch(
-                        accentColor = accentColor,
-                        shape = uiState.selectedShape.toComposeShape(),
-                        isSelected = uiState.selectedColorId == accentColor.id,
-                        onClick = { viewModel.selectColor(accentColor.id) }
-                    )
+                groupedColors.forEach { (categoryResId, colorsInCategory) ->
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = stringResource(categoryResId),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                        )
+                    }
+
+                    items(colorsInCategory) { accentColor ->
+                        ColorSwatch(
+                            accentColor = accentColor,
+                            shape = uiState.selectedShape.toComposeShape(),
+                            isSelected = uiState.selectedColorId == accentColor.id,
+                            onClick = { viewModel.selectColor(accentColor.id) }
+                        )
+                    }
                 }
             }
         }
@@ -125,7 +132,7 @@ fun CallThemeScreen(
 }
 
 @Composable
-private fun LivePreview(accentColor: Color, shape: CallButtonShape) {
+private fun LivePreview(accentColor: Color, shape: CallButtonShape, wallpaperSelection: WallpaperSelection) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -133,12 +140,17 @@ private fun LivePreview(accentColor: Color, shape: CallButtonShape) {
         shape = RoundedCornerShape(24.dp),
         color = Color(0xFF1A1A1A)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Box {
+            // Shows the same background the real call screen will use — falls back to the
+            // Surface's own dark color above when no wallpaper is selected.
+            CallWallpaperBackground(selection = wallpaperSelection, modifier = Modifier.matchParentSize())
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             Box(
                 modifier = Modifier
                     .size(72.dp)
@@ -176,6 +188,7 @@ private fun LivePreview(accentColor: Color, shape: CallButtonShape) {
                     Icon(Icons.Default.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
                 }
             }
+            }
         }
     }
 }
@@ -192,11 +205,13 @@ private fun ShapeOption(
         CallButtonShape.CIRCLE -> stringResource(R.string.shape_circle)
         CallButtonShape.ROUNDED_SQUARE -> stringResource(R.string.shape_rounded_square)
         CallButtonShape.SQUARE -> stringResource(R.string.shape_square)
-        CallButtonShape.PILL -> stringResource(R.string.shape_pill)
         CallButtonShape.LEAF -> stringResource(R.string.shape_leaf)
-        CallButtonShape.ARCH -> stringResource(R.string.shape_arch)
         CallButtonShape.CLOVER -> stringResource(R.string.shape_clover)
         CallButtonShape.COOKIE -> stringResource(R.string.shape_cookie)
+        CallButtonShape.FLOWER -> stringResource(R.string.shape_flower)
+        CallButtonShape.BADGE -> stringResource(R.string.shape_badge)
+        CallButtonShape.SUN -> stringResource(R.string.shape_sun)
+        CallButtonShape.STAMP -> stringResource(R.string.shape_stamp)
     }
 
     Surface(

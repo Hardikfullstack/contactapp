@@ -156,11 +156,32 @@
     <!-- Fake Call Setup -->
     <string name="caller_info">Información del llamante</string>
     <string name="schedule_timer">Programar temporizador</string>
-    <string name="sec_10">10 Seg</string>
-    <string name="sec_30">30 Seg</string>
-    <string name="min_1">1 Min</string>
-    <string name="min_5">5 Min</string>
-    <string name="test_call">Llamada de prueba</string>
+    <string name="shape_circle">Círculo</string>
+    <string name="shape_rounded_square">Cuadrado redondeado</string>
+    <string name="shape_square">Cuadrado</string>
+    <string name="shape_leaf">Hoja</string>
+    <string name="shape_clover">Trébol</string>
+    <string name="shape_cookie">Galleta</string>
+    <string name="shape_flower">Flor</string>
+    <string name="shape_badge">Insignia</string>
+    <string name="shape_sun">Sol</string>
+    <string name="shape_stamp">Sello</string>
+
+    <string name="standard_tones">TONOS ESTÁNDAR</string>
+    <string name="soft_shades">TONOS SUAVES</string>
+    <string name="shaded_tones">TONOS SOMBREADOS</string>
+    <string name="premium_tones">TONOS PREMIUM</string>
+
+    <string name="color_light_mint">Menta clara</string>
+    <string name="color_deep_mint">Menta profunda</string>
+    <string name="color_cloud_blue">Azul nube</string>
+    <string name="color_steel_blue">Azul acero</string>
+    <string name="color_pale_peach">Melocotón pálido</string>
+    <string name="color_warm_coral">Coral cálido</string>
+    <string name="color_soft_lavender">Lavanda suave</string>
+    <string name="color_rich_plum">Ciruela rica</string>
+    <string name="color_linen">Lino</string>
+    <string name="color_terracotta">Terracota</string>
 
     <!-- Headers -->
     <string name="general_header">GENERAL</string>

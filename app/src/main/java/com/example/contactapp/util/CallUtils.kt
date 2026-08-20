@@ -37,14 +37,19 @@ object CallUtils {
                     val uri = Uri.parse("tel:$number")
                     telecomManager.placeCall(uri, null)
                 } else {
+                    // FLAG_ACTIVITY_NEW_TASK is required when this is called from a non-Activity
+                    // context (e.g. a notification action's BroadcastReceiver, like the Call
+                    // Reminder "Call Now" action) — harmless when called from an Activity too.
                     val intent = Intent(Intent.ACTION_CALL).apply {
                         data = Uri.parse("tel:$number")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     context.startActivity(intent)
                 }
             } else {
                 val intent = Intent(Intent.ACTION_DIAL).apply {
                     data = Uri.parse("tel:$number")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(intent)
             }

@@ -48,7 +48,11 @@ fun PermissionScreen(
         Manifest.permission.WRITE_CONTACTS,
         Manifest.permission.CALL_PHONE,
         Manifest.permission.READ_CALL_LOG,
-        Manifest.permission.WRITE_CALL_LOG
+        Manifest.permission.WRITE_CALL_LOG,
+        // Without this, AccountManager.accounts can't see the user's Google account, so every
+        // contact this app creates falls back to a local-only (non-syncable) account — it can
+        // never receive data like a profile photo from Google no matter how often it's synced.
+        Manifest.permission.GET_ACCOUNTS
     ).apply {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(Manifest.permission.POST_NOTIFICATIONS)

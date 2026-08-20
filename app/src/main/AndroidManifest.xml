@@ -105,6 +105,21 @@
             android:enabled="true"
             android:exported="false" />
 
+        <receiver
+            android:name=".service.FakeCallHangupReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.CallReminderReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.CallReminderActionReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
         <service
             android:name=".service.FakeCallConnectionService"
             android:exported="true"
