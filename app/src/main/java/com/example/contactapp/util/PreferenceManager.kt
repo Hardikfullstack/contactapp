@@ -198,6 +198,28 @@ class PreferenceManager @Inject constructor(
         _preferenceUpdateEvent.value = System.currentTimeMillis()
     }
 
+    fun isShakeTriggerEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_SHAKE_TRIGGER_ENABLED, false)
+    }
+
+    fun setShakeTriggerEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_SHAKE_TRIGGER_ENABLED, enabled).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun getShakeCallerName(): String = sharedPreferences.getString(KEY_SHAKE_CALLER_NAME, "") ?: ""
+
+    fun getShakeCallerNumber(): String = sharedPreferences.getString(KEY_SHAKE_CALLER_NUMBER, "") ?: ""
+
+    /** The "Default Caller" saved once from the Quick Trigger Profile section — name+number are always set together. */
+    fun setShakeCallerProfile(name: String, number: String) {
+        sharedPreferences.edit()
+            .putString(KEY_SHAKE_CALLER_NAME, name)
+            .putString(KEY_SHAKE_CALLER_NUMBER, number)
+            .apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
     companion object {
         private const val PREF_NAME = "contact_app_prefs"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
@@ -215,5 +237,8 @@ class PreferenceManager @Inject constructor(
         private const val DEFAULT_AUTO_REPLY_MESSAGE = "Can't talk right now, I'll call you back."
         private const val KEY_SPAM_NUMBERS = "spam_numbers"
         private const val KEY_CALL_REMINDERS = "call_reminders"
+        private const val KEY_SHAKE_TRIGGER_ENABLED = "shake_trigger_enabled"
+        private const val KEY_SHAKE_CALLER_NAME = "shake_caller_name"
+        private const val KEY_SHAKE_CALLER_NUMBER = "shake_caller_number"
     }
 }

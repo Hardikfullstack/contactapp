@@ -313,4 +313,22 @@
     <string name="call_reminder_notification_channel">Call Reminders</string>
     <string name="call_reminder_notification_channel_desc">Notifies you when it\'s time to call someone back</string>
     <string name="call_reminder_notification_title">Time to call %1$s</string>
+    <string name="reminder_note_label">REASON (OPTIONAL)</string>
+    <string name="reminder_note_placeholder">e.g. Follow up on invoice</string>
+
+    <!-- Shake-to-Fake-Call -->
+    <string name="quick_trigger_profile">QUICK TRIGGER PROFILE</string>
+    <string name="quick_trigger_profile_desc">Save a default caller once, then trigger a fake call anytime by shaking your phone — no need to open the app.</string>
+    <string name="default_caller_name">Default Caller Name</string>
+    <string name="default_caller_number">Default Caller Number</string>
+    <string name="enable_shake_trigger">Enable Shake Trigger</string>
+    <string name="enable_shake_trigger_desc">Shake firmly 3 times within 2 seconds to trigger a call from anywhere, even if the app is closed or the screen is locked.</string>
+    <string name="save_quick_trigger_profile">Save Quick Trigger Profile</string>
+    <string name="fill_shake_profile_first">Please enter a default caller name and number first</string>
+    <string name="shake_profile_saved">Quick Trigger Profile saved</string>
+    <string name="shake_service_notification_channel">Shake Trigger</string>
+    <string name="shake_service_notification_channel_desc">Keeps the shake-to-fake-call listener running in the background</string>
+    <string name="shake_service_notification_text">Shake trigger is active</string>
+    <string name="shake_battery_hint">Battery optimization may stop this in the background. Some phones also need their own background/autostart setting enabled for this app.</string>
+    <string name="fix">Fix</string>
 </resources>

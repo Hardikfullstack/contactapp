@@ -35,15 +35,16 @@ class CallReminderReceiver : BroadcastReceiver() {
         val name = intent.getStringExtra(EXTRA_CONTACT_NAME) ?: return
         val number = intent.getStringExtra(EXTRA_CONTACT_NUMBER) ?: return
         val photoUri = intent.getStringExtra(EXTRA_CONTACT_PHOTO)
+        val note = intent.getStringExtra(EXTRA_NOTE)
 
         // The reminder has now fired — drop it from the persisted list so the reminders
         // screen only ever shows what's still pending.
         preferenceManager.setCallReminders(preferenceManager.getCallReminders().filterNot { it.id == id })
 
-        postNotification(context, id, name, number, photoUri)
+        postNotification(context, id, name, number, photoUri, note)
     }
 
-    private fun postNotification(context: Context, id: Long, name: String, number: String, photoUri: String?) {
+    private fun postNotification(context: Context, id: Long, name: String, number: String, photoUri: String?, note: String?) {
         val notificationId = CallReminderScheduler.requestCode(id)
 
         val callNowIntent = Intent(context, CallReminderActionReceiver::class.java).apply {
@@ -68,7 +69,7 @@ class CallReminderReceiver : BroadcastReceiver() {
                 .createNotificationChannel(channel)
         }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(context.getString(R.string.call_reminder_notification_title, name))
             .setContentText(number)
@@ -76,7 +77,14 @@ class CallReminderReceiver : BroadcastReceiver() {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .addAction(android.R.drawable.ic_menu_call, context.getString(R.string.call_now), callNowPendingIntent)
-            .build()
+
+        // The note is optional — when present, show it in the expanded view alongside the
+        // number instead of replacing the collapsed contentText.
+        if (!note.isNullOrBlank()) {
+            notificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText("$number\n$note"))
+        }
+
+        val notification = notificationBuilder.build()
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -91,6 +99,7 @@ class CallReminderReceiver : BroadcastReceiver() {
         const val EXTRA_CONTACT_NAME = "contact_name"
         const val EXTRA_CONTACT_NUMBER = "contact_number"
         const val EXTRA_CONTACT_PHOTO = "contact_photo"
+        const val EXTRA_NOTE = "reminder_note"
         const val EXTRA_NOTIFICATION_ID = "notification_id"
     }
 }
