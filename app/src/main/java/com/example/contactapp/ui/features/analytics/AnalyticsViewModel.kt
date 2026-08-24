@@ -26,9 +26,25 @@ data class AnalyticsUiState(
     val outgoingCount: Int = 0,
     val missedCount: Int = 0,
     val topCallers: List<TopCaller> = emptyList(),
-    val hourlyDistribution: List<Float> = List(24) { 0f },
+    val hourlyStats: List<PeriodStat> = emptyList(),
+    val dailyStats: List<PeriodStat> = emptyList(),
+    val monthlyStats: List<PeriodStat> = emptyList(),
     val isLoading: Boolean = false,
     val hasData: Boolean = false
+)
+
+enum class ActivityViewMode { HOUR, DAY, MONTH }
+
+/** One bucket of the Daily Activity chart (one hour-of-day, day-of-week, or month), carrying
+ *  enough of a breakdown that tapping its bar can show real detail instead of just a count. */
+data class PeriodStat(
+    val label: String,
+    val fullLabel: String,
+    val totalCalls: Int = 0,
+    val incomingCount: Int = 0,
+    val outgoingCount: Int = 0,
+    val missedCount: Int = 0,
+    val totalDuration: String = "0m"
 )
 
 data class TopCaller(
@@ -85,7 +101,9 @@ class AnalyticsViewModel @Inject constructor(
         var incoming = 0
         var outgoing = 0
         var missed = 0
-        val hourly = FloatArray(24) { 0f }
+        val hourlyAcc = Array(24) { BucketAcc() }
+        val dayOfWeekAcc = Array(7) { BucketAcc() }
+        val monthAcc = Array(12) { BucketAcc() }
         val callersMap = LinkedHashMap<String, CallerStat>()
 
         for (log in logs) {
@@ -99,8 +117,13 @@ class AnalyticsViewModel @Inject constructor(
             }
 
             val calendar = Calendar.getInstance().apply { timeInMillis = log.timestamp }
-            val hour = calendar.get(Calendar.HOUR_OF_DAY)
-            if (hour in 0..23) hourly[hour]++
+            val hour = calendar.get(Calendar.HOUR_OF_DAY).coerceIn(0, 23)
+            val dayOfWeek = (calendar.get(Calendar.DAY_OF_WEEK) - 1).coerceIn(0, 6) // Calendar.SUNDAY(1) -> 0
+            val month = calendar.get(Calendar.MONTH).coerceIn(0, 11)
+
+            hourlyAcc[hour].add(log)
+            dayOfWeekAcc[dayOfWeek].add(log)
+            monthAcc[month].add(log)
 
             val stat = callersMap.getOrPut(log.number) {
                 CallerStat(log.name ?: log.number, log.number, 0, 0L)
@@ -113,9 +136,6 @@ class AnalyticsViewModel @Inject constructor(
             .sortedByDescending { it.count }
             .take(5)
 
-        val maxHour = hourly.maxOrNull() ?: 1f
-        val normalizedHourly = hourly.map { if (maxHour > 0) it / maxHour else 0f }
-
         val state = AnalyticsUiState(
             totalCalls = logs.size,
             totalDuration = formatDuration(totalSec),
@@ -123,11 +143,43 @@ class AnalyticsViewModel @Inject constructor(
             incomingCount = incoming,
             outgoingCount = outgoing,
             missedCount = missed,
-            hourlyDistribution = normalizedHourly,
+            hourlyStats = hourlyAcc.mapIndexed { i, acc -> acc.toPeriodStat(HOUR_LABELS[i], HOUR_LABELS[i]) },
+            dailyStats = dayOfWeekAcc.mapIndexed { i, acc -> acc.toPeriodStat(DAY_LABELS[i], DAY_FULL_LABELS[i]) },
+            monthlyStats = monthAcc.mapIndexed { i, acc -> acc.toPeriodStat(MONTH_LABELS[i], MONTH_FULL_LABELS[i]) },
             hasData = true
         )
 
         return Aggregate(state, topCallerStats)
+    }
+
+    /** Mutable per-bucket accumulator used only while scanning the log once in [aggregate]. */
+    private inner class BucketAcc {
+        var total = 0
+        var incoming = 0
+        var outgoing = 0
+        var missed = 0
+        var durationSeconds = 0L
+
+        fun add(log: CallLogItem) {
+            total++
+            durationSeconds += log.durationSeconds
+            when (log.type) {
+                CallType.INCOMING -> incoming++
+                CallType.OUTGOING -> outgoing++
+                CallType.MISSED, CallType.REJECTED -> missed++
+                else -> {}
+            }
+        }
+
+        fun toPeriodStat(label: String, fullLabel: String) = PeriodStat(
+            label = label,
+            fullLabel = fullLabel,
+            totalCalls = total,
+            incomingCount = incoming,
+            outgoingCount = outgoing,
+            missedCount = missed,
+            totalDuration = formatDuration(durationSeconds)
+        )
     }
 
     /** Only the (at most 5) top-caller numbers get a real contact lookup — never the whole log. */
@@ -161,4 +213,18 @@ class AnalyticsViewModel @Inject constructor(
         var count: Int,
         var duration: Long
     )
+
+    private companion object {
+        val HOUR_LABELS = listOf(
+            "12 AM", "1 AM", "2 AM", "3 AM", "4 AM", "5 AM", "6 AM", "7 AM", "8 AM", "9 AM", "10 AM", "11 AM",
+            "12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM", "6 PM", "7 PM", "8 PM", "9 PM", "10 PM", "11 PM"
+        )
+        val DAY_LABELS = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+        val DAY_FULL_LABELS = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+        val MONTH_LABELS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+        val MONTH_FULL_LABELS = listOf(
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        )
+    }
 }

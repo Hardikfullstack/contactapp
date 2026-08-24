@@ -2,6 +2,7 @@ package com.example.contactapp.service
 
 import android.content.Intent
 import android.telecom.Call
+import android.telecom.CallAudioState
 import android.telecom.InCallService
 import com.example.contactapp.ui.features.call.InCallActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -28,9 +29,32 @@ class ContactCallService : InCallService() {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
+    override fun onCreate() {
+        super.onCreate()
+        CallManager.attachService(this)
+    }
+
+    override fun onDestroy() {
+        CallManager.detachService(this)
+        super.onDestroy()
+    }
+
+    override fun onCallAudioStateChanged(audioState: CallAudioState) {
+        super.onCallAudioStateChanged(audioState)
+        CallManager.onAudioStateChanged(audioState)
+    }
+
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
-        CallManager.updateCall(call)
+
+        val isFirstCall = CallManager.currentCall.value == null
+        if (isFirstCall) {
+            CallManager.updateCall(call)
+        } else {
+            // A call already exists — this is the second leg from "Add call", not a
+            // replacement for the primary call.
+            CallManager.addSecondaryCall(call)
+        }
 
         val number = call.details.handle?.schemeSpecificPart ?: "Unknown"
 
@@ -54,8 +78,12 @@ class ContactCallService : InCallService() {
 
         call.registerCallback(object : Call.Callback() {
             override fun onStateChanged(call: Call, state: Int) {
-                CallManager.updateCall(call) // Ensure CallManager stays in sync
-                
+                // CallManager already tracks this call's own state via the callback it
+                // registers internally (updateCall/addSecondaryCall) — this one only drives
+                // notification/flash-alert side effects, and only for the primary call, so a
+                // second call's transitions can't clobber the primary's CallManager state.
+                if (call !== CallManager.currentCall.value) return
+
                 when (state) {
                     Call.STATE_ACTIVE -> {
                         flashAlertManager.stopBlinking()
@@ -78,9 +106,24 @@ class ContactCallService : InCallService() {
 
     override fun onCallRemoved(call: Call) {
         super.onCallRemoved(call)
+
+        if (call === CallManager.secondaryCall.value) {
+            // Only the second leg ended — the primary call is still up, so none of the
+            // ringtone/notification/flash cleanup below applies.
+            CallManager.clearSecondaryCall()
+            return
+        }
+
         callAnnouncerManager.stopAnnouncing()
         flashAlertManager.stopBlinking()
         callNotificationManager.cancelNotification()
-        CallManager.updateCall(null)
+
+        if (CallManager.secondaryCall.value != null) {
+            // The primary ended but a second call is still up — promote it instead of
+            // clearing CallManager down to no call at all.
+            CallManager.promoteSecondaryToPrimary()
+        } else {
+            CallManager.updateCall(null)
+        }
     }
 }

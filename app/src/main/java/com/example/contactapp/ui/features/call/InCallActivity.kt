@@ -1,11 +1,16 @@
 package com.example.contactapp.ui.features.call
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.telecom.Call
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -13,15 +18,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import com.example.contactapp.R
+import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.service.AutoReplyManager
 import com.example.contactapp.service.CallManager
+import com.example.contactapp.service.CallRecorder
 import com.example.contactapp.service.SpamManager
 import com.example.contactapp.ui.theme.ContactAppTheme
 import com.example.contactapp.util.CallAccentColors
 import com.example.contactapp.util.CallButtonShape
 import com.example.contactapp.util.CallTheme
+import com.example.contactapp.util.CallUtils
 import com.example.contactapp.util.ContactCallBackgroundManager
 import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.util.WallpaperSelection
@@ -48,6 +58,9 @@ class InCallActivity : ComponentActivity() {
     @Inject
     lateinit var spamManager: SpamManager
 
+    @Inject
+    lateinit var callRecorder: CallRecorder
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -64,16 +77,33 @@ class InCallActivity : ComponentActivity() {
             val callState by CallManager.callState.collectAsState()
             val call by CallManager.currentCall.collectAsState()
             val rawNumber = call?.details?.handle?.schemeSpecificPart
+            val secondaryCall by CallManager.secondaryCall.collectAsState()
+            val isRecording by callRecorder.isRecording.collectAsState()
+            val recordingSeconds by callRecorder.elapsedSeconds.collectAsState()
+
+            var pendingRecordingStart by remember { mutableStateOf(false) }
+            val recordAudioLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                if (granted && pendingRecordingStart) {
+                    val started = callRecorder.start(rawNumber ?: "call")
+                    if (!started) {
+                        Toast.makeText(this@InCallActivity, R.string.recording_not_supported, Toast.LENGTH_LONG).show()
+                    }
+                }
+                pendingRecordingStart = false
+            }
 
             // The number Telecom hands back (call.details.handle) can be formatted
             // differently from what's stored on the contact (country code, spacing, etc.),
             // so resolve it through the same PhoneLookup-backed contact matching the rest
             // of the app already trusts, rather than comparing raw strings directly.
             var resolvedNumber by remember { mutableStateOf<String?>(null) }
+            var resolvedContact by remember { mutableStateOf<Contact?>(null) }
             LaunchedEffect(rawNumber) {
-                resolvedNumber = rawNumber?.let { raw ->
-                    contactRepository.findContactByNumber(raw)?.number ?: raw
-                }
+                val contact = rawNumber?.let { raw -> contactRepository.findContactByNumber(raw) }
+                resolvedContact = contact
+                resolvedNumber = contact?.number ?: rawNumber
             }
 
             val globalSelection by preferenceManager.wallpaperSelectionFlow.collectAsState(
@@ -100,6 +130,8 @@ class InCallActivity : ComponentActivity() {
 
             LaunchedEffect(callState) {
                 if (callState == Call.STATE_DISCONNECTED) {
+                    // Never leave a recording running past the call it belongs to.
+                    callRecorder.stop()
                     // Plain finish() can leave an empty task card behind in the system
                     // app-switcher for a singleInstance activity like this one — remove it
                     // outright instead, since there's nothing to return to in this task.
@@ -112,18 +144,64 @@ class InCallActivity : ComponentActivity() {
                 insetsController.isAppearanceLightStatusBars = !selection.isDarkOnCallScreen()
             }
 
-            ContactAppTheme {
+            ContactAppTheme(darkTheme = true) { // Always dark for call UI — matches FakeCallActivity
                 val isSpamByCallManager by CallManager.isSpam.collectAsState()
-                
+                val audioState by CallManager.audioState.collectAsState()
+
                 InCallScreen(
+                    contactName = resolvedContact?.name,
+                    number = rawNumber ?: "",
+                    photoUri = resolvedContact?.photoUri,
                     onHangup = { CallManager.disconnect() },
                     onDecline = {
                         CallManager.reject()
                         resolvedNumber?.let { autoReplyManager.sendReplyIfEnabled(it) }
                     },
                     onAnswer = { CallManager.answer() },
+                    onSendQuickReply = { message ->
+                        CallManager.reject()
+                        resolvedNumber?.let { autoReplyManager.sendQuickReply(it, message) }
+                    },
                     isSpam = isSpamByCallManager,
                     onReportSpam = { num -> spamManager.reportSpam(num, true) },
+                    audioState = audioState,
+                    onToggleMute = { CallManager.toggleMute() },
+                    onToggleSpeaker = { CallManager.toggleSpeaker() },
+                    onPlayDtmf = { digit -> CallManager.playDtmfTone(digit) },
+                    onStopDtmf = { CallManager.stopDtmfTone() },
+                    canAddCall = CallManager.canAddCall(),
+                    secondaryCallNumber = secondaryCall?.details?.handle?.schemeSpecificPart,
+                    onAddCall = { number ->
+                        // Hold the current call first — Telecom generally does this
+                        // automatically when a second call is placed, but making it explicit
+                        // avoids depending on that OEM/carrier-specific behavior.
+                        val current = CallManager.currentCall.value
+                        if (current?.state == Call.STATE_ACTIVE) current.hold()
+                        CallUtils.makeCall(this@InCallActivity, number)
+                    },
+                    onEndSecondaryCall = { secondaryCall?.disconnect() },
+                    isRecording = isRecording,
+                    recordingSeconds = recordingSeconds,
+                    onStartRecording = {
+                        val hasPermission = ContextCompat.checkSelfPermission(
+                            this@InCallActivity, Manifest.permission.RECORD_AUDIO
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (hasPermission) {
+                            val started = callRecorder.start(rawNumber ?: "call")
+                            if (!started) {
+                                Toast.makeText(this@InCallActivity, R.string.recording_not_supported, Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            pendingRecordingStart = true
+                            recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                    onStopRecording = {
+                        val file = callRecorder.stop()
+                        if (file != null) {
+                            Toast.makeText(this@InCallActivity, getString(R.string.recording_saved, file.name), Toast.LENGTH_LONG).show()
+                        }
+                    },
                     selection = selection,
                     theme = callTheme
                 )

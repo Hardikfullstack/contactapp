@@ -134,7 +134,12 @@ class ShakeDetectionService : Service(), SensorEventListener {
             .setOngoing(true)
             .build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // FOREGROUND_SERVICE_TYPE_SPECIAL_USE isn't a valid type until API 34 (UPSIDE_DOWN_CAKE)
+        // even though the 3-arg startForeground(id, notification, type) overload itself has
+        // existed since API 29 — passing this constant on API 29-33 risks an
+        // InvalidForegroundServiceTypeException since the OS wouldn't recognize the manifest's
+        // foregroundServiceType="specialUse" either on those versions.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             startForeground(NOTIFICATION_ID, notification)

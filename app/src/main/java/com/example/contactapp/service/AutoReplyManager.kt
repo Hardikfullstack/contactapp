@@ -23,14 +23,25 @@ class AutoReplyManager @Inject constructor(
 ) {
     fun sendReplyIfEnabled(number: String) {
         if (!preferenceManager.isAutoReplyEnabled()) return
+        val message = preferenceManager.getAutoReplyMessage()
+        if (message.isBlank()) return
+        sendSms(number, message)
+    }
+
+    /** Explicit "decline with this message" pick from the in-call quick-reply sheet — sent
+     *  regardless of whether the always-on auto-reply setting is enabled, since the user chose
+     *  this message themselves for this specific call. */
+    fun sendQuickReply(number: String, message: String) {
+        if (message.isBlank()) return
+        sendSms(number, message)
+    }
+
+    private fun sendSms(number: String, message: String) {
         if (number.isBlank()) return
 
         val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) ==
             PackageManager.PERMISSION_GRANTED
         if (!hasPermission) return
-
-        val message = preferenceManager.getAutoReplyMessage()
-        if (message.isBlank()) return
 
         try {
             val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -41,7 +52,7 @@ class AutoReplyManager @Inject constructor(
             }
             smsManager.sendTextMessage(number, null, message, null, null)
         } catch (e: Exception) {
-            Log.e("AutoReplyManager", "sendReplyIfEnabled: FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
+            Log.e("AutoReplyManager", "sendSms: FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
         }
     }
 }

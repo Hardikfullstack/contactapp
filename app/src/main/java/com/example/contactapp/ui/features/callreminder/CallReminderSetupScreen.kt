@@ -34,6 +34,7 @@ import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.getAvatarColor
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
@@ -236,7 +237,12 @@ fun CallReminderSetupScreen(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis ?: System.currentTimeMillis())
+        // DatePicker interprets initialSelectedDateMillis as UTC-midnight of the intended date —
+        // raw System.currentTimeMillis() is a UTC instant that can fall on the previous UTC
+        // calendar day during early-morning hours in positive-offset timezones (e.g. before
+        // ~5:30 AM IST), which would silently pre-select yesterday instead of today.
+        val todayUtcMillis = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis ?: todayUtcMillis)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {

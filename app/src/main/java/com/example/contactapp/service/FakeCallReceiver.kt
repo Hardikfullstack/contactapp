@@ -184,7 +184,12 @@ class FakeCallReceiver : BroadcastReceiver() {
             Log.e(TAG, "deliverAsNotification: POST_NOTIFICATIONS not granted — notification NOT posted")
         }
 
-        // Best-effort instant path: succeeds when the app already has a foreground presence.
+        // Best-effort instant path: only succeeds when the caller already has a legitimate
+        // foreground-adjacent presence (e.g. the shake-trigger foreground service, or the app
+        // already being open) — that's exactly the unlocked-screen case a full-screen-intent
+        // notification can't cover on its own, since Android only auto-launches those when the
+        // screen is locked/off; on an unlocked screen it's just a heads-up requiring a manual
+        // tap. Purely additive on top of the notification above, never a replacement for it.
         try {
             context.startActivity(activityIntent)
         } catch (e: Exception) {

@@ -316,6 +316,37 @@
     <string name="reminder_note_label">REASON (OPTIONAL)</string>
     <string name="reminder_note_placeholder">e.g. Follow up on invoice</string>
 
+    <!-- Analytics: Daily Activity drill-down -->
+    <string name="view_hour">Hour</string>
+    <string name="view_day">Day</string>
+    <string name="view_month">Month</string>
+    <string name="tap_bar_hint">Tap a bar for details</string>
+    <string name="period_activity_title">%1$s Activity</string>
+    <string name="close">Close</string>
+
+    <!-- In-Call Screen -->
+    <string name="mute">Mute</string>
+    <string name="speaker">Speaker</string>
+    <string name="hold">Hold</string>
+    <string name="reply_with_message">Reply with message</string>
+    <string name="quick_reply_1">Can\'t talk right now, I\'ll call you later.</string>
+    <string name="quick_reply_2">I\'ll call you back.</string>
+    <string name="quick_reply_3">Sorry, I\'m busy right now.</string>
+    <string name="quick_reply_4">On my way.</string>
+    <string name="more_options">More options</string>
+    <string name="more_options_short">More</string>
+    <string name="add_call">Add call</string>
+    <string name="record_call">Record call</string>
+    <string name="stop_recording">Stop recording</string>
+    <string name="swap_calls">Swap</string>
+    <string name="merge_calls">Merge</string>
+    <string name="enter_number">Enter a number</string>
+    <string name="recording_disclaimer_title">Before you record</string>
+    <string name="recording_disclaimer_text">Recording laws vary by location — many places require every participant\'s consent before a call is recorded. You\'re responsible for complying with the law in your area. Also, many phones and Android versions block apps from capturing the other person\'s audio at all, so this recording may end up silent on some devices.</string>
+    <string name="start_recording">Start Recording</string>
+    <string name="recording_saved">Recording saved: %1$s</string>
+    <string name="recording_not_supported">Recording isn\'t supported on this device</string>
+
     <!-- Shake-to-Fake-Call -->
     <string name="quick_trigger_profile">QUICK TRIGGER PROFILE</string>
     <string name="quick_trigger_profile_desc">Save a default caller once, then trigger a fake call anytime by shaking your phone — no need to open the app.</string>

@@ -5,14 +5,10 @@ import android.telecom.Call
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -21,7 +17,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.Dialpad
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,8 +39,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.media.AudioManager
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.WindowCompat
+import androidx.compose.ui.platform.LocalContext
 import com.example.contactapp.R
 import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.service.CallAnnouncerManager
@@ -53,6 +58,8 @@ import com.example.contactapp.ui.components.ContactAvatarImage
 import com.example.contactapp.ui.components.SwipeUpCallButton
 import com.example.contactapp.ui.components.lightened
 import com.example.contactapp.ui.components.toComposeShape
+import com.example.contactapp.ui.features.call.CallControlButton
+import com.example.contactapp.ui.features.call.DtmfKeypadSheet
 import com.example.contactapp.ui.theme.ContactAppTheme
 import com.example.contactapp.util.CallAccentColors
 import com.example.contactapp.util.CallButtonShape
@@ -247,140 +254,297 @@ fun FakeCallContent(
         }
     }
 
+    // Mute/Speaker for a fake call have no real Telecom audio session to control (the
+    // self-managed connection this feature relies on frequently never gets created at all —
+    // see FakeCallManager), so these toggle the device's actual microphone/speakerphone
+    // directly instead. That's also more fitting for what this feature is for: sounding
+    // authentic while acting out the call, not routing audio for a real conversation.
+    val context = LocalContext.current
+    val audioManager = remember { context.getSystemService(AudioManager::class.java) }
+    var isMuted by remember { mutableStateOf(false) }
+    var isSpeakerOn by remember { mutableStateOf(false) }
+    var showKeypad by remember { mutableStateOf(false) }
+
+    // Add Call / Record here are purely cosmetic — there's no real second caller to add and no
+    // real audio to capture on a fake call, so this is only for the acting illusion.
+    var showAddCallDialog by remember { mutableStateOf(false) }
+    var fakeSecondaryCallerName by remember { mutableStateOf<String?>(null) }
+    var isFakeRecording by remember { mutableStateOf(false) }
+    var fakeRecordingSeconds by remember { mutableIntStateOf(0) }
+    LaunchedEffect(isFakeRecording) {
+        if (isFakeRecording) {
+            while (true) {
+                delay(1000)
+                fakeRecordingSeconds++
+            }
+        } else {
+            fakeRecordingSeconds = 0
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            // Never leave the device's real mic/speaker state altered after the fake call ends.
+            audioManager?.isMicrophoneMute = false
+            audioManager?.isSpeakerphoneOn = false
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121412)) // Deep charcoal default
+            .background(Color(0xFF121212)) // Same flat dark base as the real in-call screen
     ) {
         // Wallpaper Background
         CallWallpaperBackground(selection = selection, modifier = Modifier.fillMaxSize())
 
+        if (isFakeRecording) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(top = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color.Red)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(formatTimer(fakeRecordingSeconds), color = Color.White, fontSize = 13.sp)
+                }
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(top = 80.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .statusBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Avatar
-            Box(
+            Column(
                 modifier = Modifier
-                    .size(120.dp)
-                    .border(3.dp, theme.accentColor, CircleShape)
-                    .padding(4.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 80.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (photoUri != null) {
-                    ContactAvatarImage(
-                        photoUri = photoUri,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(getAvatarColor(name)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = name.take(1).uppercase(),
-                            color = Color.White,
-                            fontSize = 56.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = name,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-
-            Text(
-                text = if (isAccepted) formatTimer(timer) else number,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-            if (!isAccepted && isSpam) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Surface(
-                    color = Color.Red.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(8.dp)
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .border(3.dp, theme.accentColor, CircleShape)
+                        .padding(4.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    if (photoUri != null) {
+                        ContactAvatarImage(
+                            photoUri = photoUri,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(getAvatarColor(name)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = name.take(1).uppercase(),
+                                color = Color.White,
+                                fontSize = 56.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Text(
+                    text = if (isAccepted) formatTimer(timer) else number,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+
+                if (fakeSecondaryCallerName != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(
+                        color = Color.White.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = Color(0xFFFF5252),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.spam_warning),
-                            color = Color(0xFFFF5252),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = fakeSecondaryCallerName ?: "",
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { fakeSecondaryCallerName = null }) {
+                                Text(stringResource(R.string.end_call), color = Color(0xFFFF8A80), fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+
+                if (!isAccepted && isSpam) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        color = Color.Red.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = Color(0xFFFF5252),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.spam_warning),
+                                color = Color(0xFFFF5252),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Action Buttons
-            AnimatedVisibility(
-                visible = buttonsVisible,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 80.dp),
-                enter = slideInVertically(animationSpec = tween(450)) { fullHeight -> fullHeight } + fadeIn(tween(450))
-            ) {
-                // Swaps the ringing (decline + accept) button set for the ongoing-call
-                // (single end-call) set with an upward slide, mirroring stock dialer behavior.
-                AnimatedContent(
-                    targetState = isAccepted,
-                    transitionSpec = {
-                        (slideInVertically(tween(350)) { height -> height } + fadeIn(tween(350))) togetherWith
-                            (slideOutVertically(tween(350)) { height -> -height } + fadeOut(tween(200)))
-                    },
-                    label = "callButtons"
-                ) { accepted ->
+            // Ringing keeps the plain floating swipe-button layout (matches stock Android — no
+            // bottom tray while a call is still just ringing). Once accepted, the controls sit
+            // inside one distinct rounded-top tray, visually separated from the caller-info area
+            // above it, matching the real in-call screen's same tray treatment.
+            if (!isAccepted) {
+                AnimatedVisibility(
+                    visible = buttonsVisible,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 80.dp),
+                    enter = slideInVertically(animationSpec = tween(450)) { fullHeight -> fullHeight } + fadeIn(tween(450))
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        if (!accepted) {
-                            // Decline: requires an upward swipe while ringing.
-                            SwipeUpCallButton(
-                                icon = Icons.Default.CallEnd,
-                                color = Color(0xFFD32F2F),
-                                shape = theme.buttonShape.toComposeShape(),
-                                contentDescription = stringResource(R.string.decline_call),
-                                onTriggered = { FakeCallManager.endFromUi() }
-                            )
+                        // Decline: requires an upward swipe while ringing.
+                        SwipeUpCallButton(
+                            icon = Icons.Default.CallEnd,
+                            color = Color(0xFFD32F2F),
+                            shape = theme.buttonShape.toComposeShape(),
+                            contentDescription = stringResource(R.string.decline_call),
+                            onTriggered = { FakeCallManager.endFromUi() }
+                        )
 
-                            // Accept: requires an upward swipe while ringing.
-                            SwipeUpCallButton(
-                                icon = Icons.Default.Call,
-                                color = theme.accentColor,
-                                shape = theme.buttonShape.toComposeShape(),
-                                contentDescription = stringResource(R.string.answer),
-                                onTriggered = { FakeCallManager.answerFromUi() }
-                            )
-                        } else {
-                            // End Active Call
+                        // Accept: requires an upward swipe while ringing.
+                        SwipeUpCallButton(
+                            icon = Icons.Default.Call,
+                            color = theme.accentColor,
+                            shape = theme.buttonShape.toComposeShape(),
+                            contentDescription = stringResource(R.string.answer),
+                            onTriggered = { FakeCallManager.answerFromUi() }
+                        )
+                    }
+                }
+            } else {
+                AnimatedVisibility(
+                    visible = buttonsVisible,
+                    modifier = Modifier.fillMaxWidth(),
+                    enter = slideInVertically(animationSpec = tween(450)) { fullHeight -> fullHeight } + fadeIn(tween(450))
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                        color = Color(0xFF1E1E1E)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 20.dp)
+                                .navigationBarsPadding(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                CallControlButton(
+                                    icon = Icons.Default.Dialpad,
+                                    label = stringResource(R.string.keypad),
+                                    active = showKeypad,
+                                    onClick = { showKeypad = true }
+                                )
+                                CallControlButton(
+                                    icon = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                                    label = stringResource(R.string.mute),
+                                    active = isMuted,
+                                    onClick = {
+                                        isMuted = !isMuted
+                                        audioManager?.isMicrophoneMute = isMuted
+                                    }
+                                )
+                                CallControlButton(
+                                    icon = Icons.Default.VolumeUp,
+                                    label = stringResource(R.string.speaker),
+                                    active = isSpeakerOn,
+                                    onClick = {
+                                        isSpeakerOn = !isSpeakerOn
+                                        audioManager?.isSpeakerphoneOn = isSpeakerOn
+                                    }
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                CallControlButton(
+                                    icon = Icons.Default.PersonAdd,
+                                    label = stringResource(R.string.add_call),
+                                    active = false,
+                                    enabled = fakeSecondaryCallerName == null,
+                                    onClick = { showAddCallDialog = true }
+                                )
+                                CallControlButton(
+                                    icon = if (isFakeRecording) Icons.Default.Stop else Icons.Default.Circle,
+                                    label = stringResource(if (isFakeRecording) R.string.stop_recording else R.string.record_call),
+                                    active = isFakeRecording,
+                                    onClick = { isFakeRecording = !isFakeRecording }
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
                             CallActionButton(
                                 icon = Icons.Default.CallEnd,
                                 color = Color(0xFFD32F2F),
@@ -392,6 +556,46 @@ fun FakeCallContent(
                 }
             }
         }
+    }
+
+    if (showKeypad) {
+        // No real call session to send DTMF through — this is purely for the acting illusion
+        // (e.g. pretending to enter an extension code), so digits are just shown, not dialed.
+        DtmfKeypadSheet(
+            onDigit = {},
+            onDigitReleased = {},
+            onDismiss = { showKeypad = false }
+        )
+    }
+
+    if (showAddCallDialog) {
+        var enteredName by remember { mutableStateOf("") }
+        val unknownLabel = stringResource(R.string.unknown)
+        AlertDialog(
+            onDismissRequest = { showAddCallDialog = false },
+            title = { Text(stringResource(R.string.add_call)) },
+            text = {
+                OutlinedTextField(
+                    value = enteredName,
+                    onValueChange = { enteredName = it },
+                    label = { Text(stringResource(R.string.caller_name)) },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    fakeSecondaryCallerName = enteredName.ifBlank { unknownLabel }
+                    showAddCallDialog = false
+                }) {
+                    Text(stringResource(R.string.add_call))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddCallDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 }
 

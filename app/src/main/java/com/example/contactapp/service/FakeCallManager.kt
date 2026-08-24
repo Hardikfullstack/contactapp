@@ -27,6 +27,7 @@ object FakeCallManager {
     val callInfo: StateFlow<FakeCallInfo?> = _callInfo.asStateFlow()
 
     private var connection: FakeCallConnection? = null
+    private var preAnswered: Boolean = false
 
     /**
      * Called by FakeCallActivity.onCreate() — the confirmed-reliable delivery path — every time
@@ -35,6 +36,7 @@ object FakeCallManager {
      */
     fun startRinging(info: FakeCallInfo) {
         connection = null
+        preAnswered = false
         _callInfo.value = info
         _callState.value = Call.STATE_RINGING
     }
@@ -46,12 +48,32 @@ object FakeCallManager {
      */
     fun attachConnection(connection: FakeCallConnection) {
         this.connection = connection
+        if (preAnswered) {
+            // The user already answered via the UI before this connection existed — sync
+            // Telecom's side to match instead of leaving it stuck on the setRinging() the
+            // connection service just called. _callState is already ACTIVE from answerFromUi()
+            // below, so only the Telecom-facing connection needs to catch up here.
+            preAnswered = false
+            connection.setActive()
+        }
     }
 
-    /** The user answered via the in-app swipe-up gesture — reflect that on the telecom side. */
+    /**
+     * The user answered via the in-app swipe-up gesture (or a notification's Answer action) —
+     * always updates the UI state immediately, regardless of whether Telecom's self-managed
+     * connection has arrived yet. On some devices/OEMs that connection can be delayed by a lot,
+     * or — confirmed via logging elsewhere in this app — never arrive at all; the UI must never
+     * block on it, or the call screen appears to hang with the answer gesture having done
+     * nothing. If the connection does show up later, attachConnection() above reconciles it.
+     */
     fun answerFromUi() {
-        connection?.setActive()
         _callState.value = Call.STATE_ACTIVE
+        val existingConnection = connection
+        if (existingConnection != null) {
+            existingConnection.setActive()
+        } else {
+            preAnswered = true
+        }
     }
 
     /** The user declined or ended via the in-app UI — reflect that on the telecom side. */

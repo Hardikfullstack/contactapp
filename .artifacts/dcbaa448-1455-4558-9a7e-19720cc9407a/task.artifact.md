@@ -1,12 +1,11 @@
-- [x] **Infrastructure**
-    - [x] Update `CallAccentColor` to include `categoryResId` in `CallThemes.kt`
-    - [x] Add new category and color strings in `strings.xml`
-- [x] **Data Reorganization**
-    - [x] Reorganize `CallAccentColors.all` into categorized groups in `CallThemes.kt`
-    - [x] Add new Shaded Tones (Light/Deep pairs)
-- [x] **UI Implementation**
-    - [x] Implement category headers in `CallThemeScreen.kt` using `GridItemSpan`
-    - [x] Update `ColorSwatch` or grid logic if needed
+- [x] **Notification Interaction Fixes**
+    - [x] Update `FakeCallActionReceiver.kt` to launch `FakeCallActivity` on answer
+    - [x] Update `CallNotificationManager.kt` to launch `InCallActivity` on answer
+- [x] **Fake Call Stability**
+    - [x] Implement "Pre-Answer" logic in `FakeCallManager.kt` to handle early clicks
+    - [x] Remove redundant `startActivity` in `FakeCallReceiver.kt`
+- [x] **Data Consistency**
+    - [x] Align `SpamManager.kt` with `PreferenceManager` source of truth
 - [x] **Verification**
     - [x] Verify build passes
-    - [x] Manual verification of headers and grouped colors
+    - [x] Manual verification of notification actions and spam detection sync

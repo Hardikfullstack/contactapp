@@ -1,14 +1,11 @@
 package com.example.contactapp.service
 
 import android.content.Context
-import android.content.SharedPreferences
 import com.example.contactapp.domain.repository.CallLogRepository
+import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.util.SpamDetector
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,13 +13,13 @@ import javax.inject.Singleton
 @Singleton
 class SpamManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val callLogRepository: CallLogRepository
+    private val callLogRepository: CallLogRepository,
+    private val preferenceManager: PreferenceManager
 ) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("spam_numbers", Context.MODE_PRIVATE)
 
     /**
      * Checks if a number should be flagged as spam based on:
-     * 1. Manual user reporting (local blacklist).
+     * 1. Manual user reporting (local blacklist from PreferenceManager).
      * 2. Automatic pattern detection (history analysis).
      * 3. Contact lookup (known contacts are never spam).
      */
@@ -30,8 +27,8 @@ class SpamManager @Inject constructor(
         val cleanNumber = number.replace(Regex("[^0-9]"), "").takeLast(10)
         if (cleanNumber.isEmpty()) return@withContext SpamStatus.NONE
 
-        // 1. Manual Blacklist
-        if (prefs.getBoolean(cleanNumber, false)) {
+        // 1. Manual Blacklist (Unified with Recents/Settings)
+        if (preferenceManager.getSpamNumbers().contains(cleanNumber)) {
             return@withContext SpamStatus.MANUAL_SPAM
         }
 
@@ -55,7 +52,9 @@ class SpamManager @Inject constructor(
     fun reportSpam(number: String, isSpam: Boolean) {
         val cleanNumber = number.replace(Regex("[^0-9]"), "").takeLast(10)
         if (cleanNumber.isNotEmpty()) {
-            prefs.edit().putBoolean(cleanNumber, isSpam).apply()
+            val current = preferenceManager.getSpamNumbers().toMutableSet()
+            if (isSpam) current.add(cleanNumber) else current.remove(cleanNumber)
+            preferenceManager.setSpamNumbers(current)
         }
     }
 

@@ -2,6 +2,7 @@ package com.example.contactapp.ui.features.analytics
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -16,17 +17,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.ui.components.CommonHeader
@@ -47,6 +54,9 @@ fun AnalyticsScreen(
     viewModel: AnalyticsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var activityViewMode by remember { mutableStateOf(ActivityViewMode.HOUR) }
+    var selectedPeriod by remember { mutableStateOf<PeriodStat?>(null) }
+    var selectedPeriodIndex by remember { mutableStateOf<Int?>(null) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -161,9 +171,50 @@ fun AnalyticsScreen(
 
                         // Activity Chart
                         item {
+                            val stats = when (activityViewMode) {
+                                ActivityViewMode.HOUR -> uiState.hourlyStats
+                                ActivityViewMode.DAY -> uiState.dailyStats
+                                ActivityViewMode.MONTH -> uiState.monthlyStats
+                            }
+
                             AnalyticsSection(title = stringResource(R.string.daily_activity)) {
+                                SingleChoiceSegmentedButtonRow(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 12.dp)
+                                ) {
+                                    ActivityViewMode.entries.forEachIndexed { index, mode ->
+                                        SegmentedButton(
+                                            selected = activityViewMode == mode,
+                                            onClick = {
+                                                activityViewMode = mode
+                                                selectedPeriod = null
+                                                selectedPeriodIndex = null
+                                            },
+                                            shape = SegmentedButtonDefaults.itemShape(
+                                                index = index,
+                                                count = ActivityViewMode.entries.size
+                                            ),
+                                            label = {
+                                                Text(
+                                                    when (mode) {
+                                                        ActivityViewMode.HOUR -> stringResource(R.string.view_hour)
+                                                        ActivityViewMode.DAY -> stringResource(R.string.view_day)
+                                                        ActivityViewMode.MONTH -> stringResource(R.string.view_month)
+                                                    }
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+
                                 ActivityChart(
-                                    distribution = uiState.hourlyDistribution,
+                                    stats = stats,
+                                    selectedIndex = selectedPeriodIndex,
+                                    onBarClick = { index ->
+                                        selectedPeriodIndex = index
+                                        selectedPeriod = stats.getOrNull(index)
+                                    },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(160.dp)
@@ -173,7 +224,13 @@ fun AnalyticsScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    listOf("12 AM", "6 AM", "12 PM", "6 PM").forEach { label ->
+                                    val axisLabels = if (activityViewMode == ActivityViewMode.HOUR) {
+                                        listOfNotNull(stats.getOrNull(0), stats.getOrNull(6), stats.getOrNull(12), stats.getOrNull(18))
+                                            .map { it.label }
+                                    } else {
+                                        stats.map { it.label }
+                                    }
+                                    axisLabels.forEach { label ->
                                         Text(
                                             label,
                                             style = MaterialTheme.typography.labelSmall,
@@ -181,6 +238,12 @@ fun AnalyticsScreen(
                                         )
                                     }
                                 }
+                                Text(
+                                    text = stringResource(R.string.tap_bar_hint),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
                             }
                         }
 
@@ -202,6 +265,16 @@ fun AnalyticsScreen(
                 }
             }
         }
+    }
+
+    selectedPeriod?.let { period ->
+        PeriodDetailDialog(
+            stat = period,
+            onDismiss = {
+                selectedPeriod = null
+                selectedPeriodIndex = null
+            }
+        )
     }
 }
 
@@ -357,25 +430,92 @@ fun BreakdownLegendRow(color: Color, label: String, count: Int, total: Int) {
 
 @Composable
 fun ActivityChart(
-    distribution: List<Float>,
+    stats: List<PeriodStat>,
+    selectedIndex: Int?,
+    onBarClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val barColor = PrimaryGreen
-    Canvas(modifier = modifier) {
+    val maxCalls = (stats.maxOfOrNull { it.totalCalls } ?: 0).coerceAtLeast(1)
+
+    fun barSlotWidth(totalWidth: Float): Pair<Float, Float> {
+        val barWidth = totalWidth / (stats.size * 1.5f)
+        val space = if (stats.size > 1) (totalWidth - (barWidth * stats.size)) / (stats.size - 1) else 0f
+        return barWidth to space
+    }
+
+    Canvas(
+        modifier = modifier.pointerInput(stats) {
+            detectTapGestures { offset ->
+                if (stats.isEmpty()) return@detectTapGestures
+                val (barWidth, space) = barSlotWidth(size.width.toFloat())
+                val slot = (barWidth + space).coerceAtLeast(1f)
+                val index = (offset.x / slot).toInt().coerceIn(0, stats.size - 1)
+                onBarClick(index)
+            }
+        }
+    ) {
         val width = size.width
         val height = size.height
-        val barWidth = width / (distribution.size * 1.5f)
-        val space = (width - (barWidth * distribution.size)) / (distribution.size - 1)
+        val (barWidth, space) = barSlotWidth(width)
 
-        distribution.forEachIndexed { index, value ->
+        stats.forEachIndexed { index, stat ->
+            val value = stat.totalCalls / maxCalls.toFloat()
             val barHeight = height * value.coerceIn(0.05f, 1f)
+            val isDimmed = selectedIndex != null && selectedIndex != index
             drawRoundRect(
-                color = barColor,
+                color = if (isDimmed) barColor.copy(alpha = 0.35f) else barColor,
                 topLeft = Offset(index * (barWidth + space), height - barHeight),
                 size = Size(barWidth, barHeight),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
+                cornerRadius = CornerRadius(4.dp.toPx())
             )
         }
+    }
+}
+
+@Composable
+fun PeriodDetailDialog(stat: PeriodStat, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    text = stringResource(R.string.period_activity_title, stat.fullLabel),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                PeriodDetailRow(stringResource(R.string.total_calls), stat.totalCalls.toString())
+                PeriodDetailRow(stringResource(R.string.incoming), stat.incomingCount.toString())
+                PeriodDetailRow(stringResource(R.string.outgoing), stat.outgoingCount.toString())
+                PeriodDetailRow(stringResource(R.string.missed), stat.missedCount.toString())
+                PeriodDetailRow(stringResource(R.string.talk_time), stat.totalDuration)
+
+                Spacer(modifier = Modifier.height(20.dp))
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeriodDetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, fontWeight = FontWeight.SemiBold)
     }
 }
 

@@ -24,7 +24,7 @@ class FakeCallSetupViewModel @Inject constructor(
         preferenceManager.setShakeTriggerEnabled(enabled)
         if (enabled) {
             ShakeDetectionService.start(context)
-            ShakeWatchdogScheduler.schedule(context)
+            ShakeWatchdogScheduler.scheduleNext(context)
         } else {
             ShakeDetectionService.stop(context)
             ShakeWatchdogScheduler.cancel(context)

@@ -147,7 +147,14 @@ class CallNotificationManager @Inject constructor(
 class CallActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            CallNotificationManager.ACTION_ANSWER -> CallManager.answer()
+            CallNotificationManager.ACTION_ANSWER -> {
+                CallManager.answer()
+                // Ensure the UI opens immediately when answering from a heads-up notification.
+                val activityIntent = Intent(context, InCallActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                }
+                context.startActivity(activityIntent)
+            }
             CallNotificationManager.ACTION_DECLINE -> CallManager.reject()
             CallNotificationManager.ACTION_HANGUP -> CallManager.disconnect()
         }

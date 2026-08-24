@@ -18,7 +18,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED && preferenceManager.isShakeTriggerEnabled()) {
             ShakeDetectionService.start(context)
-            ShakeWatchdogScheduler.schedule(context)
+            ShakeWatchdogScheduler.scheduleNext(context)
         }
     }
 }
