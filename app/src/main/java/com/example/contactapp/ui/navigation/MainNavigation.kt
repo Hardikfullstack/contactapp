@@ -1,7 +1,11 @@
 package com.example.contactapp.ui.navigation
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -11,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -28,6 +34,7 @@ import com.example.contactapp.ui.features.favorites.FavoritesScreen
 import com.example.contactapp.ui.features.contacts.ContactsScreen
 import com.example.contactapp.ui.features.keypad.KeypadScreen
 import com.example.contactapp.ui.features.settings.SettingsScreen
+import com.example.contactapp.ui.features.settings.AfterCallSettingsScreen
 import com.example.contactapp.ui.features.settings.BlockedNumbersScreen
 import com.example.contactapp.ui.features.settings.RecycleBinScreen
 import com.example.contactapp.ui.features.tools.ToolsScreen
@@ -42,9 +49,11 @@ import com.example.contactapp.ui.features.fakecall.FakeCallSetupScreen
 import com.example.contactapp.ui.features.callreminder.CallReminderScreen
 import com.example.contactapp.ui.features.callreminder.CallReminderSetupScreen
 import com.example.contactapp.ui.features.onboarding.LanguageSelectionScreen
+import com.example.contactapp.ads.BannerAdView
 import com.example.contactapp.ui.components.CommonBottomBar
 import com.example.contactapp.ui.components.BottomBarActionItem
 import com.example.contactapp.util.PreferenceManager
+import com.example.contactapp.viewmodel.AppConfigViewModel
 
 sealed class MainScreen(
     val route: String,
@@ -64,6 +73,7 @@ sealed class MainScreen(
     }
     object BlockedNumbers : MainScreen("blocked_numbers")
     object RecycleBin : MainScreen("recycle_bin")
+    object AfterCall : MainScreen("after_call_settings")
     object Language : MainScreen("language_settings")
     object Analytics : MainScreen("analytics")
     object CallAnnouncer : MainScreen("call_announcer")
@@ -81,8 +91,15 @@ sealed class MainScreen(
 }
 
 @Composable
-fun MainNavigation(preferenceManager: PreferenceManager) {
+fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = null) {
     val navController = rememberNavController()
+    // "contacts"/"recents" as passed via MainActivity's open_tab intent extra (e.g. from the
+    // After Call screen) — any other/missing value falls back to the normal default tab.
+    val startDestination = when (startTab) {
+        "contacts" -> MainScreen.Contacts.route
+        "recents" -> MainScreen.Recents.route
+        else -> MainScreen.Recents.route
+    }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     
@@ -99,6 +116,17 @@ fun MainNavigation(preferenceManager: PreferenceManager) {
 
     val showBottomBar = remember(currentDestination) {
         navItems.any { it.route == currentDestination?.route }
+    }
+
+    // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped),
+    // so the remote ad config isn't refetched per screen.
+    val context = LocalContext.current
+    val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val bannerAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.banner_1_on_off == "on") {
+            result.banner_1?.takeIf { it.isNotBlank() }
+        } else null
     }
 
     Scaffold(
@@ -127,14 +155,19 @@ fun MainNavigation(preferenceManager: PreferenceManager) {
                         )
                     }
                 }
-                CommonBottomBar(items = items)
+                Column(modifier = Modifier.navigationBarsPadding()) {
+                    CommonBottomBar(items = items, windowInsets = WindowInsets(0.dp))
+                    if (bannerAdUnitId != null) {
+                        BannerAdView(adUnitId = bannerAdUnitId)
+                    }
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = MainScreen.Recents.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp)
         ) {
             composable(MainScreen.Recents.route) {
@@ -187,6 +220,7 @@ fun MainNavigation(preferenceManager: PreferenceManager) {
             composable(MainScreen.Keypad.route) { 
                 KeypadScreen(
                     onSearchClick = { navController.navigate(MainScreen.Search.route) },
+                    onBackClick = { navController.popBackStack() },
                     preferenceManager = preferenceManager
                 )
             }
@@ -202,11 +236,17 @@ fun MainNavigation(preferenceManager: PreferenceManager) {
                 SettingsScreen(
                     onBlockedNumbersClick = { navController.navigate(MainScreen.BlockedNumbers.route) },
                     onLanguageClick = { navController.navigate(MainScreen.Language.route) },
-                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) }
+                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) },
+                    onAfterCallClick = { navController.navigate(MainScreen.AfterCall.route) }
                 )
             }
             composable(MainScreen.BlockedNumbers.route) {
                 BlockedNumbersScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.AfterCall.route) {
+                AfterCallSettingsScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -273,7 +313,8 @@ fun MainNavigation(preferenceManager: PreferenceManager) {
             }
             composable(MainScreen.Language.route) {
                 LanguageSelectionScreen(
-                    onDone = { navController.popBackStack() }
+                    onDone = { navController.popBackStack() },
+                    onBackClick = { navController.popBackStack() }
                 )
             }
         }

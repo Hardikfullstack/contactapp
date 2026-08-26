@@ -2,4 +2,16 @@
 <resources>
 
     <style name="Theme.ContactApp" parent="Theme.AppCompat.Light.NoActionBar" />
+
+    <!-- Android 12+ always shows a system splash screen on cold start, before the first frame is
+         drawn. windowSplashScreenBackground is transparent (no green flash before SplashScreen.kt's
+         own composable takes over) and windowSplashScreenAnimatedIcon is transparent too (no
+         separate small icon drawn). Applied only to MainActivity in the manifest —
+         installSplashScreen() (called there) switches to postSplashScreenTheme once the first
+         frame is ready. -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.ContactApp</item>
+    </style>
 </resources>

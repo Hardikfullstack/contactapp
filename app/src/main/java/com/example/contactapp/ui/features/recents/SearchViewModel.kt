@@ -57,9 +57,15 @@ class SearchViewModel @Inject constructor(
             return
         }
 
+        // Matching raw formatted strings breaks the moment the typed digits need to span a
+        // space/dash/country-code in how the number happens to be stored (e.g. "88646 46789") —
+        // a shorter query can accidentally match before that boundary while a longer, still-valid
+        // prefix no longer does. Stripping to digits-only on both sides makes the match immune to
+        // formatting entirely.
+        val digitsQuery = query.filter { it.isDigit() }
         val filtered = allContacts.filter { item ->
             val nameMatch = item.name.contains(query, ignoreCase = true)
-            val numberMatch = item.number.contains(query)
+            val numberMatch = digitsQuery.isNotEmpty() && item.number.filter { it.isDigit() }.contains(digitsQuery)
             nameMatch || numberMatch
         }.sortedBy { it.name.lowercase() }
 

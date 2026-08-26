@@ -1,12 +1,23 @@
 package com.example.contactapp.ui.features.onboarding
 
 import android.Manifest
+import android.app.Activity
 import android.app.role.RoleManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,18 +48,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.ui.draw.clip
 import com.example.contactapp.util.CallReliabilityUtils
+import com.example.contactapp.util.PreferenceManager
 
 @Composable
 fun PermissionScreen(
     onContinue: () -> Unit
 ) {
     val context = LocalContext.current
+    // Not Hilt-injected here — PermissionScreen is a plain composable with no ViewModel of its
+    // own, and PreferenceManager holds no in-memory state (every read/write goes straight to
+    // SharedPreferences), so a manually-constructed instance behaves identically to the DI one.
+    val prefs = remember { PreferenceManager(context.applicationContext) }
     val permissionsToRequest = mutableListOf(
         Manifest.permission.READ_CONTACTS,
         Manifest.permission.WRITE_CONTACTS,
         Manifest.permission.CALL_PHONE,
         Manifest.permission.READ_CALL_LOG,
         Manifest.permission.WRITE_CALL_LOG,
+        Manifest.permission.READ_PHONE_STATE,
         // Without this, AccountManager.accounts can't see the user's Google account, so every
         // contact this app creates falls back to a local-only (non-syncable) account — it can
         // never receive data like a profile photo from Google no matter how often it's synced.
@@ -59,6 +76,9 @@ fun PermissionScreen(
         }
     }
 
+    // The background reliability chain (overlay, MIUI autostart, etc) is now handled
+    // by AdvancedPermissionScreen.kt after this screen.
+
     // Being the default dialer only makes Telecom offer calls to this app — OEM battery
     // managers can still kill it in the background before an incoming call arrives, so
     // proactively ask for the battery-optimization exemption once the role is granted.
@@ -68,10 +88,18 @@ fun PermissionScreen(
         onContinue()
     }
 
+    var showDialerRequiredDialog by remember { mutableStateOf(false) }
+
     val roleLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { _ ->
-        if (!CallReliabilityUtils.isIgnoringBatteryOptimizations(context)) {
+        val roleManager = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
+        if (!roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
+            // Declining this is not a dead end like a permanently-denied runtime permission —
+            // the role request can simply be shown again, so offer a retry instead of
+            // silently letting onboarding finish with calling features broken.
+            showDialerRequiredDialog = true
+        } else if (!CallReliabilityUtils.isIgnoringBatteryOptimizations(context)) {
             try {
                 batteryOptimizationLauncher.launch(CallReliabilityUtils.batteryOptimizationIntent(context))
             } catch (e: Exception) {
@@ -82,10 +110,8 @@ fun PermissionScreen(
         }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ ->
-        // After general permissions, request Role
+    fun proceedAfterPermissions() {
+        // Request Role
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val roleManager = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
             if (!roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
@@ -101,6 +127,40 @@ fun PermissionScreen(
             }
         } else {
             onContinue()
+        }
+    }
+
+    var showSettingsDialog by remember { mutableStateOf(false) }
+
+    val settingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        val allGranted = permissionsToRequest.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+        if (allGranted) proceedAfterPermissions()
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        val allGranted = permissionsToRequest.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+        if (allGranted) {
+            proceedAfterPermissions()
+        } else {
+            // If the system can no longer show a rationale for any still-denied permission,
+            // the user has denied it (usually the second time) with "Don't allow" — the
+            // request dialog won't reappear, so send them to app settings instead.
+            val activity = context as? Activity
+            val canAskAgain = activity != null && permissionsToRequest.any { permission ->
+                ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED &&
+                    ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+            }
+            if (!canAskAgain) {
+                showSettingsDialog = true
+            }
         }
     }
 
@@ -151,7 +211,8 @@ fun PermissionScreen(
         PermissionItem(
             icon = Icons.Outlined.NotificationsNone,
             title = stringResource(R.string.smart_notifications),
-            description = stringResource(R.string.notifications_description)
+            description = stringResource(R.string.notifications_description),
+            onClick = { permissionLauncher.launch(permissionsToRequest.toTypedArray()) }
         )
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -159,7 +220,8 @@ fun PermissionScreen(
         PermissionItem(
             icon = Icons.Default.Call,
             title = stringResource(R.string.enable_call_access),
-            description = stringResource(R.string.call_access_description)
+            description = stringResource(R.string.call_access_description),
+            onClick = { permissionLauncher.launch(permissionsToRequest.toTypedArray()) }
         )
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -167,7 +229,8 @@ fun PermissionScreen(
         PermissionItem(
             icon = Icons.Default.Smartphone,
             title = stringResource(R.string.set_as_default_title),
-            description = stringResource(R.string.set_as_default_desc)
+            description = stringResource(R.string.set_as_default_desc),
+            onClick = { permissionLauncher.launch(permissionsToRequest.toTypedArray()) }
         )
         Spacer(modifier = Modifier.weight(1f))
         Spacer(modifier = Modifier.height(16.dp))
@@ -191,15 +254,17 @@ fun PermissionScreen(
 
         Spacer(modifier = Modifier.height(6.dp))
 
+        val privacyPolicyPrefix = stringResource(R.string.privacy_policy_prefix)
+        val privacyPolicyLink = stringResource(R.string.privacy_policy)
         val privacyText = buildAnnotatedString {
-            append("By continuing, you agree to our ")
+            append(privacyPolicyPrefix)
             withStyle(
                 style = SpanStyle(
                     color = PrimaryGreen,
                     textDecoration = TextDecoration.Underline
                 )
             ) {
-                append("Privacy Policy")
+                append(privacyPolicyLink)
             }
             append(".")
         }
@@ -213,16 +278,65 @@ fun PermissionScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
     }
+
+    if (showSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showSettingsDialog = false },
+            title = { Text(stringResource(R.string.permission_permanently_denied_title)) },
+            text = { Text(stringResource(R.string.permission_permanently_denied_desc)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSettingsDialog = false
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    settingsLauncher.launch(intent)
+                }) {
+                    Text(stringResource(R.string.open_settings), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSettingsDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    if (showDialerRequiredDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialerRequiredDialog = false },
+            title = { Text(stringResource(R.string.dialer_required_title)) },
+            text = { Text(stringResource(R.string.dialer_required_desc)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDialerRequiredDialog = false
+                    val roleManager = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
+                    roleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER))
+                }) {
+                    Text(stringResource(R.string.try_again), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialerRequiredDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun PermissionItem(
     icon: ImageVector,
     title: String,
-    description: String
+    description: String,
+    onClick: () -> Unit = {}
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
         color = Color.White,

@@ -15,6 +15,15 @@ object CallManager {
     private val _callState = MutableStateFlow<Int>(Call.STATE_DISCONNECTED)
     val callState = _callState.asStateFlow()
 
+    // Telecom/carriers often grant CAPABILITY_HOLD (and similar) a moment after a call becomes
+    // ACTIVE via a separate onDetailsChanged callback, not a state change — without observing
+    // that too, Compose never recomposes to re-check canHold()/canAddCall(), so the Hold/Add
+    // Call buttons stay stuck showing whatever was true at the last state change (usually
+    // disabled, from before the call connected). This counter's only purpose is to be collected
+    // as State so any details update forces a recheck.
+    private val _detailsVersion = MutableStateFlow(0)
+    val detailsVersion = _detailsVersion.asStateFlow()
+
     private val _isSpam = MutableStateFlow(false)
     val isSpam = _isSpam.asStateFlow()
 
@@ -31,6 +40,10 @@ object CallManager {
     private val callCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
             _callState.value = state
+        }
+
+        override fun onDetailsChanged(call: Call, details: Call.Details) {
+            _detailsVersion.value++
         }
     }
 
@@ -75,6 +88,19 @@ object CallManager {
     /** Ends a call that's already dialing/active. */
     fun disconnect() {
         _currentCall.value?.disconnect()
+    }
+
+    /** Whether the current call can be put on hold — false on some carriers/SIMs even for an
+     *  otherwise-normal active call, so the Hold button should hide/disable rather than assume. */
+    fun canHold(): Boolean {
+        return _currentCall.value?.details?.can(Call.Details.CAPABILITY_HOLD) == true
+    }
+
+    /** Toggles hold on the current call — Telecom exposes hold/unhold as separate calls, not a
+     *  single flip, so this just picks the right one based on the call's current state. */
+    fun toggleHold() {
+        val call = _currentCall.value ?: return
+        if (call.state == Call.STATE_HOLDING) call.unhold() else call.hold()
     }
 
     fun setMuted(shouldMute: Boolean) {

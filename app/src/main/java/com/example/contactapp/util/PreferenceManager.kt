@@ -220,6 +220,21 @@ class PreferenceManager @Inject constructor(
         _preferenceUpdateEvent.value = System.currentTimeMillis()
     }
 
+    // One-time-ask flags for the OEM background-reliability permissions requested during
+    // onboarding (see PermissionScreen.kt) — each is asked at most once per install, even if the
+    // user backs out without actually granting it, so onboarding doesn't nag on every app open.
+    fun isOverlayPermissionAutoPrompted(): Boolean = sharedPreferences.getBoolean(KEY_OVERLAY_AUTO_PROMPTED, false)
+    fun setOverlayPermissionAutoPrompted() { sharedPreferences.edit().putBoolean(KEY_OVERLAY_AUTO_PROMPTED, true).apply() }
+
+    fun isMiuiPermissionsCompleted(): Boolean = sharedPreferences.getBoolean(KEY_MIUI_PERMISSIONS_DONE, false)
+    fun setMiuiPermissionsCompleted() { sharedPreferences.edit().putBoolean(KEY_MIUI_PERMISSIONS_DONE, true).apply() }
+
+    fun isMiuiAutostartCompleted(): Boolean = sharedPreferences.getBoolean(KEY_MIUI_AUTOSTART_DONE, false)
+    fun setMiuiAutostartCompleted() { sharedPreferences.edit().putBoolean(KEY_MIUI_AUTOSTART_DONE, true).apply() }
+
+    fun isOemAutostartCompleted(): Boolean = sharedPreferences.getBoolean(KEY_OEM_AUTOSTART_DONE, false)
+    fun setOemAutostartCompleted() { sharedPreferences.edit().putBoolean(KEY_OEM_AUTOSTART_DONE, true).apply() }
+
     companion object {
         private const val PREF_NAME = "contact_app_prefs"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
@@ -240,5 +255,9 @@ class PreferenceManager @Inject constructor(
         private const val KEY_SHAKE_TRIGGER_ENABLED = "shake_trigger_enabled"
         private const val KEY_SHAKE_CALLER_NAME = "shake_caller_name"
         private const val KEY_SHAKE_CALLER_NUMBER = "shake_caller_number"
+        private const val KEY_OVERLAY_AUTO_PROMPTED = "overlay_permission_auto_prompted"
+        private const val KEY_MIUI_PERMISSIONS_DONE = "miui_permissions_completed"
+        private const val KEY_MIUI_AUTOSTART_DONE = "miui_autostart_completed"
+        private const val KEY_OEM_AUTOSTART_DONE = "oem_autostart_completed"
     }
 }

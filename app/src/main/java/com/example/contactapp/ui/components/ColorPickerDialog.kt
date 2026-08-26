@@ -89,7 +89,7 @@ fun ColorPickerDialog(
 
                 // Brightness Slider
                 Text(
-                    text = "Brightness",
+                    text = stringResource(R.string.brightness_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.Start)

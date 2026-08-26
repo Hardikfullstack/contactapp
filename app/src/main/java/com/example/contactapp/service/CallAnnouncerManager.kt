@@ -1,7 +1,9 @@
 package com.example.contactapp.service
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.speech.tts.TextToSpeech
+import android.util.Log
 import com.example.contactapp.R
 import com.example.contactapp.util.PreferenceManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,7 +29,20 @@ class CallAnnouncerManager @Inject constructor(
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts?.language = Locale.getDefault()
+            // Without this, speak() plays over the Music stream by default — inaudible whenever
+            // the user's media volume is low/zero even though the ringer itself is up, which is a
+            // very common combination. Routing to the same usage/stream as the actual ringtone
+            // (see FakeCallRingtonePlayer) ties the announcement's volume to the ring volume,
+            // matching how a real incoming call's audio is controlled.
+            tts?.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
             isInitialized = true
+        } else {
+            Log.e("CallAnnouncerDebug", "TTS init FAILED — status=$status (no TTS engine installed/enabled on this device?)")
         }
     }
 
@@ -47,8 +62,10 @@ class CallAnnouncerManager @Inject constructor(
                 delay(100)
                 waited += 100
             }
-            if (!isInitialized) return@launch
-
+            if (!isInitialized) {
+                Log.e("CallAnnouncerDebug", "announceCall: giving up — TTS never finished initializing after ${waited}ms")
+                return@launch
+            }
             if (repeatCount == 0) { // Continuous
                 while (isActive) {
                     speak(message)
@@ -69,7 +86,10 @@ class CallAnnouncerManager @Inject constructor(
     }
 
     private fun speak(text: String) {
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "CallAnnouncer")
+        val result = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "CallAnnouncer")
+        if (result != TextToSpeech.SUCCESS) {
+            Log.e("CallAnnouncerDebug", "speak: TextToSpeech.speak() returned $result (expected ${TextToSpeech.SUCCESS})")
+        }
     }
 
     fun shutdown() {

@@ -4,11 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.contactapp.ui.features.onboarding.AdvancedPermissionScreen
 import com.example.contactapp.ui.features.onboarding.LanguageSelectionScreen
 import com.example.contactapp.ui.features.onboarding.PermissionScreen
 
 sealed class OnboardingScreen(val route: String) {
     object Permission : OnboardingScreen("permission")
+    object AdvancedPermission : OnboardingScreen("advanced_permission")
     object Language : OnboardingScreen("language")
 }
 
@@ -25,6 +27,13 @@ fun OnboardingNavHost(
         composable(OnboardingScreen.Permission.route) {
             PermissionScreen(
                 onContinue = {
+                    navController.navigate(OnboardingScreen.AdvancedPermission.route)
+                }
+            )
+        }
+        composable(OnboardingScreen.AdvancedPermission.route) {
+            AdvancedPermissionScreen(
+                onAllPermissionsGranted = {
                     navController.navigate(OnboardingScreen.Language.route)
                 }
             )
@@ -33,7 +42,8 @@ fun OnboardingNavHost(
             LanguageSelectionScreen(
                 onDone = {
                     onOnboardingComplete()
-                }
+                },
+                isFirstRun = true
             )
         }
     }

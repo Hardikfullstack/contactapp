@@ -62,9 +62,16 @@ fun CallReminderSetupScreen(
     var showTimePicker by remember { mutableStateOf(false) }
 
     val filteredContacts = remember(query, contacts) {
-        if (query.isBlank()) contacts
-        else contacts.filter {
-            it.name.contains(query, ignoreCase = true) || it.number.contains(query)
+        if (query.isBlank()) {
+            contacts
+        } else {
+            // Digits-only comparison so formatting (spaces/dashes/country code) in the stored
+            // number never breaks a longer, still-correct query — see SearchViewModel's fix.
+            val digitsQuery = query.filter { it.isDigit() }
+            contacts.filter {
+                it.name.contains(query, ignoreCase = true) ||
+                    (digitsQuery.isNotEmpty() && it.number.filter { c -> c.isDigit() }.contains(digitsQuery))
+            }
         }
     }
 

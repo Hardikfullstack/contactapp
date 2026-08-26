@@ -86,7 +86,7 @@ fun BottomDialActions(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.Backspace,
                         contentDescription = "Backspace",
-                        tint = if (hasNumber) Color.Black else Color.LightGray.copy(alpha = 0.5f),
+                        tint = if (hasNumber) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.size(24.dp)
                     )
                 }

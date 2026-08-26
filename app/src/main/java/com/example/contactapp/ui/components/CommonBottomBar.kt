@@ -1,5 +1,6 @@
 package com.example.contactapp.ui.components
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -20,13 +21,18 @@ data class BottomBarActionItem(
 @Composable
 fun CommonBottomBar(
     items: List<BottomBarActionItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Callers that place something else (e.g. a banner ad) below this bar in the same column
+    // should pass WindowInsets(0) here and apply the system nav-bar inset further down instead —
+    // otherwise this reserved space ends up sandwiched between the bar and that content instead
+    // of at the screen's true bottom edge.
+    windowInsets: WindowInsets = NavigationBarDefaults.windowInsets
 ) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
         modifier = modifier,
-        windowInsets = NavigationBarDefaults.windowInsets
+        windowInsets = windowInsets
     ) {
         items.forEach { item ->
             val isSelected = item.selected

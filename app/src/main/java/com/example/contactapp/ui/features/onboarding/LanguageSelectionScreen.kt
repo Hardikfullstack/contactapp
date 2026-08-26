@@ -1,5 +1,7 @@
 package com.example.contactapp.ui.features.onboarding
 
+import android.app.Activity
+import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -7,19 +9,28 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.InterstitialAdManager
+import com.example.contactapp.ads.NativeAdTemplate
+import com.example.contactapp.ads.NativeAdView
 import com.example.contactapp.ui.theme.*
+import com.example.contactapp.util.LocaleChangeState
+import com.example.contactapp.viewmodel.AppConfigViewModel
 import java.util.Locale
 import kotlin.math.abs
 
@@ -56,7 +67,9 @@ private fun getAvatarColorForCode(code: String): Color {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageSelectionScreen(
-    onDone: () -> Unit
+    onDone: () -> Unit,
+    isFirstRun: Boolean = false,
+    onBackClick: (() -> Unit)? = null
 ) {
     val systemDefaultTitle = stringResource(R.string.system_default)
     val dynamicLanguages = remember(systemDefaultTitle) {
@@ -87,10 +100,27 @@ fun LanguageSelectionScreen(
         mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags().ifEmpty { "" })
     }
 
+    // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
+    val context = LocalContext.current
+    val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val bigNativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_2_on_off == "on") {
+            result.native_2?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // First-run only — shown right after "Done" is tapped, on the way into the app.
+    val languageDoneInterstitialAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.interstitial_1_on_off == "on") {
+            result.interstitial_1?.takeIf { it.isNotBlank() }
+        } else null
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .navigationBarsPadding()
     ) {
         TopAppBar(
             title = {
@@ -101,6 +131,17 @@ fun LanguageSelectionScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             },
+            navigationIcon = {
+                if (onBackClick != null) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            },
             actions = {
                 Button(
                     onClick = {
@@ -109,8 +150,19 @@ fun LanguageSelectionScreen(
                         } else {
                             LocaleListCompat.forLanguageTags(selectedLanguageCode)
                         }
+                        // setApplicationLocales() recreates MainActivity to refresh strings —
+                        // without this flag, that recreate replays the splash screen from scratch.
+                        LocaleChangeState.skipNextSplash = true
                         AppCompatDelegate.setApplicationLocales(appLocale)
-                        onDone()
+
+                        val activity = context as? Activity
+                        if (isFirstRun && activity != null && languageDoneInterstitialAdUnitId != null &&
+                            InterstitialAdManager.isReady(languageDoneInterstitialAdUnitId)
+                        ) {
+                            InterstitialAdManager.show(activity, languageDoneInterstitialAdUnitId) { onDone() }
+                        } else {
+                            onDone()
+                        }
                     },
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -130,7 +182,9 @@ fun LanguageSelectionScreen(
         )
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
         ) {
             items(dynamicLanguages) { language ->
                 LanguageItem(
@@ -139,6 +193,14 @@ fun LanguageSelectionScreen(
                     onClick = { selectedLanguageCode = language.code }
                 )
             }
+        }
+
+        if (bigNativeAdUnitId != null) {
+            NativeAdView(
+                adUnitId = bigNativeAdUnitId,
+                template = NativeAdTemplate.MEDIUM,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.contactapp.ui.features.history
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -36,11 +38,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import com.example.contactapp.R
+import com.example.contactapp.ads.BannerAdView
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.ui.components.BottomBarActionItem
 import com.example.contactapp.ui.components.CommonBottomBar
-import com.example.contactapp.ui.components.ContactAvatarImage
 import com.example.contactapp.ui.components.ContactQrDialog
 import com.example.contactapp.ui.components.EditContactSheet
 import com.example.contactapp.ui.components.HeaderActionButton
@@ -49,6 +53,7 @@ import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.CallUtils
 import com.example.contactapp.util.MessageUtils
 import com.example.contactapp.util.getAvatarColor
+import com.example.contactapp.viewmodel.AppConfigViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,6 +82,16 @@ fun HistoryScreen(
         if (uiState.isDeleted) {
             onBack()
         }
+    }
+
+    // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped),
+    // so the remote ad config isn't refetched per screen.
+    val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val bannerAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.banner_2_on_off == "on") {
+            result.banner_2?.takeIf { it.isNotBlank() }
+        } else null
     }
 
     Scaffold(
@@ -137,7 +152,13 @@ fun HistoryScreen(
                     onClick = { viewModel.showDeleteConfirmation(true) }
                 )
             )
-            CommonBottomBar(items = footerItems)
+            Column(modifier = Modifier.navigationBarsPadding()) {
+                CommonBottomBar(items = footerItems, windowInsets = WindowInsets(0.dp))
+                if (bannerAdUnitId != null) {
+                    BannerAdView(adUnitId = bannerAdUnitId)
+                }
+            }
+           // CommonBottomBar(items = footerItems)
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -383,9 +404,11 @@ fun ContactDetailHeader(
             contentAlignment = Alignment.Center
         ) {
             if (photoUri != null) {
-                ContactAvatarImage(
-                    photoUri = photoUri,
-                    modifier = Modifier.fillMaxSize()
+                AsyncImage(
+                    model = photoUri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 Text(
@@ -431,7 +454,7 @@ fun QuickActionsRow(
     ) {
         QuickActionButton(icon = Icons.Default.Call, label = stringResource(R.string.call), onClick = onCallClick)
         QuickActionButton(icon = Icons.AutoMirrored.Outlined.Chat, label = stringResource(R.string.message), onClick = onMessageClick)
-        QuickActionButton(icon = Icons.Outlined.QrCode, label = "QR Code", onClick = onQrClick)
+        QuickActionButton(icon = Icons.Outlined.QrCode, label = stringResource(R.string.qr_code_label), onClick = onQrClick)
     }
 }
 

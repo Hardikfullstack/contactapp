@@ -7,4 +7,12 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Native ad card colors — mirrors the Messages app's ads/ base -->
+    <color name="text_title">#FF1B1B24</color>
+    <color name="text_des">#FF464555</color>
+    <color name="native_ad_card_bg">#FFEBEBEF</color>
+    <color name="light_color_gray">#FF82828E</color>
+    <color name="native_ad_primary">#FF109D6F</color>
+    <color name="splash_background">#00109D6F</color>
 </resources>

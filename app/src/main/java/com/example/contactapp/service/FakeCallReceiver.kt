@@ -92,12 +92,21 @@ class FakeCallReceiver : BroadcastReceiver() {
         FakeCallConnectionService.registerPhoneAccount(context)
 
         val handle = FakeCallConnectionService.phoneAccountHandle(context)
-        val registeredAccount = telecomManager.getPhoneAccount(handle)
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-        Log.d(TAG, "deliverAsTelecomCall: account registered=${registeredAccount != null}, " +
-            "enabled=${registeredAccount?.isEnabled}, " +
-            "ignoringBatteryOptimizations=${powerManager.isIgnoringBatteryOptimizations(context.packageName)}, " +
-            "manufacturer=${Build.MANUFACTURER}, sdk=${Build.VERSION.SDK_INT}")
+        // Purely diagnostic — some Android versions now gate getPhoneAccount() behind
+        // READ_PHONE_NUMBERS (which this app doesn't request, since it isn't otherwise needed).
+        // This must never be allowed to block the real addNewIncomingCall() attempt below —
+        // it previously did, since an uncaught SecurityException here aborted this whole function
+        // before ever reaching it.
+        try {
+            val registeredAccount = telecomManager.getPhoneAccount(handle)
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            Log.d(TAG, "deliverAsTelecomCall: account registered=${registeredAccount != null}, " +
+                "enabled=${registeredAccount?.isEnabled}, " +
+                "ignoringBatteryOptimizations=${powerManager.isIgnoringBatteryOptimizations(context.packageName)}, " +
+                "manufacturer=${Build.MANUFACTURER}, sdk=${Build.VERSION.SDK_INT}")
+        } catch (e: Exception) {
+            Log.w(TAG, "deliverAsTelecomCall: diagnostic getPhoneAccount() check failed (non-fatal) — ${e.javaClass.simpleName}: ${e.message}")
+        }
 
         val callInfo = Bundle().apply {
             putString(FakeCallConnectionService.EXTRA_CALLER_NAME, name)

@@ -128,17 +128,21 @@ fun ToolsScreen(
                 onClick = onKeypadClick,
                 containerColor = PrimaryGreen,
                 contentColor = Color.White,
-                shape = CircleShape
+                shape = CircleShape,
+                modifier = Modifier.offset(y = 24.dp)
             ) {
                 Icon(Icons.Default.Dialpad, contentDescription = "Keypad")
             }
         },
         containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    ) {
+        // No bottom padding here — this Scaffold only hosts a FAB (no bottomBar of its own),
+        // and the outer MainNavigation Scaffold already reserves the correct space below for
+        // the shared bottom nav bar / banner ad. Applying innerPadding's bottom value here too
+        // double-counts that space on top of it.
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding())
                 .statusBarsPadding()
         ) {
             CommonHeader(

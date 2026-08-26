@@ -1,8 +1,18 @@
 <resources>
-    <string name="app_name">Connect</string>
+    <string name="app_name">Contacts</string>
+    <string name="app_launcher_name">#Contacts</string>
 
     <!-- Onboarding -->
-    <string name="allow_permission">Allow Permission</string>
+    <!-- Advanced Permissions -->
+    <string name="permission_miui_title">Permission Required</string>
+    <string name="permissions_required_title">Permissions Required</string>
+    <string name="permission_overlay_desc">We need permission to display pop-ups over other apps for quick replies and call features. This is required.</string>
+    <string name="permission_miui_desc">Your device requires extra permissions for reliable background operation. Please follow the steps below.</string>
+    <string name="action_go_to_settings">Go to Settings</string>
+    <string name="action_grant_permission">Grant Permission</string>
+    <string name="action_grant_autostart_permission">Grant Auto-Start Permission</string>
+
+    <string name="allow_permission">Contacts Needs Permission</string>
     <string name="permission_description">Enable the necessary permissions to continue and access all features.</string>
     <string name="smart_notifications">Smart Notifications</string>
     <string name="notifications_description">Allow access to identify callers and stay informed.</string>
@@ -10,8 +20,12 @@
     <string name="call_access_description">Enable call access to send messages from the after-call screen.</string>
     <string name="set_as_default_title">Set as Default Phone App</string>
     <string name="set_as_default_desc">To use our in-app call experience, please set this app as your default phone handler.</string>
+    <string name="dialer_required_title">Default Phone App Required</string>
+    <string name="dialer_required_desc">This app must be set as your default phone app for calling and call history to work. Please try again.</string>
+    <string name="try_again">Try Again</string>
     <string name="agree_continue">Agree &amp; Continue</string>
     <string name="privacy_policy_notice">By continuing, you agree to our Privacy Policy.</string>
+    <string name="privacy_policy_prefix">By continuing, you agree to our </string>
     <string name="select_app_language">Select app Language</string>
     <string name="system_default">System Default</string>
     <string name="done">Done</string>
@@ -278,6 +292,8 @@
     <string name="ringtone_updated">Ringtone updated</string>
     <string name="write_settings_permission_title">Allow Ringtone Changes</string>
     <string name="write_settings_permission_desc">To set your phone\'s ringtone, allow Connect to modify system settings.</string>
+    <string name="permission_permanently_denied_title">Permission Required</string>
+    <string name="permission_permanently_denied_desc">These permissions are essential for the app to work. Please enable them from Settings.</string>
     <string name="open_settings">Open Settings</string>
     <string name="apply">Apply</string>
     <string name="tool_import_export">Import/Export</string>
@@ -362,4 +378,132 @@
     <string name="shake_service_notification_text">Shake trigger is active</string>
     <string name="shake_battery_hint">Battery optimization may stop this in the background. Some phones also need their own background/autostart setting enabled for this app.</string>
     <string name="fix">Fix</string>
+
+    <!-- Rate Us -->
+    <string name="rate_us_title">Rate us</string>
+    <string name="rate_us_subtitle">Enjoying the app?\nRate us and help us improve!</string>
+    <string name="rate_us_button">Rate on Google play</string>
+    <string name="rate_us_button_low">Rate</string>
+    <string name="rate_us_maybe_later">May be later</string>
+    <string name="toast_no_email_app">No email app found</string>
+    <string name="help_feedback_label">Help &amp; Feedback</string>
+
+    <!-- In-app update -->
+    <string name="update_title">Update Available</string>
+    <string name="update_desc">A new version of the app is available with the latest fixes and improvements. Update now for the best experience.</string>
+    <string name="update_button">Update Now</string>
+    <string name="update_later">Later</string>
+
+    <!-- After Call -->
+    <string name="feature_after_call_title">After Call</string>
+    <string name="after_call_private_number">Private Number</string>
+    <string name="after_call_duration_outgoing">Outgoing call · %1$s</string>
+    <string name="after_call_duration_incoming">Incoming call · %1$s</string>
+    <string name="after_call_missed">Missed call</string>
+    <string name="after_call_just_now_template">Just now · %1$s</string>
+    <string name="after_call_quick_reply_1">Sorry, can\'t talk right now.</string>
+    <string name="after_call_quick_reply_2">I\'ll call you back soon.</string>
+    <string name="after_call_quick_reply_3">On my way!</string>
+    <string name="after_call_write_personal">Write a personal message…</string>
+    <string name="after_call_no_reminder">No reminders yet</string>
+    <string name="after_call_add_reminder">Add Reminder</string>
+    <string name="after_call_remind_me_about">Remind me about…</string>
+    <string name="after_call_reminder_notification_title_template">Call back %1$s</string>
+    <string name="after_call_action_add_contact">Add Contact</string>
+    <string name="after_call_action_message">Message</string>
+    <string name="after_call_action_send_mail">Send Mail</string>
+    <string name="after_call_action_calendar">Add to Calendar</string>
+    <string name="after_call_action_web">Search Web</string>
+    <string name="tomorrow">Tomorrow</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_section_preferences">Preferences</string>
+    <string name="settings_app_language">App Language</string>
+    <string name="settings_sync_contact">Sync Contact</string>
+    <string name="toast_contacts_synced">Contacts synced successfully</string>
+    <string name="toast_no_sync_account">No account to sync with — contacts are stored on this device only</string>
+    <string name="settings_sort_contact">Sort Contact</string>
+    <string name="sort_first_name">First Name</string>
+    <string name="sort_last_name">Last Name</string>
+    <string name="settings_dark_mode">Dark Mode</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
+    <string name="settings_sound_vibration">Sound &amp; Vibration</string>
+    <string name="settings_section_call_reliability">Call Reliability</string>
+    <string name="settings_battery_optimization">Battery Optimization</string>
+    <string name="state_allowed">Allowed</string>
+    <string name="state_restricted_tap_to_fix">Restricted – tap to fix</string>
+    <string name="settings_full_screen_notifications">Full-Screen Notifications</string>
+    <string name="state_required_tap_to_fix">Required – tap to fix</string>
+    <string name="toast_couldnt_open_battery_settings">Couldn\'t open battery settings</string>
+    <string name="toast_couldnt_open_notification_settings">Couldn\'t open notification settings</string>
+    <string name="toast_couldnt_open_permission_settings">Couldn\'t open permission settings</string>
+    <string name="settings_autostart_permission">Autostart Permission</string>
+    <string name="autostart_required_desc">Required on this device for incoming calls and the After Call screen</string>
+    <string name="settings_background_popup_permission">Background Pop-up Permission</string>
+    <string name="background_popup_required_desc">Required for the call screen and After Call screen to open</string>
+    <string name="settings_after_call_screen_title">After Call Screen</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
+    <string name="settings_section_privacy_data">Privacy &amp; Data</string>
+    <string name="settings_caller_id_spam">Caller ID &amp; Spam</string>
+    <string name="toast_caller_id_protection_active">Caller ID protection is active</string>
+    <string name="settings_blocking">Blocking</string>
+    <string name="recycle_bin_title">Recycle Bin</string>
+    <string name="settings_section_other">Other</string>
+    <string name="settings_rate_us">Rate Us</string>
+    <string name="settings_share_app">Share App</string>
+    <string name="share_app_message">Check out this Contact App!</string>
+    <string name="share_via">Share via</string>
+    <string name="settings_feedback">Feedback</string>
+    <string name="email_subject_app_feedback">App Feedback</string>
+    <string name="settings_about_us">About Us</string>
+    <string name="toast_app_version_template">Contacts App v%1$s</string>
+    <string name="settings_system_language">System Language</string>
+
+    <!-- Recycle Bin -->
+    <string name="recycle_bin_selected_count">%1$d selected</string>
+    <string name="recycle_bin_empty">Recycle bin is empty</string>
+
+    <!-- Misc UI text -->
+    <string name="qr_scan_hint">Scan to add to contacts</string>
+    <string name="view_call_history">View Call History</string>
+    <string name="edit_contact_title">Edit contact</string>
+    <string name="copy_number">Copy number</string>
+    <string name="unblock_number">Unblock number</string>
+    <string name="block_or_report">Block or report</string>
+    <string name="brightness_label">Brightness</string>
+    <string name="qr_code_label">QR Code</string>
+    <string name="share_history_chooser_title">Share History</string>
+    <string name="toast_error_scheduling_call">Error scheduling call</string>
+    <string name="toast_invalid_phone_number">Invalid phone number</string>
+    <string name="toast_could_not_open_messaging_app">Could not open messaging app</string>
+    <string name="toast_could_not_initiate_call">Could not initiate call</string>
+
+    <!-- Call Accent Color names (remaining, not covered by the color_* set above) -->
+    <string name="color_green">Green</string>
+    <string name="color_teal">Teal</string>
+    <string name="color_lime">Lime</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_cyan">Cyan</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_indigo">Indigo</string>
+    <string name="color_pink">Pink</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_slate">Slate</string>
+    <string name="color_gold">Gold</string>
+    <string name="color_emerald">Emerald</string>
+    <string name="color_ruby">Ruby</string>
+    <string name="color_sapphire">Sapphire</string>
+    <string name="color_amethyst">Amethyst</string>
+    <string name="color_bronze">Bronze</string>
+    <string name="color_platinum">Platinum</string>
+    <string name="color_rose_gold">Rose Gold</string>
+    <string name="color_midnight_blue">Midnight Blue</string>
+    <string name="color_obsidian">Obsidian</string>
+
+    <string name="camera_permission_needed_title">Camera Permission Needed</string>
+    <string name="camera_permission_needed_desc">Your flashlight is part of your phone\'s camera hardware — Android requires Camera permission to turn it on and off, even though this app never takes photos or videos. Without it, Flash Alert can\'t blink your flashlight for incoming calls.</string>
+    <string name="camera_permission_denied_settings_hint">Since it\'s been denied, please enable it from Settings.</string>
 </resources>

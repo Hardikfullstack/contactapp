@@ -28,9 +28,19 @@ class CallLogRepositoryImpl @Inject constructor(
     }
 
     override fun fetchCallHistory(phoneNumber: String): Flow<List<CallLogItem>> = callLogFlow {
-        val selection = "${CallLog.Calls.NUMBER} = ?"
-        val selectionArgs = arrayOf(phoneNumber)
-        queryCallLogs(selection, selectionArgs)
+        // An exact CallLog.Calls.NUMBER match would miss real history whenever the call log's
+        // stored format differs even slightly from the contact's (country code, spacing, dashes)
+        // — e.g. contact "+91 98765 43210" vs a logged call stored as "9876543210". Normalize
+        // both sides to the last 10 digits instead, matching the comparison used everywhere else
+        // in the app (blocked-number checks, spam detection).
+        val target = phoneNumber.replace(Regex("[^0-9]"), "").takeLast(10)
+        if (target.isEmpty()) {
+            emptyList()
+        } else {
+            queryCallLogs(null, null).filter { log ->
+                log.number.replace(Regex("[^0-9]"), "").takeLast(10) == target
+            }
+        }
     }
 
     override suspend fun fetchCallLogsForAnalytics(): List<CallLogItem> = withContext(Dispatchers.IO) {
@@ -161,11 +171,17 @@ class CallLogRepositoryImpl @Inject constructor(
         val projection = arrayOf(
             CallLog.Calls._ID,
             CallLog.Calls.CACHED_NAME,
+            CallLog.Calls.CACHED_PHOTO_URI,
             CallLog.Calls.NUMBER,
             CallLog.Calls.TYPE,
             CallLog.Calls.DATE,
             CallLog.Calls.DURATION
         )
+
+        // One batched query for every saved contact (same pattern the fast Contacts list
+        // uses), instead of a per-row ContactsProvider round trip for each call log entry
+        // whose cache is empty.
+        val contactIndex = if (shouldResolveContactInfo) buildContactIndex() else emptyMap()
 
         try {
             contentResolver.query(
@@ -177,6 +193,7 @@ class CallLogRepositoryImpl @Inject constructor(
             )?.use { cursor ->
                 val idIndex = cursor.getColumnIndex(CallLog.Calls._ID)
                 val nameIndex = cursor.getColumnIndex(CallLog.Calls.CACHED_NAME)
+                val photoUriIndex = cursor.getColumnIndex(CallLog.Calls.CACHED_PHOTO_URI)
                 val numberIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER)
                 val typeIndex = cursor.getColumnIndex(CallLog.Calls.TYPE)
                 val dateIndex = cursor.getColumnIndex(CallLog.Calls.DATE)
@@ -190,17 +207,19 @@ class CallLogRepositoryImpl @Inject constructor(
                     val date = cursor.getLong(dateIndex)
                     val duration = cursor.getString(durationIndex)
                     val durationSec = try { duration.toLong() } catch (e: Exception) { 0L }
-                    var photoUri: String? = null
+                    var photoUri: String? = cursor.getString(photoUriIndex)
 
-                    // Resolve name and photo from Contacts if needed (skipped for bulk
-                    // analytics reads — this is a per-row ContentResolver query and far
-                    // too slow across an entire call history).
-                    if (shouldResolveContactInfo) {
-                        val contactInfo = resolveContactInfo(number)
-                        if (name.isNullOrBlank()) {
-                            name = contactInfo.first
+                    // The call log caches name/photo at call time. Only fall back to the
+                    // in-memory contact index (built once above, not a per-row query) when
+                    // either is missing from that cache — e.g. the number wasn't saved yet,
+                    // or its photo was added after the call was logged.
+                    if (shouldResolveContactInfo && (name.isNullOrBlank() || photoUri.isNullOrBlank())) {
+                        val normalized = number?.replace(Regex("[^0-9]"), "")?.takeLast(10)
+                        val contactInfo = contactIndex[normalized]
+                        if (contactInfo != null) {
+                            if (name.isNullOrBlank()) name = contactInfo.first
+                            if (photoUri.isNullOrBlank()) photoUri = contactInfo.second
                         }
-                        photoUri = contactInfo.second
                     }
 
                     callLogs.add(
@@ -246,6 +265,39 @@ class CallLogRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Pair(null, null)
         }
+    }
+
+    private fun buildContactIndex(): Map<String, Pair<String?, String?>> {
+        val index = mutableMapOf<String, Pair<String?, String?>>()
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI
+        )
+
+        try {
+            contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection,
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                val numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val photoIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI)
+
+                while (cursor.moveToNext()) {
+                    val number = cursor.getString(numberIndex) ?: continue
+                    val normalized = number.replace(Regex("[^0-9]"), "").takeLast(10)
+                    if (normalized.isEmpty() || index.containsKey(normalized)) continue
+                    index[normalized] = Pair(cursor.getString(nameIndex), cursor.getString(photoIndex))
+                }
+            }
+        } catch (e: Exception) {
+            // Log or handle
+        }
+        return index
     }
 
     private fun mapCallType(type: Int): CallType {

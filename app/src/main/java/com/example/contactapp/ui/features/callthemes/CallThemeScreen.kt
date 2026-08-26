@@ -288,7 +288,7 @@ private fun ColorSwatch(
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = accentColor.name,
+            text = stringResource(accentColor.nameResId),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1

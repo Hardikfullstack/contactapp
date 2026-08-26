@@ -11,9 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.contactapp.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +63,7 @@ fun ContactActionBottomSheet(
             // Actions
             ActionItem(
                 icon = Icons.Outlined.ContentCopy,
-                label = "Copy number",
+                label = stringResource(R.string.copy_number),
                 onClick = {
                     onCopyClick()
                     onDismiss()
@@ -70,7 +72,7 @@ fun ContactActionBottomSheet(
 
             ActionItem(
                 icon = Icons.Outlined.Block,
-                label = if (isBlocked) "Unblock number" else "Block or report",
+                label = if (isBlocked) stringResource(R.string.unblock_number) else stringResource(R.string.block_or_report),
                 onClick = {
                     onBlockClick()
                     onDismiss()

@@ -17,11 +17,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.contactapp.R
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.util.getAvatarColor
 
@@ -116,7 +118,7 @@ fun ContactQrDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Scan to add to contacts",
+                    text = stringResource(R.string.qr_scan_hint),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -134,7 +136,7 @@ fun ContactQrDialog(
                     ) {
                         Icon(Icons.Default.History, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "View Call History")
+                        Text(text = stringResource(R.string.view_call_history))
                     }
                 }
 

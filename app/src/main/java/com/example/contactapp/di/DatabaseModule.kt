@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.contactapp.data.local.AppDatabase
 import com.example.contactapp.data.local.dao.RecycleBinDao
+import com.example.contactapp.data.local.dao.ReminderDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,12 +23,22 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
-        ).build()
+        )
+            // No real migrations written yet — acceptable pre-release (no shipped user data to
+            // preserve). Revisit with a proper Migration once this app has real users.
+            .fallbackToDestructiveMigration(dropAllTables = false)
+            .build()
     }
 
     @Provides
     @Singleton
     fun provideRecycleBinDao(database: AppDatabase): RecycleBinDao {
         return database.recycleBinDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideReminderDao(database: AppDatabase): ReminderDao {
+        return database.reminderDao()
     }
 }

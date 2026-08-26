@@ -42,6 +42,7 @@ import com.example.contactapp.util.getAvatarColor
 fun KeypadScreen(
     viewModel: KeypadViewModel = hiltViewModel(),
     onSearchClick: () -> Unit,
+    onBackClick: (() -> Unit)? = null,
     preferenceManager: com.example.contactapp.util.PreferenceManager
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -97,6 +98,7 @@ fun KeypadScreen(
             // Header - Fixed at top
             CommonHeader(
                 title = stringResource(R.string.phone),
+                onBackClick = onBackClick,
                 actions = {
                     HeaderActionButton(
                         icon = Icons.Outlined.Search,

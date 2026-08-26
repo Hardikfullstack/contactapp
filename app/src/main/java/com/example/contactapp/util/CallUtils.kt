@@ -10,11 +10,12 @@ import android.os.Build
 import android.telecom.TelecomManager
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import com.example.contactapp.R
 
 object CallUtils {
     fun makeCall(context: Context, number: String) {
         if (number.isBlank()) {
-            Toast.makeText(context, "Invalid phone number", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_invalid_phone_number), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -54,7 +55,7 @@ object CallUtils {
                 context.startActivity(intent)
             }
         } catch (e: Exception) {
-            Toast.makeText(context, "Could not initiate call", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_could_not_initiate_call), Toast.LENGTH_SHORT).show()
         }
     }
 }

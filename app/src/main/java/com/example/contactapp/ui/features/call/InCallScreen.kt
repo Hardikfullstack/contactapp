@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -66,6 +67,8 @@ fun InCallScreen(
     audioState: CallAudioState? = null,
     onToggleMute: () -> Unit = {},
     onToggleSpeaker: () -> Unit = {},
+    canHold: Boolean = false,
+    onToggleHold: () -> Unit = {},
     onPlayDtmf: (Char) -> Unit = {},
     onStopDtmf: () -> Unit = {},
     canAddCall: Boolean = false,
@@ -329,6 +332,8 @@ fun InCallScreen(
                                 .navigationBarsPadding(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            // Two evenly balanced rows of three — primary in-call controls up top,
+                            // secondary/extra actions below, rather than a lopsided 4-and-2 split.
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -355,13 +360,17 @@ fun InCallScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Second row — Add call / Record. Flat and always visible rather than
-                            // hidden behind a "More" toggle: fewer taps, nothing to discover, and
-                            // no extra animated panel to manage.
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
+                                CallControlButton(
+                                    icon = Icons.Default.Pause,
+                                    label = stringResource(R.string.hold),
+                                    active = isOnHold,
+                                    enabled = canHold,
+                                    onClick = onToggleHold
+                                )
                                 CallControlButton(
                                     icon = Icons.Default.PersonAdd,
                                     label = stringResource(R.string.add_call),
@@ -556,7 +565,10 @@ fun CallControlButton(
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.alpha(if (enabled) 1f else 0.4f)
+    ) {
         Surface(
             onClick = onClick,
             enabled = enabled,

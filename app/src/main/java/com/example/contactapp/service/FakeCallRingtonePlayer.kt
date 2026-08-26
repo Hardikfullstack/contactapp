@@ -46,37 +46,50 @@ class FakeCallRingtonePlayer @Inject constructor(
 
         ringJob = scope.launch {
             val contactOverride = number?.let { contactRepository.getContactRingtone(it) }
-            val uri = when {
-                contactOverride == Uri.EMPTY -> null // contact explicitly set to Silent
-                contactOverride != null -> contactOverride
-                else -> RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE)
-            } ?: return@launch // Silent — either the contact's explicit choice, or no default set at all
+            if (contactOverride == Uri.EMPTY) return@launch // contact explicitly set to Silent
+
+            // Try, in order: the contact's own ringtone override, then the user's actual chosen
+            // default (what should normally play), and only as a last resort — since that "actual
+            // default" URI can point at a file that's since been deleted, or a fresh/emulator
+            // device can have a broken default entirely — Android's getValidRingtoneUri(), which
+            // picks *some* playable ringtone on the device rather than necessarily the user's
+            // preferred one. Falling back to it too early is exactly what silently overrode the
+            // user's real ringtone choice with the factory default before this fix.
+            val candidates = listOfNotNull(
+                contactOverride,
+                RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE),
+                RingtoneManager.getValidRingtoneUri(context)
+            )
 
             withContext(Dispatchers.Main) {
-                playUri(uri)
+                playFirstWorkingUri(candidates)
             }
         }
     }
 
-    private fun playUri(uri: Uri) {
-        try {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                setDataSource(context, uri)
-                isLooping = true
-                prepare()
-                start()
+    private fun playFirstWorkingUri(uris: List<Uri>) {
+        for (uri in uris) {
+            try {
+                mediaPlayer = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    setDataSource(context, uri)
+                    isLooping = true
+                    prepare()
+                    start()
+                }
+                return // played successfully — stop trying further candidates
+            } catch (e: Exception) {
+                Log.e("FakeCallDebug", "startRinging: FAILED for $uri — ${e.javaClass.simpleName}: ${e.message}", e)
+                mediaPlayer?.release()
+                mediaPlayer = null
             }
-        } catch (e: Exception) {
-            Log.e("FakeCallDebug", "startRinging: FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
-            mediaPlayer?.release()
-            mediaPlayer = null
         }
+        Log.e("FakeCallDebug", "startRinging: no ringtone URI on this device could actually be played — staying silent")
     }
 
     fun stopRinging() {

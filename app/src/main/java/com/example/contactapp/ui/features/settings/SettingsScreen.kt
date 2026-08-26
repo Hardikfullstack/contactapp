@@ -6,7 +6,11 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,12 +35,16 @@ import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.components.SettingsDivider
 import com.example.contactapp.ui.components.SettingsItem
 import com.example.contactapp.ui.components.SettingsSectionHeader
+import com.example.contactapp.ui.components.dialogs.RateUsDialog
+import com.example.contactapp.util.AfterCallState
+import com.example.contactapp.util.RateUsHelper
 
 @Composable
 fun SettingsScreen(
     onBlockedNumbersClick: () -> Unit,
     onLanguageClick: () -> Unit,
     onRecycleBinClick: () -> Unit,
+    onAfterCallClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -44,20 +52,53 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     var showSortDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showRateUsDialog by remember { mutableStateOf(false) }
+    val afterCallEnabled by AfterCallState.enabled
 
     val systemSettingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { viewModel.refreshState() }
 
+    // The autostart/MIUI-popup screens are launched as plain startActivity() calls (no
+    // meaningful ActivityResult callback — see CallReliabilityUtils), so catch the return trip
+    // via ON_RESUME instead, same as systemSettingsLauncher's callback does for the ones that do
+    // support a result callback.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshState()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val contactsSyncedMessage = stringResource(R.string.toast_contacts_synced)
+    val noSyncAccountMessage = stringResource(R.string.toast_no_sync_account)
     fun runSync() {
         viewModel.syncContacts { synced ->
-            val message = if (synced) {
-                "Contacts synced successfully"
-            } else {
-                "No account to sync with — contacts are stored on this device only"
-            }
+            val message = if (synced) contactsSyncedMessage else noSyncAccountMessage
             android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
         }
+    }
+
+    val couldntOpenBatterySettingsMessage = stringResource(R.string.toast_couldnt_open_battery_settings)
+    val couldntOpenNotificationSettingsMessage = stringResource(R.string.toast_couldnt_open_notification_settings)
+    val callerIdProtectionActiveMessage = stringResource(R.string.toast_caller_id_protection_active)
+    val shareAppMessage = stringResource(R.string.share_app_message)
+    val shareViaLabel = stringResource(R.string.share_via)
+    val feedbackEmailSubject = stringResource(R.string.email_subject_app_feedback)
+    val appVersionMessage = stringResource(R.string.toast_app_version_template, uiState.appVersion)
+
+    val firstNameLabel = stringResource(R.string.sort_first_name)
+    val lastNameLabel = stringResource(R.string.sort_last_name)
+    val lightLabel = stringResource(R.string.theme_light)
+    val darkLabel = stringResource(R.string.theme_dark)
+    val systemLabel = stringResource(R.string.theme_system)
+    fun sortOrderLabel(order: String): String = if (order == "Last Name") lastNameLabel else firstNameLabel
+    fun themeLabel(theme: String): String = when (theme) {
+        "Dark" -> darkLabel
+        "Light" -> lightLabel
+        else -> systemLabel
     }
 
     val accountsPermissionLauncher = rememberLauncherForActivityResult(
@@ -75,17 +116,17 @@ fun SettingsScreen(
         )
 
         // Preferences Section
-        SettingsSectionHeader(title = "Preferences")
+        SettingsSectionHeader(title = stringResource(R.string.settings_section_preferences))
         SettingsCard {
             SettingsItem(
-                title = "App Language",
+                title = stringResource(R.string.settings_app_language),
                 icon = Icons.Outlined.Language,
                 value = uiState.currentLanguage,
                 onClick = onLanguageClick
             )
             SettingsDivider()
             SettingsItem(
-                title = "Sync Contact",
+                title = stringResource(R.string.settings_sync_contact),
                 icon = Icons.Outlined.Sync,
                 showChevron = false,
                 trailing = {
@@ -109,17 +150,17 @@ fun SettingsScreen(
             )
             SettingsDivider()
             SettingsItem(
-                title = "Sort Contact",
+                title = stringResource(R.string.settings_sort_contact),
                 icon = Icons.Outlined.SortByAlpha,
-                value = uiState.contactSortOrder,
+                value = sortOrderLabel(uiState.contactSortOrder),
                 onClick = { showSortDialog = true }
             )
             SettingsDivider()
             SettingsItem(
-                title = "Dark Mode",
+                title = stringResource(R.string.settings_dark_mode),
                 icon = if (uiState.appTheme == "Dark") Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
                 onClick = { showThemeDialog = true },
-                value = uiState.appTheme,
+                value = themeLabel(uiState.appTheme),
                 trailing = {
                     Switch(
                         checked = uiState.appTheme == "Dark",
@@ -133,7 +174,7 @@ fun SettingsScreen(
             )
             SettingsDivider()
             SettingsItem(
-                title = "Sound & Vibration",
+                title = stringResource(R.string.settings_sound_vibration),
                 icon = Icons.AutoMirrored.Outlined.VolumeUp,
                 onClick = { viewModel.openSoundSettings() }
             )
@@ -142,19 +183,36 @@ fun SettingsScreen(
         // Call Reliability Section — helps on OEMs (MIUI, ColorOS, FuntouchOS, EMUI, etc.)
         // that kill background apps and can silently stop incoming calls from reaching
         // this app even after it's set as the default dialer.
-        SettingsSectionHeader(title = "Call Reliability")
+        SettingsSectionHeader(title = stringResource(R.string.settings_section_call_reliability))
         SettingsCard {
+            val allowedLabel = stringResource(R.string.state_allowed)
             SettingsItem(
-                title = "Battery Optimization",
+                title = stringResource(R.string.settings_battery_optimization),
                 icon = Icons.Outlined.BatteryChargingFull,
-                value = if (uiState.isBatteryOptimizationIgnored) "Allowed" else "Restricted – tap to fix",
+                value = if (uiState.isBatteryOptimizationIgnored) allowedLabel else stringResource(R.string.state_restricted_tap_to_fix),
                 showChevron = false,
                 onClick = {
                     if (!uiState.isBatteryOptimizationIgnored) {
                         try {
                             systemSettingsLauncher.launch(viewModel.getBatteryOptimizationIntent())
                         } catch (e: Exception) {
-                            android.widget.Toast.makeText(context, "Couldn't open battery settings", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, couldntOpenBatterySettingsMessage, android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            )
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(R.string.settings_full_screen_notifications),
+                icon = Icons.Outlined.NotificationsActive,
+                value = if (uiState.hasFullScreenIntentPermission) allowedLabel else stringResource(R.string.state_required_tap_to_fix),
+                showChevron = false,
+                onClick = {
+                    if (!uiState.hasFullScreenIntentPermission) {
+                        try {
+                            systemSettingsLauncher.launch(viewModel.fullScreenIntentIntent())
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(context, couldntOpenNotificationSettingsMessage, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -162,92 +220,92 @@ fun SettingsScreen(
             if (uiState.hasAutoStartSettings) {
                 SettingsDivider()
                 SettingsItem(
-                    title = "Autostart Permission",
+                    title = stringResource(R.string.settings_autostart_permission),
                     icon = Icons.Outlined.PlayCircleOutline,
-                    value = "Required on this device for incoming calls",
-                    onClick = {
-                        viewModel.getAutoStartIntent()?.let {
-                            try {
-                                systemSettingsLauncher.launch(it)
-                            } catch (e: Exception) {
-                                android.widget.Toast.makeText(context, "Couldn't open autostart settings", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
+                    value = if (uiState.isMiuiAutostartGranted) allowedLabel else stringResource(R.string.autostart_required_desc),
+                    onClick = { viewModel.launchAutoStartSettings(context) }
                 )
             }
+            if (uiState.showBackgroundPopupSettings) {
+                SettingsDivider()
+                SettingsItem(
+                    title = stringResource(R.string.settings_background_popup_permission),
+                    icon = Icons.Outlined.PictureInPicture,
+                    value = if (uiState.isMiuiBackgroundPopupGranted) allowedLabel else stringResource(R.string.background_popup_required_desc),
+                    onClick = { viewModel.openMiuiBackgroundPopupSettings(context) }
+                )
+            }
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(R.string.settings_after_call_screen_title),
+                icon = Icons.Outlined.NotificationsActive,
+                value = if (afterCallEnabled) stringResource(R.string.state_on) else stringResource(R.string.state_off),
+                onClick = onAfterCallClick
+            )
         }
 
         // Privacy & Data Section
-        SettingsSectionHeader(title = "Privacy & Data")
+        SettingsSectionHeader(title = stringResource(R.string.settings_section_privacy_data))
         SettingsCard {
             SettingsItem(
-                title = "Caller ID & Spam",
+                title = stringResource(R.string.settings_caller_id_spam),
                 icon = Icons.Outlined.Report,
-                onClick = { 
-                    android.widget.Toast.makeText(context, "Caller ID protection is active", android.widget.Toast.LENGTH_SHORT).show()
+                onClick = {
+                    android.widget.Toast.makeText(context, callerIdProtectionActiveMessage, android.widget.Toast.LENGTH_SHORT).show()
                 }
             )
             SettingsDivider()
             SettingsItem(
-                title = "Blocking",
+                title = stringResource(R.string.settings_blocking),
                 icon = Icons.Outlined.Block,
                 onClick = onBlockedNumbersClick
             )
             SettingsDivider()
             SettingsItem(
-                title = "Recycle Bin",
+                title = stringResource(R.string.recycle_bin_title),
                 icon = Icons.Outlined.Delete,
                 onClick = onRecycleBinClick
             )
         }
 
         // Other Section
-        SettingsSectionHeader(title = "Other")
+        SettingsSectionHeader(title = stringResource(R.string.settings_section_other))
         SettingsCard {
             SettingsItem(
-                title = "Rate Us",
+                title = stringResource(R.string.settings_rate_us),
                 icon = Icons.Outlined.ThumbUp,
-                onClick = { 
-                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=${context.packageName}"))
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    try {
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        // fallback to browser
-                    }
-                }
+                onClick = { showRateUsDialog = true }
             )
             SettingsDivider()
             SettingsItem(
-                title = "Share App",
+                title = stringResource(R.string.settings_share_app),
                 icon = Icons.Outlined.Share,
-                onClick = { 
+                onClick = {
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "Check out this Contact App!")
+                        putExtra(Intent.EXTRA_TEXT, shareAppMessage)
                     }
-                    context.startActivity(Intent.createChooser(intent, "Share via"))
+                    context.startActivity(Intent.createChooser(intent, shareViaLabel))
                 }
             )
             SettingsDivider()
             SettingsItem(
-                title = "Feedback",
+                title = stringResource(R.string.settings_feedback),
                 icon = Icons.AutoMirrored.Outlined.Chat,
-                onClick = { 
+                onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = android.net.Uri.parse("mailto:feedback@example.com")
-                        putExtra(Intent.EXTRA_SUBJECT, "App Feedback")
+                        data = android.net.Uri.parse("mailto:parth@aavakar.com")
+                        putExtra(Intent.EXTRA_SUBJECT, feedbackEmailSubject)
                     }
                     try { context.startActivity(intent) } catch (e: Exception) {}
                 }
             )
             SettingsDivider()
             SettingsItem(
-                title = "About Us",
+                title = stringResource(R.string.settings_about_us),
                 icon = Icons.Outlined.Info,
-                onClick = { 
-                    android.widget.Toast.makeText(context, "Connect App v${uiState.appVersion}", android.widget.Toast.LENGTH_LONG).show()
+                onClick = {
+                    android.widget.Toast.makeText(context, appVersionMessage, android.widget.Toast.LENGTH_LONG).show()
                 }
             )
         }
@@ -266,24 +324,28 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setSortOrder(option)
+                                    showSortDialog = false
+                                }
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = uiState.contactSortOrder == option,
-                                onClick = { 
+                                onClick = {
                                     viewModel.setSortOrder(option)
                                     showSortDialog = false
                                 }
                             )
-                            Text(text = option, modifier = Modifier.padding(start = 8.dp))
+                            Text(text = sortOrderLabel(option), modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                 }
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showSortDialog = false }) { 
+                TextButton(onClick = { showSortDialog = false }) {
                     Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -300,6 +362,10 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setTheme(option)
+                                    showThemeDialog = false
+                                }
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -310,7 +376,7 @@ fun SettingsScreen(
                                     showThemeDialog = false
                                 }
                             )
-                            Text(text = option, modifier = Modifier.padding(start = 8.dp))
+                            Text(text = themeLabel(option), modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                 }
@@ -323,4 +389,15 @@ fun SettingsScreen(
             }
         )
     }
+
+    if (showRateUsDialog) {
+        RateUsDialog(
+            onRateClick = { stars ->
+                showRateUsDialog = false
+                RateUsHelper.handleRating(context, stars)
+            },
+            onDismiss = { showRateUsDialog = false }
+        )
+    }
+
 }

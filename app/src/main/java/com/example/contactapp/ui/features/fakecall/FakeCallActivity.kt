@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Stop
@@ -142,6 +143,14 @@ class FakeCallActivity : ComponentActivity() {
             // removal all happen exactly once regardless of which path (swipe gesture or a
             // Telecom-driven answer/end) drove the transition.
             LaunchedEffect(fakeCallState) {
+                // FakeCallReceiver posts the ringing notification (NOTIFICATION_ID) asynchronously,
+                // behind a spam-status check — that can land AFTER the one-shot cancel already in
+                // onCreate() above, leaving it stuck even once answered/declined from this screen's
+                // own swipe UI (the notification's own Answer/Decline buttons go through
+                // FakeCallActionReceiver instead, which does cancel it, but the in-app path never
+                // did). Re-cancelling on every real state change here closes that race.
+                NotificationManagerCompat.from(this@FakeCallActivity).cancel(FakeCallReceiver.NOTIFICATION_ID)
+
                 when (fakeCallState) {
                     Call.STATE_ACTIVE -> {
                         postActiveCallNotification(this@FakeCallActivity, name)
@@ -238,6 +247,8 @@ fun FakeCallContent(
     val isAccepted = state == Call.STATE_ACTIVE
     var timer by remember { mutableIntStateOf(0) }
     var buttonsVisible by remember { mutableStateOf(false) }
+    // Purely cosmetic, same as Add Call/Record below — no real Telecom call to actually hold.
+    var isFakeOnHold by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { buttonsVisible = true }
 
     LaunchedEffect(isAccepted) {
@@ -247,6 +258,12 @@ fun FakeCallContent(
             // swipe gesture below or a Telecom-driven answer (both funnel through this state).
             flashAlertManager.stopBlinking()
             ringtonePlayer.stopRinging()
+        }
+    }
+
+    // Timer pauses while cosmetically "on hold", matching the real in-call screen's behavior.
+    LaunchedEffect(isAccepted, isFakeOnHold) {
+        if (isAccepted && !isFakeOnHold) {
             while (true) {
                 delay(1000)
                 timer++
@@ -378,7 +395,7 @@ fun FakeCallContent(
                 )
 
                 Text(
-                    text = if (isAccepted) formatTimer(timer) else number,
+                    text = if (isAccepted) { if (isFakeOnHold) stringResource(R.string.on_hold) else formatTimer(timer) } else number,
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.8f),
                     modifier = Modifier.padding(top = 8.dp)
@@ -528,6 +545,12 @@ fun FakeCallContent(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
+                                CallControlButton(
+                                    icon = Icons.Default.Pause,
+                                    label = stringResource(R.string.hold),
+                                    active = isFakeOnHold,
+                                    onClick = { isFakeOnHold = !isFakeOnHold }
+                                )
                                 CallControlButton(
                                     icon = Icons.Default.PersonAdd,
                                     label = stringResource(R.string.add_call),

@@ -120,18 +120,22 @@ fun ContactsScreen(
                     onClick = { viewModel.showAddContactSheet(true) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = androidx.compose.foundation.shape.CircleShape
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    modifier = Modifier.offset(y = 24.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Contact")
                 }
             }
         },
         containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    ) {
+        // No bottom padding here — this Scaffold only hosts a FAB (no bottomBar of its own),
+        // and the outer MainNavigation Scaffold already reserves the correct space below for
+        // the shared bottom nav bar / banner ad. Applying innerPadding's bottom value here too
+        // double-counts that space on top of it.
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding())
                 .statusBarsPadding()
         ) {
             if (uiState.isSelectionMode) {
@@ -154,7 +158,7 @@ fun ContactsScreen(
                         }
                         
                         Text(
-                            text = "${uiState.selectedIds.size} selected",
+                            text = stringResource(R.string.recycle_bin_selected_count, uiState.selectedIds.size),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier
                                 .weight(1f)

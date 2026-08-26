@@ -43,7 +43,7 @@ fun EditContactSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Edit contact",
+                    text = stringResource(R.string.edit_contact_title),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Normal,
                     color = MaterialTheme.colorScheme.onSurface

@@ -1,6 +1,7 @@
 package com.example.contactapp.ui.features.announcer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -79,6 +80,7 @@ fun CallAnnouncerScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clickable { viewModel.setRepeatCount(value) }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

@@ -5,6 +5,7 @@ import android.app.role.RoleManager
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
@@ -12,6 +13,7 @@ import android.provider.Settings
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.contactapp.R
 import com.example.contactapp.util.CallReliabilityUtils
 import com.example.contactapp.util.PreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,7 +32,11 @@ data class SettingsUiState(
     val isSyncing: Boolean = false,
     val currentLanguage: String = "System Language",
     val isBatteryOptimizationIgnored: Boolean = true,
-    val hasAutoStartSettings: Boolean = false
+    val hasAutoStartSettings: Boolean = false,
+    val showBackgroundPopupSettings: Boolean = false,
+    val isMiuiBackgroundPopupGranted: Boolean = true,
+    val isMiuiAutostartGranted: Boolean = true,
+    val hasFullScreenIntentPermission: Boolean = true
 )
 
 @HiltViewModel
@@ -49,7 +55,7 @@ class SettingsViewModel @Inject constructor(
     fun refreshState() {
         val languageTags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
         val languageDisplayName = if (languageTags.isEmpty()) {
-            "System Language"
+            context.getString(R.string.settings_system_language)
         } else {
             java.util.Locale.forLanguageTag(languageTags).getDisplayLanguage(java.util.Locale.forLanguageTag(languageTags)).replaceFirstChar { it.uppercase() }
         }
@@ -61,13 +67,37 @@ class SettingsViewModel @Inject constructor(
             appVersion = getVersionName(),
             currentLanguage = languageDisplayName,
             isBatteryOptimizationIgnored = CallReliabilityUtils.isIgnoringBatteryOptimizations(context),
-            hasAutoStartSettings = CallReliabilityUtils.autoStartIntent(context) != null
+            hasAutoStartSettings = CallReliabilityUtils.hasKnownAutoStartSettings(),
+            showBackgroundPopupSettings = CallReliabilityUtils.isMiui(),
+            isMiuiBackgroundPopupGranted = CallReliabilityUtils.isMiuiBackgroundPopupGranted(context),
+            isMiuiAutostartGranted = CallReliabilityUtils.isMiuiAutostartGranted(context),
+            hasFullScreenIntentPermission = CallReliabilityUtils.hasFullScreenIntentPermission(context)
         )
     }
 
+    fun fullScreenIntentIntent(): Intent = Intent(
+        Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+        Uri.parse("package:${context.packageName}")
+    )
+
     fun getBatteryOptimizationIntent(): Intent = CallReliabilityUtils.batteryOptimizationIntent(context)
 
-    fun getAutoStartIntent(): Intent? = CallReliabilityUtils.autoStartIntent(context)
+    /** Tries every known candidate for this device's manufacturer directly (explicit intents,
+     * bypassing package-visibility filtering) — see CallReliabilityUtils' class doc comment.
+     * Takes the caller's (Activity) context rather than always using the injected Application
+     * context — launching from an Activity context keeps the OEM settings screen on this app's
+     * own task, so back actually returns here instead of going to the home screen. */
+    fun launchAutoStartSettings(callerContext: Context = context) {
+        CallReliabilityUtils.launchAutoStartSettings(callerContext)
+    }
+
+    fun openMiuiBackgroundPopupSettings(callerContext: Context = context) {
+        CallReliabilityUtils.openMiuiBackgroundPopupSettings(callerContext)
+    }
+
+    fun openMiuiAutoStartSettings(callerContext: Context = context) {
+        CallReliabilityUtils.openMiuiAutoStartSettings(callerContext)
+    }
 
     /**
      * Triggers a real account sync (e.g. Google Contacts) via the OS sync framework —

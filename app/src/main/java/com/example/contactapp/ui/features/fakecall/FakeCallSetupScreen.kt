@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.SystemClock
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -139,6 +140,10 @@ fun FakeCallSetupScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clickable {
+                                    selectedDelaySec = value
+                                    useCustomTime = false
+                                }
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -159,6 +164,10 @@ fun FakeCallSetupScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clickable {
+                                useCustomTime = true
+                                showTimePicker = true
+                            }
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -449,6 +458,6 @@ private fun scheduleFakeCall(context: Context, name: String, number: String, del
 
         Toast.makeText(context, scheduledMsg, Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
-        Toast.makeText(context, "Error scheduling call", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.toast_error_scheduling_call), Toast.LENGTH_SHORT).show()
     }
 }

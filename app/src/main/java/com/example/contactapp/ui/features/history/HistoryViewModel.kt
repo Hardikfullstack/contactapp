@@ -5,6 +5,7 @@ import android.text.format.DateUtils
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.contactapp.R
 import com.example.contactapp.domain.model.CallLogItem
 import com.example.contactapp.domain.repository.CallLogRepository
 import com.example.contactapp.util.QrUtils
@@ -232,7 +233,7 @@ class HistoryViewModel @Inject constructor(
             type = "text/plain"
             putExtra(android.content.Intent.EXTRA_TEXT, shareText)
         }
-        context.startActivity(android.content.Intent.createChooser(intent, "Share History"))
+        context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.share_history_chooser_title)))
     }
 
     private fun groupLogs(logs: List<CallLogItem>): Map<String, List<CallLogItem>> {

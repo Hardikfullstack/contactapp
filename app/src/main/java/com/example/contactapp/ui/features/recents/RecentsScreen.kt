@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,12 +25,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.app.Activity
+import androidx.activity.ComponentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.AppOpenBackgroundReturnTrigger
+import com.example.contactapp.ads.AppOpenCounter
 import com.example.contactapp.ui.components.*
+import com.example.contactapp.ui.components.dialogs.RateUsDialog
+import com.example.contactapp.ui.components.dialogs.UpdateAppDialog
 import com.example.contactapp.ui.theme.PrimaryGreen
+import com.example.contactapp.util.AppUpdateHelper
 import com.example.contactapp.util.CallUtils
 import com.example.contactapp.util.MessageUtils
+import com.example.contactapp.util.RateUsHelper
+import com.example.contactapp.util.isRemoteVersionNewer
+import com.example.contactapp.viewmodel.AppConfigViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,13 +59,117 @@ fun RecentsScreen(
         viewModel.checkPermissionAndFetch()
     }
 
+    // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
+    val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+
+    // In-app update — extra_data_2_message carries the latest version string from the panel; if
+    // it's newer than this build, prompt to update. extra_data_5_on_off decides soft (dismissible)
+    // vs hard (mandatory, no "Later") update; extra_data_2_on_off decides whether to use Play's
+    // in-app update API (falling back to Play Store if it's unavailable) or just open Play Store.
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    val appUpdateHelper = remember { AppUpdateHelper(context) }
+    LaunchedEffect(adConfig) {
+        val remoteVersion = adConfig?.result?.extra_data_2_message
+        if (!remoteVersion.isNullOrBlank() && isRemoteVersionNewer(remoteVersion, com.example.contactapp.BuildConfig.VERSION_NAME)) {
+            showUpdateDialog = true
+        }
+    }
+
+    // Auto Rate Us — AppOpenCounter's count already represents "which return to the app is this"
+    // (the very first-ever open, right after onboarding, never passes back through Splash and so
+    // never touches this counter — see AppOpenCounter's doc comment), so count == 1 is exactly the
+    // user's *second* time opening the app, which is when this should show, once ever.
+    var showRateUsDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!RateUsHelper.hasAutoShown(context) &&
+            !RateUsHelper.hasInteracted(context) &&
+            AppOpenCounter.currentCount(context) == 1
+        ) {
+            showRateUsDialog = true
+            RateUsHelper.markAutoShown(context)
+        }
+    }
+    if (showRateUsDialog) {
+        RateUsDialog(
+            onRateClick = { stars ->
+                showRateUsDialog = false
+                RateUsHelper.handleRating(context, stars)
+            },
+            onDismiss = { showRateUsDialog = false }
+        )
+    }
+
+    if (showUpdateDialog) {
+        val isSoftUpdate = adConfig?.result?.extra_data_5_on_off == "on"
+        UpdateAppDialog(
+            title = stringResource(R.string.update_title),
+            description = stringResource(R.string.update_desc),
+            onOkClick = {
+                val openPlayStore = {
+                    val playStoreLink = adConfig?.result?.app_link
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "https://play.google.com/store/apps/details?id=${context.packageName}"
+                    val uri = runCatching { android.net.Uri.parse(playStoreLink) }.getOrNull()
+                    if (uri != null) {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                        try {
+                            // Opening Play Store backgrounds/re-foregrounds this Activity — without
+                            // this, that return would look like a normal app-switch-back and could
+                            // trigger an App Open ad right as the user is trying to update.
+                            AppOpenBackgroundReturnTrigger.isAdPaused = true
+                            context.startActivity(intent)
+                        } catch (e: android.content.ActivityNotFoundException) {
+                            // No Play Store app or browser available — nothing more we can do.
+                        }
+                    }
+                }
+
+                if (adConfig?.result?.extra_data_2_on_off == "on") {
+                    appUpdateHelper.checkForUpdate(object : AppUpdateHelper.UpdateStatusListener {
+                        override fun onUpdateAvailable(appUpdateInfo: com.google.android.play.core.appupdate.AppUpdateInfo) {
+                            val activity = context as? Activity
+                            if (activity != null) {
+                                appUpdateHelper.startUpdate(
+                                    activity,
+                                    appUpdateInfo,
+                                    com.google.android.play.core.install.model.AppUpdateType.IMMEDIATE,
+                                    999,
+                                    onFailure = openPlayStore
+                                )
+                            } else {
+                                openPlayStore()
+                            }
+                        }
+
+                        override fun onUpdateNotAvailable() {
+                            openPlayStore()
+                        }
+
+                        override fun onUpdateFailed(e: Exception) {
+                            openPlayStore()
+                        }
+
+                        override fun onFlexibleUpdateDownloaded() {}
+                    })
+                } else {
+                    openPlayStore()
+                }
+            },
+            onCancelClick = if (isSoftUpdate) {
+                { showUpdateDialog = false }
+            } else null
+        )
+    }
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onKeypadClick,
                 containerColor = PrimaryGreen,
                 contentColor = Color.White,
-                shape = CircleShape
+                shape = CircleShape,
+                modifier = Modifier.offset(y = 24.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Dialpad,
@@ -62,11 +178,10 @@ fun RecentsScreen(
             }
         },
         containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding())
                 .statusBarsPadding()
         ) {
             CommonHeader(
@@ -129,9 +244,15 @@ fun RecentsScreen(
                         "older" to R.string.older
                     )
                 }
-                
+
+                val listState = rememberLazyListState()
+                LaunchedEffect(uiState.selectedFilter) {
+                    listState.scrollToItem(0)
+                }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     sections.forEach { (key, titleRes) ->
@@ -233,6 +354,7 @@ fun RecentsScreen(
             onDismiss = { viewModel.dismissActionSheet() }
         )
     }
+
 }
 
 @Composable

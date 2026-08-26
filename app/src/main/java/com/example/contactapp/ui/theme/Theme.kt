@@ -36,6 +36,16 @@ private val LightColorScheme = lightColorScheme(
     onSurface = TextPrimary
 )
 
+/**
+ * The app's actual dark/light state (from the user's in-app theme choice, resolved against
+ * system default when set to "System" — see MainActivity), as opposed to [isSystemInDarkTheme].
+ * Views that can't read MaterialTheme.colorScheme directly — e.g. AndroidView-hosted native ads,
+ * which style themselves from plain color constants, not Compose theme — read this instead of
+ * [isSystemInDarkTheme] so they stay in sync with the in-app toggle even when it disagrees with
+ * the system (app set to Dark while the phone itself is in light mode, or vice versa).
+ */
+val LocalIsDarkTheme = compositionLocalOf { false }
+
 @Composable
 fun ContactAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -53,9 +63,11 @@ fun ContactAppTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
