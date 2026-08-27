@@ -21,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
+import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.components.SettingsDivider
 import com.example.contactapp.ui.components.SettingsItem
@@ -69,10 +71,8 @@ fun AfterCallSettingsScreen(
         }
     }
 
-    // Autostart/MIUI-popup screens are launched as plain startActivity() calls with no
-    // meaningful ActivityResult callback (see CallReliabilityUtils) — catch the return trip via
-    // ON_RESUME instead, same as systemSettingsLauncher's callback does for the ones that do
-    // support a result.
+    // Autostart/MIUI-popup screens have no meaningful ActivityResult callback (see
+    // CallReliabilityUtils) — catch the return trip via ON_RESUME instead.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -124,15 +124,11 @@ fun AfterCallSettingsScreen(
                         if (afterCallEnabled) showDisableDialog = true else enable()
                     },
                     trailing = {
-                        Switch(
+                        CustomSwitch(
                             checked = afterCallEnabled,
                             onCheckedChange = { checked ->
                                 if (!checked) showDisableDialog = true else enable()
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary
-                            )
+                            }
                         )
                     }
                 )
@@ -224,6 +220,7 @@ fun AfterCallSettingsScreen(
     if (showDisableDialog) {
         AlertDialog(
             onDismissRequest = { showDisableDialog = false },
+            containerColor = if (LocalIsDarkTheme.current) AlertDialogDefaults.containerColor else Color(0xFFF3F3F3),
             title = { Text("Turn off After Call screen?") },
             text = { Text("You won't see quick actions after your calls end. You can turn this back on anytime.") },
             confirmButton = {

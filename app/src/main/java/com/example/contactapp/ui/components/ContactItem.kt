@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.contactapp.domain.model.Contact
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.util.getAvatarColor
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -37,7 +38,7 @@ fun ContactItem(
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 2.dp)
+            .padding(horizontal = 16.dp, vertical = 2.dp)
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(
                 onClick = onClick,
@@ -104,15 +105,18 @@ fun ContactItem(
             ) {
                 Text(
                     text = contact.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = contact.number,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF656565),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -127,7 +131,7 @@ fun ContactItem(
                     Icon(
                         imageVector = Icons.Default.Call,
                         contentDescription = stringResource(com.example.contactapp.R.string.call),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF656565),
                         modifier = Modifier.size(24.dp)
                     )
                 }

@@ -29,6 +29,7 @@ import com.example.contactapp.ads.InterstitialAdManager
 import com.example.contactapp.ads.NativeAdTemplate
 import com.example.contactapp.ads.NativeAdView
 import com.example.contactapp.ui.theme.*
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.LocaleChangeState
 import com.example.contactapp.viewmodel.AppConfigViewModel
 import java.util.Locale
@@ -105,8 +106,8 @@ fun LanguageSelectionScreen(
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
     val adConfig by appConfigViewModel.appResponse.collectAsState()
     val bigNativeAdUnitId = adConfig?.result?.let { result ->
-        if (result.google_ads_on_off == "on" && result.native_2_on_off == "on") {
-            result.native_2?.takeIf { it.isNotBlank() }
+        if (result.google_ads_on_off == "on" && result.native_1_on_off == "on") {
+            result.native_1?.takeIf { it.isNotBlank() }
         } else null
     }
     // First-run only — shown right after "Done" is tapped, on the way into the app.
@@ -154,6 +155,12 @@ fun LanguageSelectionScreen(
                         // without this flag, that recreate replays the splash screen from scratch.
                         LocaleChangeState.skipNextSplash = true
                         AppCompatDelegate.setApplicationLocales(appLocale)
+                        AnalyticsManager.logEventWithAction(
+                            "language_changed",
+                            "LanguageSelectionScreen",
+                            selectedLanguageCode.ifEmpty { "system" },
+                            mapOf("first_run" to isFirstRun)
+                        )
 
                         val activity = context as? Activity
                         if (isFirstRun && activity != null && languageDoneInterstitialAdUnitId != null &&

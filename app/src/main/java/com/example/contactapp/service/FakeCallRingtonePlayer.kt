@@ -48,13 +48,8 @@ class FakeCallRingtonePlayer @Inject constructor(
             val contactOverride = number?.let { contactRepository.getContactRingtone(it) }
             if (contactOverride == Uri.EMPTY) return@launch // contact explicitly set to Silent
 
-            // Try, in order: the contact's own ringtone override, then the user's actual chosen
-            // default (what should normally play), and only as a last resort — since that "actual
-            // default" URI can point at a file that's since been deleted, or a fresh/emulator
-            // device can have a broken default entirely — Android's getValidRingtoneUri(), which
-            // picks *some* playable ringtone on the device rather than necessarily the user's
-            // preferred one. Falling back to it too early is exactly what silently overrode the
-            // user's real ringtone choice with the factory default before this fix.
+            // Order matters: contact override, then the user's actual default, and only as a last
+            // resort getValidRingtoneUri() — falling back to it too early overrides the user's choice.
             val candidates = listOfNotNull(
                 contactOverride,
                 RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE),

@@ -1,16 +1,20 @@
 package com.example.contactapp.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.contactapp.R
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
+import com.example.contactapp.ui.theme.PrimaryGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +95,10 @@ fun EditContactSheet(
             Button(
                 onClick = onMoreDetailsClick,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF7F7F7)
+                ),
+                border = BorderStroke(1.dp, PrimaryGreen),
                 shape = RoundedCornerShape(24.dp)
             ) {
                 Text(text = stringResource(R.string.more_details), color = MaterialTheme.colorScheme.primary)

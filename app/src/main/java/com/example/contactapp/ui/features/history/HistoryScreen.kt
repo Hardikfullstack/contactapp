@@ -158,7 +158,6 @@ fun HistoryScreen(
                     BannerAdView(adUnitId = bannerAdUnitId)
                 }
             }
-           // CommonBottomBar(items = footerItems)
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->

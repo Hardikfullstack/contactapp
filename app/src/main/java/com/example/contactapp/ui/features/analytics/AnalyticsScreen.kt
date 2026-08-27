@@ -39,6 +39,7 @@ import com.example.contactapp.R
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.ContactAvatarImage
 import com.example.contactapp.ui.components.HeaderActionButton
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.getAvatarColor
 import kotlin.math.roundToInt
@@ -529,7 +530,7 @@ fun TopCallerItem(caller: TopCaller) {
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(46.dp)
                 .clip(CircleShape)
                 .background(getAvatarColor(caller.name)),
             contentAlignment = Alignment.Center
@@ -549,11 +550,18 @@ fun TopCallerItem(caller: TopCaller) {
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = caller.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = caller.name,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Normal,
+                color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = stringResource(R.string.calls_count, caller.callCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
+                color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF656565)
             )
         }
         Text(

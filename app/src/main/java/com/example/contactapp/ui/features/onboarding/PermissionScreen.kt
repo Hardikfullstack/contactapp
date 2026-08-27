@@ -47,6 +47,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.ui.draw.clip
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.CallReliabilityUtils
 import com.example.contactapp.util.PreferenceManager
 
@@ -99,14 +100,17 @@ fun PermissionScreen(
             // the role request can simply be shown again, so offer a retry instead of
             // silently letting onboarding finish with calling features broken.
             showDialerRequiredDialog = true
-        } else if (!CallReliabilityUtils.isIgnoringBatteryOptimizations(context)) {
-            try {
-                batteryOptimizationLauncher.launch(CallReliabilityUtils.batteryOptimizationIntent(context))
-            } catch (e: Exception) {
+        } else {
+            AnalyticsManager.logEventWithAction("default_dialer_set", "PermissionScreen", "completed")
+            if (!CallReliabilityUtils.isIgnoringBatteryOptimizations(context)) {
+                try {
+                    batteryOptimizationLauncher.launch(CallReliabilityUtils.batteryOptimizationIntent(context))
+                } catch (e: Exception) {
+                    onContinue()
+                }
+            } else {
                 onContinue()
             }
-        } else {
-            onContinue()
         }
     }
 

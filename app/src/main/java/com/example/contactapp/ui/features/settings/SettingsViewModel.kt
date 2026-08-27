@@ -112,7 +112,12 @@ class SettingsViewModel @Inject constructor(
             val accountManager = AccountManager.get(context)
             val syncableAccounts = try {
                 accountManager.accounts.filter { account ->
-                    ContentResolver.getIsSyncable(account, ContactsContract.AUTHORITY) > 0
+                    // getIsSyncable() returns -1 (not just 0) when Android hasn't resolved the
+                    // syncable state for this account+authority yet — a genuinely syncable Google
+                    // account can report -1 right after being added. Only an explicit 0 means the
+                    // sync adapter itself declared this account non-syncable; requestSync() below
+                    // is a safe no-op for any account it can't actually sync.
+                    ContentResolver.getIsSyncable(account, ContactsContract.AUTHORITY) != 0
                 }
             } catch (e: SecurityException) {
                 emptyList()

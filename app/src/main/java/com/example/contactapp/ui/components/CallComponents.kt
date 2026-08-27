@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.example.contactapp.R
 import com.example.contactapp.domain.model.CallLogItem
 import com.example.contactapp.domain.model.CallType
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.util.getAvatarColor
 import java.util.*
 
@@ -72,8 +73,8 @@ fun CallItem(
                 Text(
                     text = displayName.take(1).uppercase(),
                     color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 27.sp,
+                    fontWeight = FontWeight.Normal
                 )
             } else {
                 Icon(
@@ -91,18 +92,29 @@ fun CallItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = displayName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Normal,
+                color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(modifier = Modifier.height(2.dp))
+            val isMissedOrRejected = call.type == CallType.MISSED || call.type == CallType.REJECTED
+            val statusColor = if (isMissedOrRejected) {
+                // Dark mode keeps the theme's own semantic error color (as it always did);
+                // light mode uses the flat #F20004 red requested for this row.
+                if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.error else Color(0xFFF20004)
+            } else if (LocalIsDarkTheme.current) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                Color(0xFF656565)
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = getCallIcon(call.type),
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
-                    tint = getCallColor(call.type)
+                    tint = statusColor
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 val typeString = when(call.type) {
@@ -115,8 +127,9 @@ fun CallItem(
                 }
                 Text(
                     text = "$typeString • $timeString",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = getCallColor(call.type),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = statusColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -131,7 +144,7 @@ fun CallItem(
             Icon(
                 imageVector = Icons.Default.Call,
                 contentDescription = stringResource(R.string.call),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF656565),
                 modifier = Modifier.size(24.dp)
             )
         }

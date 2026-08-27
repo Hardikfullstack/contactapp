@@ -1,6 +1,5 @@
 package com.example.contactapp.ui.features.recents
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -8,7 +7,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Dialpad
 import androidx.compose.material.icons.outlined.FilterList
@@ -18,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,7 +32,9 @@ import com.example.contactapp.ads.AppOpenCounter
 import com.example.contactapp.ui.components.*
 import com.example.contactapp.ui.components.dialogs.RateUsDialog
 import com.example.contactapp.ui.components.dialogs.UpdateAppDialog
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.ui.theme.PrimaryGreen
+import com.example.contactapp.ui.theme.TextSecondary
 import com.example.contactapp.util.AppUpdateHelper
 import com.example.contactapp.util.CallUtils
 import com.example.contactapp.util.MessageUtils
@@ -63,10 +62,8 @@ fun RecentsScreen(
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
     val adConfig by appConfigViewModel.appResponse.collectAsState()
 
-    // In-app update — extra_data_2_message carries the latest version string from the panel; if
-    // it's newer than this build, prompt to update. extra_data_5_on_off decides soft (dismissible)
-    // vs hard (mandatory, no "Later") update; extra_data_2_on_off decides whether to use Play's
-    // in-app update API (falling back to Play Store if it's unavailable) or just open Play Store.
+    // In-app update: extra_data_2_message carries the latest version to prompt for; extra_data_5_on_off
+    // picks soft vs hard update, extra_data_2_on_off picks Play's in-app API vs plain Play Store.
     var showUpdateDialog by remember { mutableStateOf(false) }
     val appUpdateHelper = remember { AppUpdateHelper(context) }
     LaunchedEffect(adConfig) {
@@ -76,10 +73,8 @@ fun RecentsScreen(
         }
     }
 
-    // Auto Rate Us — AppOpenCounter's count already represents "which return to the app is this"
-    // (the very first-ever open, right after onboarding, never passes back through Splash and so
-    // never touches this counter — see AppOpenCounter's doc comment), so count == 1 is exactly the
-    // user's *second* time opening the app, which is when this should show, once ever.
+    // Auto Rate Us — the first-ever open never touches AppOpenCounter (see its doc comment),
+    // so count == 1 here is exactly the user's second open, shown once ever.
     var showRateUsDialog by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!RateUsHelper.hasAutoShown(context) &&
@@ -263,8 +258,9 @@ fun RecentsScreen(
                                     text = stringResource(titleRes),
                                     modifier = Modifier.padding(horizontal = 15.dp, vertical = 12.dp),
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold
+                                    color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else TextSecondary,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Normal
                                 )
                             }
 
@@ -300,10 +296,13 @@ fun RecentsScreen(
                                         )
                                         
                                         if (index < calls.size - 1) {
+                                            // Starts under the name/desc text (16dp row padding +
+                                            // 46dp avatar + 16dp spacer from CallItem), not under
+                                            // the avatar — and runs flush to the card's right edge.
                                             HorizontalDivider(
-                                                modifier = Modifier.padding(horizontal = 16.dp),
+                                                modifier = Modifier.padding(start = 78.dp),
                                                 thickness = 0.5.dp,
-                                                color = MaterialTheme.colorScheme.outlineVariant
+                                                color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCDCDCD)
                                             )
                                         }
                                     }

@@ -6,12 +6,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -72,11 +74,22 @@ fun CallReminderSetupScreen(
                 it.name.contains(query, ignoreCase = true) ||
                     (digitsQuery.isNotEmpty() && it.number.filter { c -> c.isDigit() }.contains(digitsQuery))
             }
+                // Names starting with the query (e.g. "Bob" for "b") rank above ones that merely
+                // contain it elsewhere (e.g. "Abby") — otherwise alphabetical order buries the
+                // more relevant match behind unrelated earlier letters.
+                .sortedBy { !it.name.startsWith(query, ignoreCase = true) }
         }
     }
 
     val dateLabel = selectedDateMillis?.let { formatPickedDate(it) } ?: stringResource(R.string.pick_date)
     val timeLabel = formatClockTime(selectedHour, selectedMinute)
+
+    val contactListState = rememberLazyListState()
+    // Every new query re-ranks the results (best match first) — always show that from the top
+    // instead of leaving the list wherever it was scrolled to for the previous query.
+    LaunchedEffect(query) {
+        contactListState.scrollToItem(0)
+    }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         Column(
@@ -108,6 +121,17 @@ fun CallReminderSetupScreen(
                         onValueChange = { query = it },
                         placeholder = { Text(stringResource(R.string.search_contacts)) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = { query = "" }) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Clear",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
@@ -120,6 +144,7 @@ fun CallReminderSetupScreen(
                     }
 
                     LazyColumn(
+                        state = contactListState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(240.dp)
@@ -244,10 +269,8 @@ fun CallReminderSetupScreen(
     }
 
     if (showDatePicker) {
-        // DatePicker interprets initialSelectedDateMillis as UTC-midnight of the intended date —
-        // raw System.currentTimeMillis() is a UTC instant that can fall on the previous UTC
-        // calendar day during early-morning hours in positive-offset timezones (e.g. before
-        // ~5:30 AM IST), which would silently pre-select yesterday instead of today.
+        // DatePicker expects UTC-midnight of the intended date — raw currentTimeMillis() can fall
+        // on the previous UTC day during early morning in positive-offset timezones (e.g. before IST 5:30 AM).
         val todayUtcMillis = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis ?: todayUtcMillis)
         DatePickerDialog(

@@ -139,16 +139,10 @@ class FakeCallActivity : ComponentActivity() {
             }
 
             // Single reaction point for every state transition — mirrors InCallActivity's
-            // LaunchedEffect(callState) pattern for real calls, so notification/cleanup/task
-            // removal all happen exactly once regardless of which path (swipe gesture or a
-            // Telecom-driven answer/end) drove the transition.
+            // LaunchedEffect(callState) so notification/cleanup happen once regardless of the path.
             LaunchedEffect(fakeCallState) {
-                // FakeCallReceiver posts the ringing notification (NOTIFICATION_ID) asynchronously,
-                // behind a spam-status check — that can land AFTER the one-shot cancel already in
-                // onCreate() above, leaving it stuck even once answered/declined from this screen's
-                // own swipe UI (the notification's own Answer/Decline buttons go through
-                // FakeCallActionReceiver instead, which does cancel it, but the in-app path never
-                // did). Re-cancelling on every real state change here closes that race.
+                // FakeCallReceiver's ringing notification posts asynchronously and can land after
+                // onCreate()'s one-shot cancel — re-cancel on every state change to close that race.
                 NotificationManagerCompat.from(this@FakeCallActivity).cancel(FakeCallReceiver.NOTIFICATION_ID)
 
                 when (fakeCallState) {
@@ -271,11 +265,8 @@ fun FakeCallContent(
         }
     }
 
-    // Mute/Speaker for a fake call have no real Telecom audio session to control (the
-    // self-managed connection this feature relies on frequently never gets created at all —
-    // see FakeCallManager), so these toggle the device's actual microphone/speakerphone
-    // directly instead. That's also more fitting for what this feature is for: sounding
-    // authentic while acting out the call, not routing audio for a real conversation.
+    // No real Telecom audio session exists for a fake call (see FakeCallManager) — toggle the
+    // device's actual mic/speakerphone directly instead, fitting for just sounding authentic.
     val context = LocalContext.current
     val audioManager = remember { context.getSystemService(AudioManager::class.java) }
     var isMuted by remember { mutableStateOf(false) }
@@ -453,10 +444,8 @@ fun FakeCallContent(
                 }
             }
 
-            // Ringing keeps the plain floating swipe-button layout (matches stock Android — no
-            // bottom tray while a call is still just ringing). Once accepted, the controls sit
-            // inside one distinct rounded-top tray, visually separated from the caller-info area
-            // above it, matching the real in-call screen's same tray treatment.
+            // Ringing keeps the plain floating swipe-button layout (matches stock Android);
+            // once accepted, controls sit in a rounded-top tray, matching the real in-call screen.
             if (!isAccepted) {
                 AnimatedVisibility(
                     visible = buttonsVisible,

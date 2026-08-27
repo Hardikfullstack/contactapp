@@ -132,10 +132,8 @@ fun NativeAdView(
                 when (template) {
                     // Fixed to match the adjacent list row's own height exactly.
                     NativeAdTemplate.SMALL -> Modifier.height(SmallNativeAdHeight)
-                    // No fixed height here (unlike the skeleton) — native_ad_medium.xml's root is
-                    // wrap_content, and at large system font sizes the headline/body/CTA text can
-                    // wrap to more lines than MediumNativeAdHeight has room for. Forcing that
-                    // fixed height would then clip the CTA button instead of letting the card grow.
+                    // No fixed height here — at large font sizes the text can wrap past
+                    // MediumNativeAdHeight, and forcing it would clip the CTA button.
                     NativeAdTemplate.MEDIUM -> Modifier
                 }
             ),

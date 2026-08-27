@@ -83,10 +83,8 @@ fun cancelActiveCallNotification(context: Context) {
 class FakeCallHangupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         FakeCallManager.endFromUi()
-        // Defensive: covers the case where the Activity's own composition isn't around to react
-        // (e.g. process was killed while active) — endFromUi() alone wouldn't reach
-        // FakeCallActivity's LaunchedEffect(fakeCallState) in that scenario, so cancel here too
-        // rather than leaving a stale notification with a dead hang-up action.
+        // Defensive: if the Activity was killed, endFromUi() alone won't reach its
+        // LaunchedEffect — cancel here too so no stale notification is left behind.
         cancelActiveCallNotification(context)
     }
 }

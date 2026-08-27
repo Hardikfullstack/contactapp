@@ -32,6 +32,9 @@ object CallUtils {
         }
 
         try {
+            AnalyticsManager.logEventWithAction(
+                "call_made", "CallUtils", if (isDefaultDialer) "default_dialer" else "system_dialer"
+            )
             if (hasCallPermission) {
                 if (isDefaultDialer) {
                     val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager

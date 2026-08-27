@@ -78,10 +78,8 @@ class ContactCallService : InCallService() {
 
         call.registerCallback(object : Call.Callback() {
             override fun onStateChanged(call: Call, state: Int) {
-                // CallManager already tracks this call's own state via the callback it
-                // registers internally (updateCall/addSecondaryCall) — this one only drives
-                // notification/flash-alert side effects, and only for the primary call, so a
-                // second call's transitions can't clobber the primary's CallManager state.
+                // CallManager tracks state via its own internal callback — this one only drives
+                // notification/flash-alert side effects for the primary call.
                 if (call !== CallManager.currentCall.value) return
 
                 when (state) {

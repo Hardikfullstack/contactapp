@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.domain.repository.CallLogRepository
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.LocalBlockManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -51,6 +52,7 @@ class BlockedNumbersViewModel @Inject constructor(
             )
             
             callLogRepository.blockNumber(number, false)
+            AnalyticsManager.logEventWithAction("number_blocked", "BlockedNumbers", "unblock")
         }
     }
 }

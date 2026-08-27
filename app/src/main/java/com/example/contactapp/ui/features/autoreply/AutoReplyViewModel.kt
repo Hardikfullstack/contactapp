@@ -1,6 +1,7 @@
 package com.example.contactapp.ui.features.autoreply
 
 import androidx.lifecycle.ViewModel
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.PreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ class AutoReplyViewModel @Inject constructor(
     fun setEnabled(enabled: Boolean) {
         preferenceManager.setAutoReplyEnabled(enabled)
         _uiState.value = _uiState.value.copy(isEnabled = enabled)
+        AnalyticsManager.logEventWithAction("auto_reply_toggled", "AutoReplyScreen", if (enabled) "on" else "off")
     }
 
     fun setMessage(message: String) {

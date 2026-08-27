@@ -32,11 +32,8 @@ class FakeCallActionReceiver : BroadcastReceiver() {
 
         when (intent.action) {
             ACTION_ANSWER -> {
-                // Launching the activity (rather than just calling FakeCallManager.answerFromUi())
-                // is what actually shows the active-call UI when nothing was on screen yet — the
-                // exact case a locked-screen notification tap needs to cover. FakeCallActivity
-                // seeds FakeCallManager itself in onCreate(), so passing the caller info through
-                // is enough; EXTRA_AUTO_ANSWER tells it to skip straight to STATE_ACTIVE.
+                // Launching the activity (not just FakeCallManager.answerFromUi()) is what shows the
+                // active-call UI when nothing was on screen — EXTRA_AUTO_ANSWER skips it to STATE_ACTIVE.
                 val activityIntent = Intent(context, FakeCallActivity::class.java).apply {
                     putExtra("caller_name", intent.getStringExtra("caller_name"))
                     putExtra("caller_number", intent.getStringExtra("caller_number"))

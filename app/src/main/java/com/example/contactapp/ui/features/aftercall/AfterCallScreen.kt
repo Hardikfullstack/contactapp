@@ -45,6 +45,7 @@ import com.example.contactapp.data.local.entity.ReminderEntity
 import com.example.contactapp.ui.components.AfterCallCard
 import com.example.contactapp.ui.components.AfterCallTabBar
 import com.example.contactapp.ui.components.InlineDateTimePicker
+import com.example.contactapp.ui.theme.DmSans
 import com.example.contactapp.util.CallUtils
 import com.example.contactapp.util.MessageUtils
 import com.example.contactapp.viewmodel.AppConfigViewModel
@@ -68,8 +69,8 @@ fun AfterCallScreen(
     val appConfigViewModel: AppConfigViewModel = viewModel()
     val adConfig by appConfigViewModel.appResponse.collectAsState()
     val nativeAdUnitId = adConfig?.result?.let { result ->
-        if (result.google_ads_on_off == "on" && result.native_7_on_off == "on") {
-            result.native_7?.takeIf { it.isNotBlank() }
+        if (result.google_ads_on_off == "on" && result.native_2_on_off == "on") {
+            result.native_2?.takeIf { it.isNotBlank() }
         } else null
     }
 
@@ -338,7 +339,7 @@ private fun AfterCallWritePersonalRow(
                 BasicTextField(
                     value = text,
                     onValueChange = onTextChange,
-                    textStyle = TextStyle(fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface),
+                    textStyle = TextStyle(fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, fontFamily = DmSans),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -570,7 +571,7 @@ private fun AfterCallReminderForm(
                 BasicTextField(
                     value = note,
                     onValueChange = { note = it },
-                    textStyle = TextStyle(fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface),
+                    textStyle = TextStyle(fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface, fontFamily = DmSans),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()

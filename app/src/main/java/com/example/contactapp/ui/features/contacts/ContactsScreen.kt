@@ -129,10 +129,8 @@ fun ContactsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) {
-        // No bottom padding here — this Scaffold only hosts a FAB (no bottomBar of its own),
-        // and the outer MainNavigation Scaffold already reserves the correct space below for
-        // the shared bottom nav bar / banner ad. Applying innerPadding's bottom value here too
-        // double-counts that space on top of it.
+        // No bottom padding here — the outer MainNavigation Scaffold already reserves space for
+        // the shared bottom nav bar/banner ad; applying innerPadding's bottom here would double-count it.
         Column(
             modifier = Modifier
                 .fillMaxSize()

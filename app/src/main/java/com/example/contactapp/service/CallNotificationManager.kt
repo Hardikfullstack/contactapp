@@ -15,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.contactapp.R
 import com.example.contactapp.ui.features.call.InCallActivity
+import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -144,7 +145,12 @@ class CallNotificationManager @Inject constructor(
     }
 }
 
+@AndroidEntryPoint
 class CallActionReceiver : BroadcastReceiver() {
+
+    @Inject
+    lateinit var autoReplyManager: AutoReplyManager
+
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             CallNotificationManager.ACTION_ANSWER -> {
@@ -155,7 +161,13 @@ class CallActionReceiver : BroadcastReceiver() {
                 }
                 context.startActivity(activityIntent)
             }
-            CallNotificationManager.ACTION_DECLINE -> CallManager.reject()
+            CallNotificationManager.ACTION_DECLINE -> {
+                // Same "decline sends the auto-reply" behavior as the in-call swipe gesture
+                // (InCallActivity) — this is just the other delivery path for the same action.
+                val number = CallManager.currentCall.value?.details?.handle?.schemeSpecificPart
+                CallManager.reject()
+                number?.let { autoReplyManager.sendReplyIfEnabled(it) }
+            }
             CallNotificationManager.ACTION_HANGUP -> CallManager.disconnect()
         }
     }

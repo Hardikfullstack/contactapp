@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.ui.components.CommonHeader
+import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.components.SettingsDivider
 import com.example.contactapp.ui.components.SettingsItem
@@ -53,13 +54,9 @@ fun CallAnnouncerScreen(
                 icon = Icons.Outlined.RecordVoiceOver,
                 onClick = { viewModel.toggleEnabled(!uiState.isEnabled) },
                 trailing = {
-                    Switch(
+                    CustomSwitch(
                         checked = uiState.isEnabled,
-                        onCheckedChange = { viewModel.toggleEnabled(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
+                        onCheckedChange = { viewModel.toggleEnabled(it) }
                     )
                 }
             )

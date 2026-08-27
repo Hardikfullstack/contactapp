@@ -68,11 +68,8 @@ class InCallActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ContactCallService always posts the incoming-call notification alongside launching this
-        // Activity directly — that notification exists purely as a fallback for when the direct
-        // launch gets blocked (OEM background restrictions). Reaching onCreate() here means the
-        // direct launch worked, so the notification is now redundant and would otherwise sit in
-        // the shade next to the call screen it's supposed to be a fallback for.
+        // The incoming-call notification is a fallback for when the direct launch gets blocked
+        // (OEM restrictions) — reaching onCreate() means it worked, so cancel the now-redundant one.
         callNotificationManager.cancelNotification()
 
         // Show over lock screen
@@ -86,10 +83,8 @@ class InCallActivity : ComponentActivity() {
 
         setContent {
             val callState by CallManager.callState.collectAsState()
-            // Not read directly — collecting it just forces a recomposition whenever Telecom
-            // updates call capabilities (e.g. CAPABILITY_HOLD granted a moment after the call
-            // goes ACTIVE) without a state change, so canHold()/canAddCall() below get re-checked
-            // instead of staying stuck at whatever was true right after connecting.
+            // Not read directly — collecting it forces a recompose when Telecom updates call
+            // capabilities without a state change, so canHold()/canAddCall() get re-checked.
             @Suppress("UNUSED_VARIABLE")
             val detailsVersion by CallManager.detailsVersion.collectAsState()
             val call by CallManager.currentCall.collectAsState()
@@ -111,17 +106,13 @@ class InCallActivity : ComponentActivity() {
                 pendingRecordingStart = false
             }
 
-            // The number Telecom hands back (call.details.handle) can be formatted
-            // differently from what's stored on the contact (country code, spacing, etc.),
-            // so resolve it through the same PhoneLookup-backed contact matching the rest
-            // of the app already trusts, rather than comparing raw strings directly.
+            // Telecom's number format can differ from the contact's stored one — resolve via
+            // the same PhoneLookup-backed matching the rest of the app trusts, not raw comparison.
             var resolvedNumber by remember { mutableStateOf<String?>(null) }
             var resolvedContact by remember { mutableStateOf<Contact?>(null) }
             LaunchedEffect(rawNumber) {
-                // Once resolved, hold onto it — the Call object (and rawNumber with it) goes null
-                // right as the call disconnects, briefly before this Activity finishes (see the
-                // callState LaunchedEffect below); resetting to null here would flash "Unknown"
-                // during that window instead of keeping the name/number on screen.
+                // Once resolved, hold onto it — rawNumber goes null right as the call disconnects,
+                // briefly before this Activity finishes; resetting here would flash "Unknown".
                 val raw = rawNumber ?: return@LaunchedEffect
                 val contact = contactRepository.findContactByNumber(raw)
                 resolvedContact = contact
@@ -151,13 +142,9 @@ class InCallActivity : ComponentActivity() {
             )
 
             LaunchedEffect(callState) {
-                // The incoming-call notification is posted asynchronously (behind a spam-status
-                // check in ContactCallService) and can race past the one-time cancel in onCreate()
-                // above, landing after it and never getting cleared — leaving it stuck even after
-                // declining. Re-cancelling here closes that race. Skipped for STATE_ACTIVE:
-                // ContactCallService posts the legitimate "ongoing call" notification (same ID)
-                // for that exact transition from its own callback, and cancelling here could race
-                // ahead of that post and wipe it out instead of just clearing the stale ringing one.
+                // The incoming-call notification posts asynchronously and can race past onCreate()'s
+                // one-time cancel, leaving it stuck — re-cancel here, except on STATE_ACTIVE where
+                // ContactCallService's own "ongoing call" notification (same ID) could get wiped instead.
                 if (callState != Call.STATE_ACTIVE) {
                     callNotificationManager.cancelNotification()
                 }

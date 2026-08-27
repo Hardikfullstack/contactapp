@@ -269,12 +269,8 @@ fun InCallScreen(
                 }
             }
 
-            // Ringing keeps the plain floating swipe-button layout (matches stock Android —
-            // there's no bottom tray while a call is still just ringing). Everything else
-            // (dialing/active/holding) sits inside one distinct rounded-top tray, visually
-            // separated from the caller-info area above it, matching stock Android's in-call
-            // layout — the same "surface at elevation" pattern this app already uses for the
-            // Keypad screen's bottom dial pad tray.
+            // Ringing keeps the plain floating swipe-button layout (matches stock Android);
+            // everything else sits in a rounded-top tray, like the Keypad screen's dial pad tray.
             if (isRinging) {
                 AnimatedVisibility(
                     visible = buttonsVisible,

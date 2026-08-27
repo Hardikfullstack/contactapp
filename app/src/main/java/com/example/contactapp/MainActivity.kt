@@ -1,13 +1,16 @@
 package com.example.contactapp
 
 import android.Manifest
+import android.app.role.RoleManager
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
@@ -23,6 +26,7 @@ import com.example.contactapp.ui.features.splash.SplashScreen
 import com.example.contactapp.ui.navigation.MainNavigation
 import com.example.contactapp.ui.navigation.OnboardingNavHost
 import com.example.contactapp.ui.theme.ContactAppTheme
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.LocaleChangeState
 import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.viewmodel.AppConfigViewModel
@@ -36,10 +40,8 @@ class MainActivity : AppCompatActivity() {
     lateinit var preferenceManager: PreferenceManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Must run before super.onCreate() — hands off from the system splash (Theme.App.Starting,
-        // see themes.xml) to postSplashScreenTheme as soon as this Activity's first frame is
-        // drawn, so our own SplashScreen.kt composable takes over instead of the system splash
-        // lingering (its default dismiss condition is "first frame drawn", which is what we want).
+        // Must run before super.onCreate() — hands off from the system splash to our own
+        // SplashScreen.kt composable as soon as the first frame draws (see themes.xml).
         installSplashScreen()
         super.onCreate(savedInstanceState)
         // Keeps the screen from auto-sleeping for as long as the app is in the foreground,
@@ -78,21 +80,31 @@ class MainActivity : AppCompatActivity() {
             var isOnboardingCompleted by remember {
                 mutableStateOf(preferenceManager.isOnboardingCompleted() && hasRequiredPermissions())
             }
-            // The check above only runs once, at cold start — if the user backgrounds the app
-            // (e.g. to revoke a permission from system Settings, or Android auto-revokes an
-            // unused one) and comes back, that stale state would otherwise never notice and the
-            // app would stay on MainNavigation with a core permission actually missing. Re-verify
-            // on every resume and drop back to onboarding the moment one of these required
-            // permissions is no longer granted.
+            // Re-verify on every resume — the check above only runs at cold start, so a permission
+            // revoked while backgrounded would otherwise go unnoticed and strand the user on MainNavigation.
             val lifecycleOwner = LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME && isOnboardingCompleted && !hasRequiredPermissions()) {
-                        isOnboardingCompleted = false
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        if (isOnboardingCompleted && !hasRequiredPermissions()) {
+                            isOnboardingCompleted = false
+                        }
+                        // Can change while backgrounded (role granted/revoked from system Settings).
+                        AnalyticsManager.setUserProperty("is_default_dialer", if (isDefaultDialer()) "yes" else "no")
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+            LaunchedEffect(Unit) {
+                AnalyticsManager.setUserProperty(
+                    "app_language",
+                    AppCompatDelegate.getApplicationLocales().toLanguageTags().ifEmpty { "system" }
+                )
+                AnalyticsManager.setUserProperty("is_default_dialer", if (isDefaultDialer()) "yes" else "no")
+            }
+            LaunchedEffect(appTheme) {
+                AnalyticsManager.setUserProperty("app_theme", appTheme)
             }
             // Set by AfterCallActivity when the user taps Contact/Recent Call there — jumping
             // straight to that tab should feel instant, not re-trigger this app's own cold-start
@@ -155,6 +167,12 @@ class MainActivity : AppCompatActivity() {
         return permissions.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
+    }
+
+    private fun isDefaultDialer(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val roleManager = getSystemService(RoleManager::class.java)
+        return roleManager?.isRoleHeld(RoleManager.ROLE_DIALER) == true
     }
 }
 

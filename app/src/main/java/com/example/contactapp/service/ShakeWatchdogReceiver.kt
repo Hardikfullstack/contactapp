@@ -32,10 +32,8 @@ class ShakeWatchdogReceiver : BroadcastReceiver() {
             // (and the sensor listener registration inside it) only runs once per live instance;
             // this just delivers an extra onStartCommand() when nothing was actually wrong.
             ShakeDetectionService.start(context)
-            // setExactAndAllowWhileIdle is one-shot — re-arm the next check ourselves so the
-            // chain keeps running indefinitely without the user ever needing to reopen the app
-            // or re-save the profile. Only re-arms while still enabled, matching cancel() being
-            // called when the user turns the feature off.
+            // setExactAndAllowWhileIdle is one-shot — re-arm here so the chain keeps running
+            // indefinitely; only while still enabled, matching cancel() when the feature is off.
             ShakeWatchdogScheduler.scheduleNext(context)
         }
     }

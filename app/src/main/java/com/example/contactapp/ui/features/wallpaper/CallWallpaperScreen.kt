@@ -133,11 +133,8 @@ fun CallWallpaperScreen(
                     }
                 }
 
-                // 2b. Currently selected custom color from the color picker, if it isn't one of
-                // the fixed presets below — without this, picking a custom color leaves nothing
-                // in the grid showing as selected (it's still correctly saved/applied, just
-                // invisible here), which looks exactly like "reset to default" and gives no way
-                // to tell which color is actually active.
+                // 2b. Shows the currently-selected custom color if it isn't one of the presets below —
+                // without this a custom pick looks like "reset to default" with nothing selected.
                 val customColorArgb = (selection as? WallpaperSelection.SolidColor)?.colorArgb
                 val matchesPreset = customColorArgb != null && viewModel.colorPresets.any { it.toArgb() == customColorArgb }
                 if (customColorArgb != null && !matchesPreset) {

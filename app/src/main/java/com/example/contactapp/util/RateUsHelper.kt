@@ -77,10 +77,8 @@ object RateUsHelper {
     }
 
     private fun requestInAppReviewOrPlayStore(context: Context) {
-        // In-app review has an undisclosed Play quota — once used, a later request can silently
-        // no-op (task succeeds but no sheet ever shows), leaving the button looking dead. So we
-        // only ever attempt it once per install; every rating after that goes straight to Play
-        // Store, which always visibly does something.
+        // In-app review has an undisclosed Play quota — a later request can silently no-op with
+        // no sheet shown, so only attempt it once per install; after that, go straight to Play Store.
         val reviewPrefs = prefs(context)
         val alreadyAttempted = reviewPrefs.getBoolean("in_app_review_attempted", false)
         val activity = context.findActivity()

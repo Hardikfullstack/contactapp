@@ -7,6 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.contactapp.ui.features.onboarding.AdvancedPermissionScreen
 import com.example.contactapp.ui.features.onboarding.LanguageSelectionScreen
 import com.example.contactapp.ui.features.onboarding.PermissionScreen
+import com.example.contactapp.util.AnalyticsManager
 
 sealed class OnboardingScreen(val route: String) {
     object Permission : OnboardingScreen("permission")
@@ -41,6 +42,7 @@ fun OnboardingNavHost(
         composable(OnboardingScreen.Language.route) {
             LanguageSelectionScreen(
                 onDone = {
+                    AnalyticsManager.logEventWithAction("onboarding_completed", "OnboardingNavHost", "finished")
                     onOnboardingComplete()
                 },
                 isFirstRun = true

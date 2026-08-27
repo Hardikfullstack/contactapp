@@ -16,12 +16,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.annotation.DrawableRes
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 
 @Composable
 fun CommonHeader(
     title: String,
     modifier: Modifier = Modifier,
     onBackClick: (() -> Unit)? = null,
+    titleStartPadding: Dp = 15.dp,
+    titleFontSize: androidx.compose.ui.unit.TextUnit = 23.sp,
+    titleFontWeight: FontWeight = FontWeight.Medium,
+    // Null uses the standard color: #020202 in light theme, the theme's default onSurface in dark.
+    titleColor: Color? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     Surface(
@@ -31,7 +37,10 @@ fun CommonHeader(
     ) {
         Row(
             modifier = Modifier
-                .padding(start = 12.dp, end = 24.dp, top = 24.dp, bottom = 12.dp),
+                .padding(
+                    start = if (onBackClick != null) 12.dp else 0.dp,
+                    end = 24.dp, top = 16.dp, bottom = 6.dp
+                ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -46,19 +55,20 @@ fun CommonHeader(
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                 } else {
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(titleStartPadding))
                 }
-                
+
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 28.sp
+                        fontWeight = titleFontWeight,
+                        fontSize = titleFontSize
                     ),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = titleColor
+                        ?: if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202)
                 )
             }
-            
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.End,
@@ -76,7 +86,7 @@ fun HeaderActionButton(
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.size(44.dp),
+        modifier = modifier.size(40.dp),
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
@@ -86,7 +96,7 @@ fun HeaderActionButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
+                tint = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202),
                 modifier = Modifier.size(24.dp)
             )
         }

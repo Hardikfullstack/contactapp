@@ -1,6 +1,7 @@
 package com.example.contactapp.ui.features.flash
 
 import androidx.lifecycle.ViewModel
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.PreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -27,6 +28,7 @@ class FlashAlertViewModel @Inject constructor(
     fun toggleEnabled(enabled: Boolean) {
         preferenceManager.setFlashAlertEnabled(enabled)
         _uiState.value = _uiState.value.copy(isEnabled = enabled)
+        AnalyticsManager.logEventWithAction("flash_alert_toggled", "FlashAlertScreen", if (enabled) "on" else "off")
     }
 
     fun setBlinkSpeed(speed: Long) {

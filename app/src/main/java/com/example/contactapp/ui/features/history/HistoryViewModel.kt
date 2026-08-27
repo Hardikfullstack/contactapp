@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.contactapp.R
 import com.example.contactapp.domain.model.CallLogItem
 import com.example.contactapp.domain.repository.CallLogRepository
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.QrUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -170,8 +171,11 @@ class HistoryViewModel @Inject constructor(
             val willBeBlocked = !_uiState.value.isBlocked
             // Optimistic update: instantly change the UI state
             _uiState.value = _uiState.value.copy(isBlocked = willBeBlocked)
-            
+
             callLogRepository.blockNumber(number, willBeBlocked)
+            AnalyticsManager.logEventWithAction(
+                "number_blocked", "History", if (willBeBlocked) "block" else "unblock"
+            )
             showBlockConfirmation(false)
         }
     }

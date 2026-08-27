@@ -57,17 +57,17 @@ class SearchViewModel @Inject constructor(
             return
         }
 
-        // Matching raw formatted strings breaks the moment the typed digits need to span a
-        // space/dash/country-code in how the number happens to be stored (e.g. "88646 46789") —
-        // a shorter query can accidentally match before that boundary while a longer, still-valid
-        // prefix no longer does. Stripping to digits-only on both sides makes the match immune to
-        // formatting entirely.
+        // Raw formatted-string matching breaks across stored spaces/dashes (e.g. "88646 46789") —
+        // strip both sides to digits-only so the match is immune to formatting.
         val digitsQuery = query.filter { it.isDigit() }
         val filtered = allContacts.filter { item ->
             val nameMatch = item.name.contains(query, ignoreCase = true)
             val numberMatch = digitsQuery.isNotEmpty() && item.number.filter { it.isDigit() }.contains(digitsQuery)
             nameMatch || numberMatch
-        }.sortedBy { it.name.lowercase() }
+        }
+            // Names starting with the query (e.g. "Bob" for "b") rank above ones that merely
+            // contain it elsewhere (e.g. "Abby"), alphabetical within each group.
+            .sortedWith(compareBy({ !it.name.startsWith(query, ignoreCase = true) }, { it.name.lowercase() }))
 
         _uiState.value = _uiState.value.copy(
             results = filtered,

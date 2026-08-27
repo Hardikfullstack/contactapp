@@ -5,8 +5,8 @@ import androidx.compose.ui.graphics.Color
 // Figma Precise Color Palette
 val PrimaryGreen = Color(0xFF109D6F)
 val PrimaryGreenLight = Color(0xFFE8F5F1)
-val TextPrimary = Color(0xFF000000)
-val TextSecondary = Color(0xFF757575)
+val TextPrimary = Color(0xFF020202)
+val TextSecondary = Color(0xFF656565)
 val BackgroundWhite = Color(0xFFFFFFFF)
 val BackgroundLightGrey = Color(0xFFF8F9FA)
 val SurfaceGray = Color(0xFFF5F5F5)

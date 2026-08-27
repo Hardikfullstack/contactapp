@@ -52,6 +52,7 @@ import com.example.contactapp.ui.features.onboarding.LanguageSelectionScreen
 import com.example.contactapp.ads.BannerAdView
 import com.example.contactapp.ui.components.CommonBottomBar
 import com.example.contactapp.ui.components.BottomBarActionItem
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.viewmodel.AppConfigViewModel
 
@@ -102,7 +103,18 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
     }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    
+
+    // Matches the Messages app's pattern: a plain OnDestinationChangedListener, with the route
+    // trimmed to its base segment (drops "/{name}/{number}"-style args) for a stable screen name.
+    DisposableEffect(navController) {
+        val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
+            val screenName = destination.route?.substringBefore("/")?.substringBefore("?") ?: "unknown"
+            AnalyticsManager.logScreenView(screenName)
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+
     // Memoize navigation items to prevent redundant re-calculations
     val navItems = remember {
         listOf(

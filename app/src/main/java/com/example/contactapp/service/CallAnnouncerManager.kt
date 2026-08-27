@@ -29,11 +29,8 @@ class CallAnnouncerManager @Inject constructor(
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts?.language = Locale.getDefault()
-            // Without this, speak() plays over the Music stream by default — inaudible whenever
-            // the user's media volume is low/zero even though the ringer itself is up, which is a
-            // very common combination. Routing to the same usage/stream as the actual ringtone
-            // (see FakeCallRingtonePlayer) ties the announcement's volume to the ring volume,
-            // matching how a real incoming call's audio is controlled.
+            // Without this, speak() plays over the (often-muted) Music stream — route it to the
+            // ring stream instead, tying volume to the ringer like a real incoming call.
             tts?.setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -53,10 +50,8 @@ class CallAnnouncerManager @Inject constructor(
         val message = context.getString(R.string.incoming_call_from, name)
 
         scope.launch {
-            // TTS init is async and this manager is typically first touched right as a
-            // call arrives (e.g. when ContactCallService is freshly created), so the
-            // engine may not be ready yet — wait briefly instead of silently dropping
-            // the announcement, which is what made this look like it "just doesn't work".
+            // TTS init is async and often not ready yet when a call first arrives — wait briefly
+            // instead of silently dropping the announcement.
             var waited = 0L
             while (!isInitialized && waited < 3000L) {
                 delay(100)

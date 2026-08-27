@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.ui.components.ContactItem
+import com.example.contactapp.ui.theme.DmSans
 import com.example.contactapp.util.CallUtils
 
 @Composable
@@ -38,6 +40,13 @@ fun SearchScreen(
     val query by viewModel.query.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    val listState = rememberLazyListState()
+    // Every new query re-ranks the results (best match first) — always show that from the top
+    // instead of leaving the list wherever it was scrolled to for the previous query.
+    LaunchedEffect(query) {
+        listState.scrollToItem(0)
+    }
 
     Column(
         modifier = Modifier
@@ -77,13 +86,13 @@ fun SearchScreen(
                         if (query.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.search),
-                                style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
+                                style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp, fontFamily = DmSans)
                             )
                         }
                         BasicTextField(
                             value = query,
                             onValueChange = { viewModel.onQueryChanged(it) },
-                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp),
+                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontFamily = DmSans),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
@@ -141,6 +150,7 @@ fun SearchScreen(
             )
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(

@@ -15,12 +15,8 @@ object CallManager {
     private val _callState = MutableStateFlow<Int>(Call.STATE_DISCONNECTED)
     val callState = _callState.asStateFlow()
 
-    // Telecom/carriers often grant CAPABILITY_HOLD (and similar) a moment after a call becomes
-    // ACTIVE via a separate onDetailsChanged callback, not a state change — without observing
-    // that too, Compose never recomposes to re-check canHold()/canAddCall(), so the Hold/Add
-    // Call buttons stay stuck showing whatever was true at the last state change (usually
-    // disabled, from before the call connected). This counter's only purpose is to be collected
-    // as State so any details update forces a recheck.
+    // Telecom often grants CAPABILITY_HOLD via onDetailsChanged, not a state change — collecting
+    // this counter as State forces a recompose so Hold/Add Call buttons don't stay stuck disabled.
     private val _detailsVersion = MutableStateFlow(0)
     val detailsVersion = _detailsVersion.asStateFlow()
 

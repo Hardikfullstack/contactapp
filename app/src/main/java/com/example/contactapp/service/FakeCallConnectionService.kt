@@ -118,14 +118,8 @@ class FakeCallConnection(
 ) : Connection() {
 
     override fun onShowIncomingCallUi() {
-        // If this line never appears in logcat, Telecom itself never asked us to show UI —
-        // meaning the connection was created but onShowIncomingCallUi was never invoked (a
-        // Telecom/OS-level decision, not something this code controls). If it DOES appear but
-        // the screen still doesn't show, startActivity below was silently blocked by the
-        // background-activity-start restriction — most likely an OEM-specific restriction
-        // (MIUI/One UI/etc. "autostart"/"display over other apps" style permission) rather than
-        // a stock-Android one, since this exact exemption path is what real Telecom-driven
-        // calls (ContactCallService) already rely on successfully.
+        // Diagnostic: missing from logcat means Telecom never invoked this (OS decision, not ours);
+        // present but no UI means startActivity was blocked by an OEM background-start restriction.
         Log.d(TAG, "onShowIncomingCallUi: launching FakeCallActivity")
         val intent = Intent(context, FakeCallActivity::class.java).apply {
             putExtra("caller_name", name)
@@ -165,10 +159,8 @@ class FakeCallConnection(
         super.onStateChanged(state)
         Log.d(TAG, "onStateChanged: $state")
         if (state == Connection.STATE_DISCONNECTED) {
-            // Fires for every termination path (UI swipe via FakeCallManager.endFromUi(), or a
-            // Telecom-driven onReject()/onDisconnect() above). Telecom writes its own Call Log
-            // entry asynchronously around this same point, so two purge attempts are spaced out
-            // to reliably land after that write instead of racing it on slower devices.
+            // Telecom writes its own Call Log entry asynchronously around this same point —
+            // two spaced-out purge attempts avoid racing that write on slower devices.
             val handler = Handler(Looper.getMainLooper())
             handler.postDelayed({ FakeCallConnectionService.purgeCallLogEntries(context) }, 1000L)
             handler.postDelayed({ FakeCallConnectionService.purgeCallLogEntries(context) }, 3000L)

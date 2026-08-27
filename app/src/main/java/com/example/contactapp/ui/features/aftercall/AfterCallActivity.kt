@@ -123,11 +123,9 @@ class AfterCallActivity : AppCompatActivity() {
                     callInfoLine2 = callInfoLine2,
                     onFinish = { finish() },
                     onOpenMainApp = { tab ->
-                        // skip_splash bypasses MainActivity's own cold-start SplashScreen (and
-                        // the App Open ad it can show) — the user already just came from this
-                        // app's own UI, showing a splash/ad on top of that would be jarring.
-                        // finish() (below) sets isAdPaused too, so the separate background-return
-                        // App Open trigger doesn't fire either.
+                        // skip_splash bypasses MainActivity's cold-start splash/App-Open ad since the
+                        // user just came from this app's own UI; finish() below also blocks the
+                        // background-return App Open trigger.
                         val intent = Intent(this, MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                             putExtra("skip_splash", true)

@@ -72,8 +72,8 @@ class AfterCallReceiver : BroadcastReceiver() {
         val appContext = context.applicationContext
 
         val cachedResult = AppConfigViewModel.readCachedResult(appContext)
-        if (cachedResult?.google_ads_on_off == "on" && cachedResult.native_7_on_off == "on") {
-            cachedResult.native_7?.takeIf { it.isNotBlank() }?.let {
+        if (cachedResult?.google_ads_on_off == "on" && cachedResult.native_2_on_off == "on") {
+            cachedResult.native_2?.takeIf { it.isNotBlank() }?.let {
                 NativeAdCache.preload(appContext, it)
             }
         }
@@ -122,11 +122,8 @@ class AfterCallReceiver : BroadcastReceiver() {
                     }
                     appContext.startActivity(activityIntent)
 
-                    // Belt-and-suspenders fallback: on OEMs where the startActivity() above gets
-                    // silently swallowed, a short delayed check catches it and falls back to a
-                    // full-screen-intent notification instead. Not awaited — on devices where the
-                    // direct launch already works this is a no-op, since isVisible flips true
-                    // almost immediately.
+                    // Fallback for OEMs that silently swallow the startActivity() above — a delayed
+                    // check falls back to a full-screen notification; a no-op where the launch works.
                     CoroutineScope(Dispatchers.Main).launch {
                         delay(1000)
                         if (!AfterCallActivity.isVisible) {

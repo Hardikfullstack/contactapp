@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.ui.components.CommonHeader
+import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.components.SettingsDivider
 import com.example.contactapp.ui.components.SettingsItem
@@ -44,12 +45,8 @@ fun FlashAlertScreen(
     val activity = context as? Activity
 
     var showPermissionRationale by remember { mutableStateOf(false) }
-    // Distinguishes "denied once, the system will still show its dialog again" from "denied
-    // permanently (Don't ask again) — the system will never show its own dialog again, so the
-    // only way forward is the app's own Settings page." Matches Android's own recommended pattern:
-    // shouldShowRequestPermissionRationale() returns false in both the "never asked yet" and the
-    // "permanently denied" cases, but since this is only checked AFTER a denial has just happened,
-    // it can only mean the latter here.
+    // Distinguishes "denied once" (system will re-ask) from "denied permanently" (Don't ask
+    // again — only the app's own Settings page can help); checked only after a fresh denial.
     var isPermanentlyDenied by remember { mutableStateOf(false) }
 
     // FlashAlertManager.startBlinking() calls CameraManager.setTorchMode(), which throws/silently
@@ -99,13 +96,9 @@ fun FlashAlertScreen(
                 icon = Icons.Outlined.FlashlightOn,
                 onClick = { if (uiState.isEnabled) viewModel.toggleEnabled(false) else enableFlashAlert() },
                 trailing = {
-                    Switch(
+                    CustomSwitch(
                         checked = uiState.isEnabled,
-                        onCheckedChange = { checked -> if (checked) enableFlashAlert() else viewModel.toggleEnabled(false) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
+                        onCheckedChange = { checked -> if (checked) enableFlashAlert() else viewModel.toggleEnabled(false) }
                     )
                 }
             )

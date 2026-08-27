@@ -31,8 +31,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.service.FakeCallReceiver
 import com.example.contactapp.ui.components.CommonHeader
+import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.theme.PrimaryGreen
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.CallReliabilityUtils
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -264,12 +266,12 @@ fun FakeCallSetupScreen(
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Switch(
+                        CustomSwitch(
                             checked = shakeEnabled,
                             onCheckedChange = { checked ->
                                 if (checked && (shakeCallerName.isBlank() || shakeCallerNumber.isBlank())) {
                                     Toast.makeText(context, context.getString(R.string.fill_shake_profile_first), Toast.LENGTH_SHORT).show()
-                                    return@Switch
+                                    return@CustomSwitch
                                 }
                                 shakeEnabled = checked
                             }
@@ -444,6 +446,13 @@ private fun scheduleFakeCall(context: Context, name: String, number: String, del
     )
 
     val triggerTime = SystemClock.elapsedRealtime() + (delaySec * 1000L)
+
+    AnalyticsManager.logEventWithAction(
+        "fake_call_scheduled",
+        "FakeCallSetupScreen",
+        "scheduled",
+        mapOf("delay_sec" to delaySec)
+    )
 
     try {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {

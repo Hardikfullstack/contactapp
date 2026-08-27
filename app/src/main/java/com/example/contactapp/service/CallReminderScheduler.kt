@@ -38,10 +38,8 @@ object CallReminderScheduler {
         pendingIntent.cancel()
     }
 
-    // Extras don't factor into PendingIntent identity (only component/action/data/category do),
-    // so the request code alone determines whether this matches an existing scheduled alarm —
-    // reminder.id (unique per reminder) is reused as that code, letting cancel() reconstruct the
-    // exact same PendingIntent schedule() created without needing the extras to match too.
+    // PendingIntent identity ignores extras — reminder.id doubles as the request code so
+    // cancel() can reconstruct the exact same PendingIntent schedule() created.
     private fun pendingIntentFor(context: Context, reminder: CallReminder): PendingIntent {
         val intent = Intent(context, CallReminderReceiver::class.java).apply {
             putExtra(CallReminderReceiver.EXTRA_REMINDER_ID, reminder.id)

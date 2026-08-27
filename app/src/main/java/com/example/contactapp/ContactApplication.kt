@@ -21,15 +21,8 @@ class ContactApplication : Application() {
         // Off the main thread — MobileAds.initialize() does blocking I/O internally.
         Thread { MobileAds.initialize(this) }.start()
 
-        // Off the main thread too — both do real IPC/disk I/O (Telecom registration, a CallLog
-        // ContentProvider delete), and Application.onCreate() must fully finish before any other
-        // component (including ContactCallService, which launches InCallActivity for a real call)
-        // can run. On a cold start triggered by an actual incoming/outgoing call — the process was
-        // killed in the background and Android is starting it fresh just to handle that call —
-        // blocking here on the main thread was adding real, user-visible delay before the call
-        // screen could appear. Neither of these needs to block anything: FakeCallReceiver only
-        // needs the phone account by the time a scheduled fake-call alarm actually fires (well
-        // after this), and the Call Log purge is just best-effort housekeeping.
+        // Off the main thread — both do real IPC/disk I/O and would otherwise delay
+        // Application.onCreate() finishing, which blocks the call screen appearing on a cold start.
         Thread {
             // Registering is idempotent and cheap — doing it on every process start (including
             // the one triggered by a scheduled fake-call alarm waking a killed app) guarantees the

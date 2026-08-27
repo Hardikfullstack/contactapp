@@ -16,8 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 
 @Composable
 fun QuickActionButton(
@@ -34,7 +36,7 @@ fun QuickActionButton(
                 onClick()
             },
         shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF7F7F7),
     ) {
 
         Row(
@@ -49,7 +51,7 @@ fun QuickActionButton(
             Icon(
                 imageVector = icon,
                 contentDescription = text,
-                tint = MaterialTheme.colorScheme.onSurface,
+                tint = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202),
                 modifier = Modifier.size(20.dp)
             )
 
@@ -57,7 +59,8 @@ fun QuickActionButton(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.Normal,
+                    color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202)
                 ),
                 maxLines = 1
             )

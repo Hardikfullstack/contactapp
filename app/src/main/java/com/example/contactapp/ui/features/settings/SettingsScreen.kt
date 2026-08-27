@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Chat
@@ -23,15 +24,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.ui.components.CommonHeader
+import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
+import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.ui.components.SettingsDivider
 import com.example.contactapp.ui.components.SettingsItem
 import com.example.contactapp.ui.components.SettingsSectionHeader
@@ -59,10 +66,8 @@ fun SettingsScreen(
         ActivityResultContracts.StartActivityForResult()
     ) { viewModel.refreshState() }
 
-    // The autostart/MIUI-popup screens are launched as plain startActivity() calls (no
-    // meaningful ActivityResult callback — see CallReliabilityUtils), so catch the return trip
-    // via ON_RESUME instead, same as systemSettingsLauncher's callback does for the ones that do
-    // support a result callback.
+    // Autostart/MIUI-popup screens have no meaningful ActivityResult callback (see
+    // CallReliabilityUtils) — catch the return trip via ON_RESUME instead.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -162,13 +167,9 @@ fun SettingsScreen(
                 onClick = { showThemeDialog = true },
                 value = themeLabel(uiState.appTheme),
                 trailing = {
-                    Switch(
+                    CustomSwitch(
                         checked = uiState.appTheme == "Dark",
-                        onCheckedChange = { viewModel.setTheme(if (it) "Dark" else "Light") },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
+                        onCheckedChange = { viewModel.setTheme(if (it) "Dark" else "Light") }
                     )
                 }
             )
@@ -315,78 +316,30 @@ fun SettingsScreen(
 
     // Dialogs
     if (showSortDialog) {
-        AlertDialog(
-            onDismissRequest = { showSortDialog = false },
-            title = { Text(stringResource(R.string.sort_by)) },
-            text = {
-                Column {
-                    listOf("First Name", "Last Name").forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setSortOrder(option)
-                                    showSortDialog = false
-                                }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = uiState.contactSortOrder == option,
-                                onClick = {
-                                    viewModel.setSortOrder(option)
-                                    showSortDialog = false
-                                }
-                            )
-                            Text(text = sortOrderLabel(option), modifier = Modifier.padding(start = 8.dp))
-                        }
-                    }
-                }
+        SelectionDialog(
+            title = stringResource(R.string.sort_by),
+            options = listOf("First Name", "Last Name"),
+            optionLabel = { sortOrderLabel(it) },
+            selectedOption = uiState.contactSortOrder,
+            onOptionSelected = { option ->
+                viewModel.setSortOrder(option)
+                showSortDialog = false
             },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showSortDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+            onDismiss = { showSortDialog = false }
         )
     }
 
     if (showThemeDialog) {
-        AlertDialog(
-            onDismissRequest = { showThemeDialog = false },
-            title = { Text(stringResource(R.string.theme)) },
-            text = {
-                Column {
-                    listOf("Light", "Dark", "System").forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setTheme(option)
-                                    showThemeDialog = false
-                                }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = uiState.appTheme == option,
-                                onClick = {
-                                    viewModel.setTheme(option)
-                                    showThemeDialog = false
-                                }
-                            )
-                            Text(text = themeLabel(option), modifier = Modifier.padding(start = 8.dp))
-                        }
-                    }
-                }
+        SelectionDialog(
+            title = stringResource(R.string.theme),
+            options = listOf("Light", "Dark", "System"),
+            optionLabel = { themeLabel(it) },
+            selectedOption = uiState.appTheme,
+            onOptionSelected = { option ->
+                viewModel.setTheme(option)
+                showThemeDialog = false
             },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showThemeDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+            onDismiss = { showThemeDialog = false }
         )
     }
 
@@ -400,4 +353,89 @@ fun SettingsScreen(
         )
     }
 
+}
+
+/** Matches the Messages app's FilterDialog styling: a plain rounded card (not AlertDialog) with
+ * a title + close icon row, and whole-row-clickable options with a trailing radio button. */
+@Composable
+private fun SelectionDialog(
+    title: String,
+    options: List<String>,
+    optionLabel: (String) -> String,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(23.dp),
+            color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surface else Color(0xFFF3F3F3),
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .widthIn(max = 300.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 22.sp,
+                        color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                options.forEach { option ->
+                    val selected = selectedOption == option
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onOptionSelected(option) }
+                            .padding(vertical = 12.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = optionLabel(option),
+                            fontSize = 16.sp,
+                            color = if (selected) {
+                                if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202)
+                            } else {
+                                if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF656565)
+                            }
+                        )
+                        RadioButton(
+                            selected = selected,
+                            onClick = null,
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = PrimaryGreen,
+                                unselectedColor = Color.LightGray
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
 }

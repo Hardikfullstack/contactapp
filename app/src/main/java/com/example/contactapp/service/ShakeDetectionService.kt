@@ -75,10 +75,8 @@ class ShakeDetectionService : Service(), SensorEventListener {
         val z = event.values[2]
         val acceleration = sqrt((x * x + y * y + z * z).toDouble()).toFloat() - SensorManager.GRAVITY_EARTH
 
-        // SHAKE_THRESHOLD is the only knob you need for "how hard do I have to shake" — lower it
-        // for a lighter shake to count, raise it to require a firmer one. MIN_PULSE_INTERVAL_MS/
-        // SHAKE_WINDOW_MS/REQUIRED_PULSES below control the *pattern* (how many pulses, how fast),
-        // independent of how strong each individual pulse needs to be.
+        // SHAKE_THRESHOLD controls how hard a shake must be; MIN_PULSE_INTERVAL_MS/SHAKE_WINDOW_MS/
+        // REQUIRED_PULSES below control the pattern (how many, how fast) independently.
         if (acceleration > SHAKE_THRESHOLD) {
             val now = System.currentTimeMillis()
             // Debounce: a single physical shake produces many sensor samples above threshold in a
@@ -134,11 +132,8 @@ class ShakeDetectionService : Service(), SensorEventListener {
             .setOngoing(true)
             .build()
 
-        // FOREGROUND_SERVICE_TYPE_SPECIAL_USE isn't a valid type until API 34 (UPSIDE_DOWN_CAKE)
-        // even though the 3-arg startForeground(id, notification, type) overload itself has
-        // existed since API 29 — passing this constant on API 29-33 risks an
-        // InvalidForegroundServiceTypeException since the OS wouldn't recognize the manifest's
-        // foregroundServiceType="specialUse" either on those versions.
+        // FOREGROUND_SERVICE_TYPE_SPECIAL_USE isn't valid until API 34 — passing it on 29-33
+        // risks InvalidForegroundServiceTypeException.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {

@@ -1,14 +1,19 @@
 package com.example.contactapp.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 
 data class BottomBarActionItem(
     val icon: ImageVector,
@@ -22,44 +27,51 @@ data class BottomBarActionItem(
 fun CommonBottomBar(
     items: List<BottomBarActionItem>,
     modifier: Modifier = Modifier,
-    // Callers that place something else (e.g. a banner ad) below this bar in the same column
-    // should pass WindowInsets(0) here and apply the system nav-bar inset further down instead —
-    // otherwise this reserved space ends up sandwiched between the bar and that content instead
-    // of at the screen's true bottom edge.
     windowInsets: WindowInsets = NavigationBarDefaults.windowInsets
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
-        modifier = modifier,
-        windowInsets = windowInsets
-    ) {
-        items.forEach { item ->
-            val isSelected = item.selected
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = item.onClick,
-                icon = {
-                    Icon(
-                        imageVector = if (isSelected && item.selectedIcon != null) item.selectedIcon else item.icon,
-                        contentDescription = item.label
+    val unselectedColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF656565)
+
+    Column(modifier = modifier) {
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 1.dp,
+            color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCDCDCD)
+        )
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            windowInsets = windowInsets
+        ) {
+            items.forEach { item ->
+                val isSelected = item.selected
+                NavigationBarItem(
+                    selected = isSelected,
+                    onClick = item.onClick,
+                    icon = {
+                        Icon(
+                            imageVector = if (isSelected && item.selectedIcon != null) item.selectedIcon else item.icon,
+                            contentDescription = item.label,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = item.label,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
                     )
-                },
-                label = {
-                    Text(
-                        text = item.label,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
                 )
-            )
+            }
         }
     }
 }

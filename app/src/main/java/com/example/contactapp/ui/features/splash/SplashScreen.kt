@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -55,12 +57,12 @@ import kotlinx.coroutines.launch
  * logo — long enough to read comfortably, short enough that returning users (the common case)
  * aren't kept waiting. */
 private const val LetterStaggerMs = 90L
-private const val LetterStartDelayMs = 300L
+private const val LetterStartDelayMs = 650L
 
 /** Minimum time the branding animation gets to play before this screen hands off to the next
  * one, regardless of how quickly config/ads resolve — otherwise on a fast/cached run the icon
  * and typing text would barely flash on screen before being replaced. */
-private const val SplashMinDurationMs = 1800L
+private const val SplashMinDurationMs = 2000L
 
 /**
  * Cold-start gate: plays a brief logo + letter-slide-in branding animation, and — once setup is
@@ -94,16 +96,16 @@ fun SplashScreen(
         }
         // Cold-start rotation's Interstitial slot (see AppOpenCounter) — preloaded unconditionally
         // so it's ready by the time the 3rd/6th/... cold open needs it, same as the App Open ad.
-        if (result.interstitial_3_on_off == "on") {
-            result.interstitial_3?.takeIf { it.isNotBlank() }?.let {
+        if (result.interstitial_2_on_off == "on") {
+            result.interstitial_2?.takeIf { it.isNotBlank() }?.let {
                 InterstitialAdManager.preload(context, it)
             }
         }
         if (!isFullySetUp) {
             // First-time user — onboarding routes through the Language screen next, which shows
             // an interstitial right after "Done" is tapped — preload it now so it's ready by then.
-            if (result.native_2_on_off == "on") {
-                result.native_2?.takeIf { it.isNotBlank() }?.let {
+            if (result.native_1_on_off == "on") {
+                result.native_1?.takeIf { it.isNotBlank() }?.let {
                     NativeAdCache.preload(context, it)
                 }
             }
@@ -157,7 +159,7 @@ fun SplashScreen(
                     }
                 }
             } else if (adsEnabled && activity != null && adType == ColdStartAdType.INTERSTITIAL) {
-                val interstitialAdUnitId = result?.interstitial_3?.takeIf { result.interstitial_3_on_off == "on" && it.isNotBlank() }
+                val interstitialAdUnitId = result?.interstitial_2?.takeIf { result.interstitial_2_on_off == "on" && it.isNotBlank() }
                 if (interstitialAdUnitId != null) {
                     if (!InterstitialAdManager.isReady(interstitialAdUnitId)) {
                         showAdLoader = true
@@ -215,14 +217,17 @@ private fun BrandingAnimation() {
         }
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-//        SplashLogo()
+    Column(
+        modifier = Modifier.padding(top = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        SplashLogo()
         Spacer(modifier = Modifier.height(14.dp))
         Row {
             letters.forEachIndexed { index, letter ->
                 Text(
                     text = letter.toString(),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     modifier = Modifier
@@ -234,26 +239,67 @@ private fun BrandingAnimation() {
     }
 }
 
-/** App's launcher-icon silhouette in a soft translucent circle, easing smoothly into view — no
- * scale/zoom, just a plain fade-in. */
+/** Two small dots slide in from either side and meet at the center — once "connected", they
+ * crossfade into the full launcher icon (background + foreground layers) clipped into a circle. */
 @Composable
 private fun SplashLogo() {
-    val alpha = remember { Animatable(0f) }
+    val dotOffset = remember { Animatable(1f) } // 1 = apart at the sides, 0 = merged at center
+    val dotsAlpha = remember { Animatable(1f) }
+    val circleAlpha = remember { Animatable(0f) }
+    val circleScale = remember { Animatable(0.7f) }
+
     LaunchedEffect(Unit) {
-        alpha.animateTo(1f, animationSpec = tween(durationMillis = 500))
+        dotOffset.animateTo(
+            0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        )
+        // Dots have met — swap them out for the real logo circle underneath.
+        launch { dotsAlpha.animateTo(0f, animationSpec = tween(durationMillis = 150)) }
+        launch { circleAlpha.animateTo(1f, animationSpec = tween(durationMillis = 200)) }
+        circleScale.animateTo(
+            1f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+        )
     }
+
     Box(
-        modifier = Modifier
-            .size(96.dp)
-            .alpha(alpha.value)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.16f)),
+        modifier = Modifier.size(96.dp),
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
-            contentDescription = null,
-            modifier = Modifier.size(56.dp)
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .offset(x = (-38).dp * dotOffset.value)
+                .alpha(dotsAlpha.value)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.5f))
         )
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .offset(x = 38.dp * dotOffset.value)
+                .alpha(dotsAlpha.value)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.5f))
+        )
+
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .scale(circleScale.value)
+                .alpha(circleAlpha.value)
+                .clip(CircleShape)
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_background),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize()
+            )
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize()
+            )
+        }
     }
 }

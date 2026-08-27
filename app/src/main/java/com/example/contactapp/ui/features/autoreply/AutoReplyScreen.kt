@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.ui.components.CommonHeader
+import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.components.SettingsItem
 import com.example.contactapp.ui.components.SettingsSectionHeader
@@ -80,7 +81,7 @@ fun AutoReplyScreen(
                     }
                 },
                 trailing = {
-                    Switch(
+                    CustomSwitch(
                         checked = uiState.isEnabled,
                         onCheckedChange = { checked ->
                             if (checked && !hasSmsPermission) {
@@ -88,11 +89,7 @@ fun AutoReplyScreen(
                             } else {
                                 viewModel.setEnabled(checked)
                             }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = androidx.compose.ui.graphics.Color.White,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
+                        }
                     )
                 }
             )

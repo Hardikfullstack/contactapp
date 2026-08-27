@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.service.CallReminderScheduler
+import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.CallReminder
 import com.example.contactapp.util.PreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +42,7 @@ class CallReminderViewModel @Inject constructor(
         )
         preferenceManager.setCallReminders(preferenceManager.getCallReminders() + reminder)
         CallReminderScheduler.schedule(context, reminder)
+        AnalyticsManager.logEventWithAction("call_reminder_set", "CallReminderScreen", "created")
     }
 
     fun cancelReminder(reminder: CallReminder) {

@@ -67,14 +67,9 @@ class FakeCallReceiver : BroadcastReceiver() {
             Log.e(TAG, "onReceive: deliverAsTelecomCall FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
         }
 
-        // A plain BroadcastReceiver only gets elevated process priority while onReceive() is
-        // actually running — the instant it returns, this process is eligible to be
-        // deprioritized/frozen again. Telecom's follow-up call into
-        // FakeCallConnectionService.onCreateIncomingConnection() is a SEPARATE, asynchronous
-        // binder transaction that happens after addNewIncomingCall() above returns, so without
-        // goAsync() holding that priority a little longer, an aggressive OEM process manager can
-        // freeze this process in the gap and silently drop Telecom's callback before it ever
-        // reaches app code — indistinguishable from Telecom rejecting the call outright.
+        // goAsync() holds process priority past onReceive() returning — Telecom's follow-up
+        // onCreateIncomingConnection() call is a separate async binder transaction an OEM process
+        // manager could otherwise freeze/drop before it reaches app code.
         val pendingResult = goAsync()
         scope.launch {
             try {
@@ -92,11 +87,8 @@ class FakeCallReceiver : BroadcastReceiver() {
         FakeCallConnectionService.registerPhoneAccount(context)
 
         val handle = FakeCallConnectionService.phoneAccountHandle(context)
-        // Purely diagnostic — some Android versions now gate getPhoneAccount() behind
-        // READ_PHONE_NUMBERS (which this app doesn't request, since it isn't otherwise needed).
-        // This must never be allowed to block the real addNewIncomingCall() attempt below —
-        // it previously did, since an uncaught SecurityException here aborted this whole function
-        // before ever reaching it.
+        // Purely diagnostic — getPhoneAccount() can throw SecurityException (READ_PHONE_NUMBERS,
+        // not requested) on some versions; must never block the real addNewIncomingCall() below.
         try {
             val registeredAccount = telecomManager.getPhoneAccount(handle)
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
@@ -193,12 +185,8 @@ class FakeCallReceiver : BroadcastReceiver() {
             Log.e(TAG, "deliverAsNotification: POST_NOTIFICATIONS not granted — notification NOT posted")
         }
 
-        // Best-effort instant path: only succeeds when the caller already has a legitimate
-        // foreground-adjacent presence (e.g. the shake-trigger foreground service, or the app
-        // already being open) — that's exactly the unlocked-screen case a full-screen-intent
-        // notification can't cover on its own, since Android only auto-launches those when the
-        // screen is locked/off; on an unlocked screen it's just a heads-up requiring a manual
-        // tap. Purely additive on top of the notification above, never a replacement for it.
+        // Best-effort instant path for the unlocked-screen case — full-screen-intent notifications
+        // only auto-launch when locked/off; additive on top of the notification above, not a replacement.
         try {
             context.startActivity(activityIntent)
         } catch (e: Exception) {

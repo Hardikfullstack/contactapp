@@ -28,11 +28,8 @@ class CallLogRepositoryImpl @Inject constructor(
     }
 
     override fun fetchCallHistory(phoneNumber: String): Flow<List<CallLogItem>> = callLogFlow {
-        // An exact CallLog.Calls.NUMBER match would miss real history whenever the call log's
-        // stored format differs even slightly from the contact's (country code, spacing, dashes)
-        // — e.g. contact "+91 98765 43210" vs a logged call stored as "9876543210". Normalize
-        // both sides to the last 10 digits instead, matching the comparison used everywhere else
-        // in the app (blocked-number checks, spam detection).
+        // Exact NUMBER match would miss history when formats differ (spacing/country code) —
+        // normalize both sides to the last 10 digits, matching blocked-number/spam checks elsewhere.
         val target = phoneNumber.replace(Regex("[^0-9]"), "").takeLast(10)
         if (target.isEmpty()) {
             emptyList()
@@ -209,10 +206,8 @@ class CallLogRepositoryImpl @Inject constructor(
                     val durationSec = try { duration.toLong() } catch (e: Exception) { 0L }
                     var photoUri: String? = cursor.getString(photoUriIndex)
 
-                    // The call log caches name/photo at call time. Only fall back to the
-                    // in-memory contact index (built once above, not a per-row query) when
-                    // either is missing from that cache — e.g. the number wasn't saved yet,
-                    // or its photo was added after the call was logged.
+                    // Call log caches name/photo at call time — fall back to the contact index
+                    // only when either is missing (e.g. saved/updated after the call was logged).
                     if (shouldResolveContactInfo && (name.isNullOrBlank() || photoUri.isNullOrBlank())) {
                         val normalized = number?.replace(Regex("[^0-9]"), "")?.takeLast(10)
                         val contactInfo = contactIndex[normalized]

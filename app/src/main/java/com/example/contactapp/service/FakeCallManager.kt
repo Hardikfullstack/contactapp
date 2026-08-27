@@ -2,6 +2,7 @@ package com.example.contactapp.service
 
 import android.telecom.Call
 import android.telecom.DisconnectCause
+import com.example.contactapp.util.AnalyticsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,10 +50,8 @@ object FakeCallManager {
     fun attachConnection(connection: FakeCallConnection) {
         this.connection = connection
         if (preAnswered) {
-            // The user already answered via the UI before this connection existed — sync
-            // Telecom's side to match instead of leaving it stuck on the setRinging() the
-            // connection service just called. _callState is already ACTIVE from answerFromUi()
-            // below, so only the Telecom-facing connection needs to catch up here.
+            // User already answered via UI before this connection existed — sync Telecom's side
+            // (still stuck on setRinging()) to match the already-ACTIVE _callState.
             preAnswered = false
             connection.setActive()
         }
@@ -68,6 +67,7 @@ object FakeCallManager {
      */
     fun answerFromUi() {
         _callState.value = Call.STATE_ACTIVE
+        AnalyticsManager.logEventWithAction("fake_call_answered", "FakeCallActivity", "answer")
         val existingConnection = connection
         if (existingConnection != null) {
             existingConnection.setActive()
@@ -78,6 +78,10 @@ object FakeCallManager {
 
     /** The user declined or ended via the in-app UI — reflect that on the telecom side. */
     fun endFromUi() {
+        val wasAnswered = _callState.value == Call.STATE_ACTIVE
+        AnalyticsManager.logEventWithAction(
+            "fake_call_ended", "FakeCallActivity", if (wasAnswered) "hangup" else "decline"
+        )
         connection?.let {
             it.setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
             it.destroy()

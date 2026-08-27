@@ -46,13 +46,8 @@ fun AdvancedPermissionScreen(
     val context = LocalContext.current
     val prefs = remember { PreferenceManager(context.applicationContext) }
 
-    // Safety net for a confirmed MIUI quirk: Settings.canDrawOverlays() has been observed to
-    // report true on this OEM immediately after a fresh install, before the user has ever seen
-    // this permission's Settings page — silently skipping the OVERLAY step, with no easy way
-    // back to it later, on a device where the underlying grant can later turn out to actually be
-    // false (e.g. AfterCallReceiver's own live check has seen it read false in the same session).
-    // Forces the step to show at least once on MIUI regardless of what the API claims; set once
-    // the user has actually seen/acted on it so subsequent steps aren't blocked forever.
+    // MIUI quirk: canDrawOverlays() can falsely report true right after install, silently skipping
+    // the OVERLAY step — force it to show once on MIUI regardless, until the user's acted on it.
     var hasForcedOverlayStep by remember { mutableStateOf(false) }
 
     fun computeNextStep(): PermissionStep {
@@ -152,10 +147,8 @@ fun AdvancedPermissionScreen(
             overlayLauncher.launch(intent)
             startAutoReturnPolling()
         } else if (!CallReliabilityUtils.isMiui() || hasForcedOverlayStep) {
-            // On MIUI, while the OVERLAY step is being force-shown (see computeNextStep()), don't
-            // let this auto-advance past it the instant the screen composes just because the
-            // (possibly lying) API already reports true — let the user actually see it and tap
-            // through via onPermissionActionClick below, which is what sets hasForcedOverlayStep.
+            // Don't auto-advance past a force-shown OVERLAY step just because the API already
+            // (possibly falsely) reports true — let the user tap through onPermissionActionClick.
             checkNextStepAfterOverlay()
         }
     }
@@ -196,14 +189,8 @@ fun AdvancedPermissionScreen(
         val onPermissionActionClick: () -> Unit = {
             when (currentStep) {
                 PermissionStep.OVERLAY -> {
-                    // Always open the real Settings page here, regardless of what
-                    // canDrawOverlays() currently claims — this button can be reached either
-                    // because it's genuinely ungranted, or via the MIUI force-show safety net
-                    // (where the API may already be lying "true"). Trusting that flag to decide
-                    // whether to even open Settings is exactly what silently skipped straight to
-                    // the next step before. overlayLauncher's own callback re-checks and advances
-                    // once the user actually comes back — no unreliable polling involved, same as
-                    // every other OEM step below (MIUI_PERMISSIONS/MIUI_AUTOSTART) already does.
+                    // Always open Settings here regardless of what canDrawOverlays() claims —
+                    // trusting it (which can lie "true" on MIUI) is what used to skip this step.
                     hasForcedOverlayStep = true
                     val intent = Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
