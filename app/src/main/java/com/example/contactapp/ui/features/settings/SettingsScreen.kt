@@ -86,7 +86,6 @@ fun SettingsScreen(
         }
     }
 
-    val couldntOpenBatterySettingsMessage = stringResource(R.string.toast_couldnt_open_battery_settings)
     val couldntOpenNotificationSettingsMessage = stringResource(R.string.toast_couldnt_open_notification_settings)
     val callerIdProtectionActiveMessage = stringResource(R.string.toast_caller_id_protection_active)
     val shareAppMessage = stringResource(R.string.share_app_message)
@@ -187,22 +186,6 @@ fun SettingsScreen(
         SettingsSectionHeader(title = stringResource(R.string.settings_section_call_reliability))
         SettingsCard {
             val allowedLabel = stringResource(R.string.state_allowed)
-            SettingsItem(
-                title = stringResource(R.string.settings_battery_optimization),
-                icon = Icons.Outlined.BatteryChargingFull,
-                value = if (uiState.isBatteryOptimizationIgnored) allowedLabel else stringResource(R.string.state_restricted_tap_to_fix),
-                showChevron = false,
-                onClick = {
-                    if (!uiState.isBatteryOptimizationIgnored) {
-                        try {
-                            systemSettingsLauncher.launch(viewModel.getBatteryOptimizationIntent())
-                        } catch (e: Exception) {
-                            android.widget.Toast.makeText(context, couldntOpenBatterySettingsMessage, android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            )
-            SettingsDivider()
             SettingsItem(
                 title = stringResource(R.string.settings_full_screen_notifications),
                 icon = Icons.Outlined.NotificationsActive,

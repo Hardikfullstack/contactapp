@@ -27,8 +27,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.activity.ComponentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.BannerAdView
 import com.example.contactapp.service.FakeCallReceiver
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.CustomSwitch
@@ -36,6 +38,7 @@ import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.CallReliabilityUtils
+import com.example.contactapp.viewmodel.AppConfigViewModel
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -62,6 +65,14 @@ fun FakeCallSetupScreen(
     var showTimePicker by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
+
+    val appConfigViewModel: AppConfigViewModel = androidx.lifecycle.viewmodel.compose.viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val bannerAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.banner_6_on_off == "on") {
+            result.banner_6?.takeIf { it.isNotBlank() }
+        } else null
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -325,6 +336,10 @@ fun FakeCallSetupScreen(
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+
+            if (bannerAdUnitId != null) {
+                BannerAdView(adUnitId = bannerAdUnitId)
             }
 
             Box(

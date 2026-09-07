@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Contacts</string>
     <string name="app_launcher_name">#Contacts</string>
+    <string name="ad_is_loading">جارٍ تحميل الإعلان…</string>
 
     <!-- Onboarding -->
     <string name="allow_permission">Contacts تحتاج إلى إذن</string>

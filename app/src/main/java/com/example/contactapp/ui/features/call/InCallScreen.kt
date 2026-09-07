@@ -14,6 +14,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,7 +45,9 @@ import com.example.contactapp.ui.components.ContactAvatarImage
 import com.example.contactapp.ui.components.SwipeUpCallButton
 import com.example.contactapp.ui.components.lightened
 import com.example.contactapp.ui.components.toComposeShape
+import com.example.contactapp.ui.features.keypad.components.BottomDialActions
 import com.example.contactapp.ui.features.keypad.components.DialPad
+import com.example.contactapp.ui.features.keypad.components.NumberDisplay
 import com.example.contactapp.util.CallAccentColors
 import com.example.contactapp.util.CallButtonShape
 import com.example.contactapp.util.CallTheme
@@ -75,10 +79,6 @@ fun InCallScreen(
     secondaryCallNumber: String? = null,
     onAddCall: (String) -> Unit = {},
     onEndSecondaryCall: () -> Unit = {},
-    isRecording: Boolean = false,
-    recordingSeconds: Int = 0,
-    onStartRecording: () -> Unit = {},
-    onStopRecording: () -> Unit = {},
     selection: WallpaperSelection,
     theme: CallTheme = CallTheme(CallAccentColors.findById("green").color, CallButtonShape.CIRCLE)
 ) {
@@ -96,9 +96,11 @@ fun InCallScreen(
     var showQuickReplySheet by remember { mutableStateOf(false) }
     var showKeypad by remember { mutableStateOf(false) }
     var showAddCallSheet by remember { mutableStateOf(false) }
-    var showRecordingDisclaimer by remember { mutableStateOf(false) }
     val hasSecondaryCall = secondaryCallNumber != null
 
+    // Counts total call duration since it first connected — pauses while on hold (isActive is
+    // false then) but must NOT reset back to 0, since a real call's duration keeps counting from
+    // where it left off once resumed, exactly like the stock dialer.
     var elapsedSeconds by remember { mutableIntStateOf(0) }
     LaunchedEffect(isActive) {
         if (isActive) {
@@ -106,8 +108,6 @@ fun InCallScreen(
                 delay(1000)
                 elapsedSeconds++
             }
-        } else {
-            elapsedSeconds = 0
         }
     }
 
@@ -126,34 +126,6 @@ fun InCallScreen(
                 )
             )
         )
-
-        // Small floating recording indicator, independent of the control tray below.
-        if (isRecording) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(top = 8.dp),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(Color.Red)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(formatTimer(recordingSeconds), color = Color.White, fontSize = 13.sp)
-                }
-            }
-        }
 
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -328,8 +300,7 @@ fun InCallScreen(
                                 .navigationBarsPadding(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Two evenly balanced rows of three — primary in-call controls up top,
-                            // secondary/extra actions below, rather than a lopsided 4-and-2 split.
+                            // Primary in-call controls up top, secondary/extra actions below.
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -373,14 +344,6 @@ fun InCallScreen(
                                     active = false,
                                     enabled = canAddCall,
                                     onClick = { showAddCallSheet = true }
-                                )
-                                CallControlButton(
-                                    icon = if (isRecording) Icons.Default.Stop else Icons.Default.Circle,
-                                    label = stringResource(if (isRecording) R.string.stop_recording else R.string.record_call),
-                                    active = isRecording,
-                                    onClick = {
-                                        if (isRecording) onStopRecording() else showRecordingDisclaimer = true
-                                    }
                                 )
                             }
 
@@ -428,65 +391,44 @@ fun InCallScreen(
         )
     }
 
-    if (showRecordingDisclaimer) {
-        AlertDialog(
-            onDismissRequest = { showRecordingDisclaimer = false },
-            title = { Text(stringResource(R.string.recording_disclaimer_title)) },
-            text = { Text(stringResource(R.string.recording_disclaimer_text)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showRecordingDisclaimer = false
-                    onStartRecording()
-                }) {
-                    Text(stringResource(R.string.start_recording))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRecordingDisclaimer = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddCallSheet(onCall: (String) -> Unit, onDismiss: () -> Unit) {
     var number by remember { mutableStateOf("") }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = stringResource(R.string.add_call),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
             )
-            Text(
-                text = number.ifEmpty { stringResource(R.string.enter_number) },
-                style = MaterialTheme.typography.headlineSmall,
-                color = if (number.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 20.dp)
-            )
+
+            NumberDisplay(number = number)
+
             DialPad(onDigitClick = { digit -> number += digit })
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(
-                onClick = { if (number.isNotBlank()) onCall(number) },
-                enabled = number.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(26.dp)
-            ) {
-                Icon(Icons.Default.Call, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.add_call))
-            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            BottomDialActions(
+                hasNumber = number.isNotEmpty(),
+                onCallClick = { if (number.isNotBlank()) onCall(number) },
+                onBackspaceClick = { number = number.dropLast(1) },
+                onClearAllClick = { number = "" }
+            )
         }
     }
 }

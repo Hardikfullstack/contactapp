@@ -17,6 +17,7 @@ import com.example.contactapp.R
 import com.example.contactapp.ads.NativeAdCache
 import com.example.contactapp.ads.AppOpenBackgroundReturnTrigger
 import com.example.contactapp.ui.features.aftercall.AfterCallActivity
+import com.example.contactapp.util.AfterCallMiniOverlay
 import com.example.contactapp.util.AfterCallNotificationHelper
 import com.example.contactapp.util.AfterCallState
 import com.example.contactapp.viewmodel.AppConfigViewModel
@@ -60,6 +61,7 @@ class AfterCallReceiver : BroadcastReceiver() {
         }
         if (!Settings.canDrawOverlays(context)) {
             Log.w(TAG, "onReceive: skipped — 'Display over other apps' permission not granted")
+            AfterCallNotificationHelper.showOverlayPermissionMissingNotification(context.applicationContext)
             return
         }
         if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
@@ -120,16 +122,24 @@ class AfterCallReceiver : BroadcastReceiver() {
                         putExtra("callInfoLine2", callInfoLine2)
                         if (contactName != null) putExtra("contactName", contactName)
                     }
-                    appContext.startActivity(activityIntent)
 
-                    // Fallback for OEMs that silently swallow the startActivity() above — a delayed
-                    // check falls back to a full-screen notification; a no-op where the launch works.
-                    CoroutineScope(Dispatchers.Main).launch {
-                        delay(1000)
-                        if (!AfterCallActivity.isVisible) {
-                            AfterCallNotificationHelper.showAfterCallFullScreenNotification(appContext, activityIntent, number, contactName)
-                        }
-                    }
+                    // Immediate, always-safe feedback — a real (if invisible) SYSTEM_ALERT_WINDOW
+                    // view appears to keep this process out of the freeze/kill window some OEMs
+                    // (MIUI in particular) apply right after a call ends.
+                    AfterCallMiniOverlay.show(appContext)
+
+                    // Posted right away, not just as a delayed fallback — this is what gives the
+                    // user instant call-info feedback (duration/time) during the settle delay
+                    // below, before the actual screen appears. AfterCallActivity cancels this
+                    // itself once it's actually on screen, so it never lingers once redundant.
+                    AfterCallNotificationHelper.showAfterCallFullScreenNotification(appContext, activityIntent, number, contactName)
+
+                    // Calling startActivity() immediately on call-end is exactly what those OEMs
+                    // silently block — waiting briefly for the call's telecom/audio teardown to
+                    // settle first is what makes the same call reliably succeed instead.
+                    delay(2000)
+                    AfterCallMiniOverlay.hide()
+                    appContext.startActivity(activityIntent)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

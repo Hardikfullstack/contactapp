@@ -29,25 +29,28 @@ fun QuickActionRow(
                 end = 16.dp,
                 bottom = 16.dp
             ),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
 
         QuickActionButton(
             icon = Icons.Outlined.Call,
             text = stringResource(R.string.call),
-            onClick = onCallClick
+            onClick = onCallClick,
+            modifier = Modifier.weight(1f)
         )
 
         QuickActionButton(
             icon = Icons.Outlined.Message,
             text = stringResource(R.string.message),
-            onClick = onMessageClick
+            onClick = onMessageClick,
+            modifier = Modifier.weight(1f)
         )
 
         QuickActionButton(
             icon = Icons.Outlined.History,
             text = stringResource(R.string.history),
-            onClick = onHistoryClick
+            onClick = onHistoryClick,
+            modifier = Modifier.weight(1f)
         )
 
     }

@@ -208,9 +208,8 @@ object CallReliabilityUtils {
         }
     }
 
-    /** AppOps codes 10021 (background pop-up) / 10020 (lock-screen display) are MIUI's own,
-     * undocumented but community-verified op codes — not part of the public Android API, read via
-     * reflection since AppOpsManager.checkOpNoThrow(int, int, String) isn't exposed for arbitrary
+    /** AppOps codes 10021 (background pop-up) and 10020 (lock-screen display) — undocumented MIUI
+     * op codes, checked via reflection since AppOpsManager only exposes the standard Android
      * op codes through the public checkOpNoThrow(String, ...) overload. If reflection fails for
      * any reason, assume granted rather than blocking the user on a check that can't be trusted. */
     fun isMiuiBackgroundPopupGranted(context: Context): Boolean {

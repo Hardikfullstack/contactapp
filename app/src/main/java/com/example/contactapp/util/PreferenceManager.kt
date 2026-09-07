@@ -235,6 +235,13 @@ class PreferenceManager @Inject constructor(
     fun isOemAutostartCompleted(): Boolean = sharedPreferences.getBoolean(KEY_OEM_AUTOSTART_DONE, false)
     fun setOemAutostartCompleted() { sharedPreferences.edit().putBoolean(KEY_OEM_AUTOSTART_DONE, true).apply() }
 
+    // NotificationManager.canUseFullScreenIntent() can flip back to false on MIUI after visiting
+    // an unrelated settings screen (e.g. the Autostart manager) even though the permission is
+    // still actually granted — this flag remembers a confirmed grant so the onboarding step is
+    // never shown a second time because of that flaky re-check.
+    fun isFullScreenIntentCompleted(): Boolean = sharedPreferences.getBoolean(KEY_FULL_SCREEN_INTENT_DONE, false)
+    fun setFullScreenIntentCompleted() { sharedPreferences.edit().putBoolean(KEY_FULL_SCREEN_INTENT_DONE, true).apply() }
+
     companion object {
         private const val PREF_NAME = "contact_app_prefs"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
@@ -259,5 +266,6 @@ class PreferenceManager @Inject constructor(
         private const val KEY_MIUI_PERMISSIONS_DONE = "miui_permissions_completed"
         private const val KEY_MIUI_AUTOSTART_DONE = "miui_autostart_completed"
         private const val KEY_OEM_AUTOSTART_DONE = "oem_autostart_completed"
+        private const val KEY_FULL_SCREEN_INTENT_DONE = "full_screen_intent_completed"
     }
 }

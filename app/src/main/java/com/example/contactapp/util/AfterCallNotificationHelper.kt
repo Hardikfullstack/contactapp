@@ -21,6 +21,7 @@ object AfterCallNotificationHelper {
 
     const val AFTER_CALL_CHANNEL_ID = "after_call_screen_channel"
     const val AFTER_CALL_NOTIFICATION_ID = 9101
+    const val OVERLAY_MISSING_NOTIFICATION_ID = 9102
     const val REMINDER_CHANNEL_ID = "after_call_reminder_channel"
 
     private fun ensureChannel(context: Context, channelId: Int) {
@@ -69,6 +70,41 @@ object AfterCallNotificationHelper {
 
     fun cancelAfterCallFullScreenNotification(context: Context) {
         NotificationManagerCompat.from(context).cancel(AFTER_CALL_NOTIFICATION_ID)
+    }
+
+    /**
+     * Nudges the user instead of silently doing nothing when a call just ended but
+     * SYSTEM_ALERT_WINDOW is missing — this can happen well after onboarding on MIUI, where
+     * removing/re-adding the Default Dialer role has been observed to silently revoke it.
+     */
+    fun showOverlayPermissionMissingNotification(context: Context) {
+        ensureChannel(context, 0)
+        if (!hasNotificationPermission(context)) return
+
+        // Goes straight to the overlay-permission settings screen — opening MainActivity here
+        // does nothing useful once onboarding is already complete, since nothing about the normal
+        // app UI re-surfaces this permission for the user to fix.
+        val overlaySettingsIntent = Intent(
+            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${context.packageName}")
+        ).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, OVERLAY_MISSING_NOTIFICATION_ID, overlaySettingsIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, AFTER_CALL_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(context.getString(R.string.after_call_permission_missing_title))
+            .setContentText(context.getString(R.string.after_call_permission_missing_desc))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.after_call_permission_missing_desc)))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+        NotificationManagerCompat.from(context).notify(OVERLAY_MISSING_NOTIFICATION_ID, builder.build())
     }
 
     /** Fired by ReminderReceiver when an After Call "remind me to call back" alarm goes off. */

@@ -31,7 +31,6 @@ data class SettingsUiState(
     val appVersion: String = "1.0.0",
     val isSyncing: Boolean = false,
     val currentLanguage: String = "System Language",
-    val isBatteryOptimizationIgnored: Boolean = true,
     val hasAutoStartSettings: Boolean = false,
     val showBackgroundPopupSettings: Boolean = false,
     val isMiuiBackgroundPopupGranted: Boolean = true,
@@ -66,7 +65,6 @@ class SettingsViewModel @Inject constructor(
             appTheme = preferenceManager.getAppTheme(),
             appVersion = getVersionName(),
             currentLanguage = languageDisplayName,
-            isBatteryOptimizationIgnored = CallReliabilityUtils.isIgnoringBatteryOptimizations(context),
             hasAutoStartSettings = CallReliabilityUtils.hasKnownAutoStartSettings(),
             showBackgroundPopupSettings = CallReliabilityUtils.isMiui(),
             isMiuiBackgroundPopupGranted = CallReliabilityUtils.isMiuiBackgroundPopupGranted(context),
@@ -80,8 +78,6 @@ class SettingsViewModel @Inject constructor(
         Uri.parse("package:${context.packageName}")
     )
 
-    fun getBatteryOptimizationIntent(): Intent = CallReliabilityUtils.batteryOptimizationIntent(context)
-
     /** Tries every known candidate for this device's manufacturer directly (explicit intents,
      * bypassing package-visibility filtering) — see CallReliabilityUtils' class doc comment.
      * Takes the caller's (Activity) context rather than always using the injected Application
@@ -91,12 +87,12 @@ class SettingsViewModel @Inject constructor(
         CallReliabilityUtils.launchAutoStartSettings(callerContext)
     }
 
-    fun openMiuiBackgroundPopupSettings(callerContext: Context = context) {
-        CallReliabilityUtils.openMiuiBackgroundPopupSettings(callerContext)
-    }
-
     fun openMiuiAutoStartSettings(callerContext: Context = context) {
         CallReliabilityUtils.openMiuiAutoStartSettings(callerContext)
+    }
+
+    fun openMiuiBackgroundPopupSettings(callerContext: Context = context) {
+        CallReliabilityUtils.openMiuiBackgroundPopupSettings(callerContext)
     }
 
     /**

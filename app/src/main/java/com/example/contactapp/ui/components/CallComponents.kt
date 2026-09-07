@@ -54,7 +54,13 @@ fun CallItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(if (call.isBlocked) MaterialTheme.colorScheme.surfaceVariant else getAvatarColor(displayName)),
+                .background(
+                    when {
+                        call.isBlocked -> MaterialTheme.colorScheme.surfaceVariant
+                        !hasContactName -> Color(0xFF9E9E9E)
+                        else -> getAvatarColor(displayName)
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             if (call.isBlocked) {

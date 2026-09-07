@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Contacts</string>
     <string name="app_launcher_name">#Contacts</string>
+    <string name="ad_is_loading">Ad is loading…</string>
 
     <!-- Onboarding -->
     <!-- Advanced Permissions -->
@@ -11,8 +12,12 @@
     <string name="action_go_to_settings">Go to Settings</string>
     <string name="action_grant_permission">Grant Permission</string>
     <string name="action_grant_autostart_permission">Grant Auto-Start Permission</string>
+    <string name="after_call_permission_missing_title">⚠️ Caller ID Disabled</string>
+    <string name="after_call_permission_missing_desc">Tap to fix by giving Contacts the ability to display over other apps</string>
+    <string name="settings_background_popup_permission">Background Pop-up Permission</string>
+    <string name="background_popup_required_desc">Required for the call screen and After Call screen to open</string>
 
-    <string name="allow_permission">Contacts Needs Permission</string>
+    <string name="allow_permission">Allow Permission</string>
     <string name="permission_description">Enable the necessary permissions to continue and access all features.</string>
     <string name="smart_notifications">Smart Notifications</string>
     <string name="notifications_description">Allow access to identify callers and stay informed.</string>
@@ -352,16 +357,9 @@
     <string name="more_options">More options</string>
     <string name="more_options_short">More</string>
     <string name="add_call">Add call</string>
-    <string name="record_call">Record call</string>
-    <string name="stop_recording">Stop recording</string>
     <string name="swap_calls">Swap</string>
     <string name="merge_calls">Merge</string>
     <string name="enter_number">Enter a number</string>
-    <string name="recording_disclaimer_title">Before you record</string>
-    <string name="recording_disclaimer_text">Recording laws vary by location — many places require every participant\'s consent before a call is recorded. You\'re responsible for complying with the law in your area. Also, many phones and Android versions block apps from capturing the other person\'s audio at all, so this recording may end up silent on some devices.</string>
-    <string name="start_recording">Start Recording</string>
-    <string name="recording_saved">Recording saved: %1$s</string>
-    <string name="recording_not_supported">Recording isn\'t supported on this device</string>
 
     <!-- Shake-to-Fake-Call -->
     <string name="quick_trigger_profile">QUICK TRIGGER PROFILE</string>
@@ -441,8 +439,6 @@
     <string name="toast_couldnt_open_permission_settings">Couldn\'t open permission settings</string>
     <string name="settings_autostart_permission">Autostart Permission</string>
     <string name="autostart_required_desc">Required on this device for incoming calls and the After Call screen</string>
-    <string name="settings_background_popup_permission">Background Pop-up Permission</string>
-    <string name="background_popup_required_desc">Required for the call screen and After Call screen to open</string>
     <string name="settings_after_call_screen_title">After Call Screen</string>
     <string name="state_on">On</string>
     <string name="state_off">Off</string>

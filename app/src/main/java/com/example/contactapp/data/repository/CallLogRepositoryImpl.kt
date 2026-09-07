@@ -126,11 +126,12 @@ class CallLogRepositoryImpl @Inject constructor(
         withContext(Dispatchers.IO) {
             val cleanNumber = number.replace(Regex("[^0-9]"), "")
             val last10 = cleanNumber.takeLast(10)
-            
-            // 1. Always update local block list for instant UI feedback and fallback
-            localBlockManager.setLocalBlocked(number, block)
 
-            // 2. Attempt to update system block list (requires being default dialer)
+            // 1. Attempt to update system block list first (requires being default dialer). This
+            // must finish before the local-prefs update below — LocalBlockManager's signal from
+            // that update also forces an immediate re-query of the system list, and firing that
+            // before this system call had even run raced its own async change notification,
+            // which could make a just-unblocked number briefly reappear in the UI.
             try {
                 if (block) {
                     val values = android.content.ContentValues().apply {
@@ -146,6 +147,9 @@ class CallLogRepositoryImpl @Inject constructor(
             } catch (e: Exception) {
                 // Not the default dialer or other restriction.
             }
+
+            // 2. Always update local block list for instant UI feedback and fallback
+            localBlockManager.setLocalBlocked(number, block)
         }
     }
 

@@ -30,7 +30,13 @@ class BlockedNumbersViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             blockManager.getBlockedNumbers().collect { numbers ->
-                val enrichedList = numbers.map { number ->
+                // A single blocked number is stored under two keys internally (raw string + last-10
+                // digits, see LocalBlockManager) — both come back here as separate entries. Once
+                // resolved to the same saved contact they'd produce duplicate rows (and duplicate
+                // LazyColumn keys, which crashes the list entirely), so dedupe by the underlying
+                // phone number before mapping to contacts.
+                val distinctNumbers = numbers.distinctBy { it.replace(Regex("[^0-9]"), "").takeLast(10) }
+                val enrichedList = distinctNumbers.map { number ->
                     contactRepository.findContactByNumber(number) ?: Contact(
                         id = number, // Use number as ID for temporary items
                         name = number,

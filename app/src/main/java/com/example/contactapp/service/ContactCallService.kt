@@ -4,11 +4,13 @@ import android.content.Intent
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
+import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.ui.features.call.InCallActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -26,6 +28,9 @@ class ContactCallService : InCallService() {
 
     @Inject
     lateinit var spamManager: SpamManager
+
+    @Inject
+    lateinit var contactRepository: ContactRepository
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -58,21 +63,36 @@ class ContactCallService : InCallService() {
 
         val number = call.details.handle?.schemeSpecificPart ?: "Unknown"
 
+        // Resolved once and reused everywhere below — call.details.callerDisplayName is
+        // Telecom's own caller-ID guess, which is almost always null for a normal saved contact
+        // since Telecom doesn't consult this app's Contacts data on its own; a real lookup here
+        // is what actually surfaces the saved name instead of silently falling back to the number.
+        var resolvedDisplayName = call.details.callerDisplayName ?: number
+
         // Trigger Call Announcer and Flash Alert for incoming calls
         if (call.state == Call.STATE_RINGING) {
-            callAnnouncerManager.announceCall(number)
             flashAlertManager.startBlinking()
-            
+
             scope.launch {
+                val contactName = contactRepository.findContactByNumber(number)?.name
+                if (contactName != null) resolvedDisplayName = contactName
+                callAnnouncerManager.announceCall(resolvedDisplayName)
+
                 val spamStatus = spamManager.checkSpamStatus(number)
                 CallManager.setSpam(spamStatus.isSpam())
-                
-                val displayName = call.details.callerDisplayName ?: number
-                callNotificationManager.showIncomingCallNotification(
-                    displayName, 
-                    number, 
-                    spamStatus.isSpam()
-                )
+
+                // A real fallback, not a redundant duplicate — this app's InCallService declares
+                // IN_CALL_SERVICE_UI, so startActivity() below is expected to reliably show the
+                // call screen. Only post the Answer/Decline notification if, after giving it a
+                // moment, that screen genuinely never came up (rare OEM restriction).
+                delay(1000L)
+                if (!InCallActivity.isVisible) {
+                    callNotificationManager.showIncomingCallNotification(
+                        resolvedDisplayName,
+                        number,
+                        spamStatus.isSpam()
+                    )
+                }
             }
         }
 
@@ -85,8 +105,7 @@ class ContactCallService : InCallService() {
                 when (state) {
                     Call.STATE_ACTIVE -> {
                         flashAlertManager.stopBlinking()
-                        val displayName = call.details.callerDisplayName ?: number
-                        callNotificationManager.showActiveCallNotification(displayName)
+                        callNotificationManager.showActiveCallNotification(resolvedDisplayName)
                     }
                     Call.STATE_DISCONNECTED -> {
                         callNotificationManager.cancelNotification()

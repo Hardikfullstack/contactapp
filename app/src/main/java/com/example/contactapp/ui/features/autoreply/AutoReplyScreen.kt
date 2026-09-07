@@ -19,15 +19,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.BannerAdView
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.components.SettingsItem
 import com.example.contactapp.ui.components.SettingsSectionHeader
 import com.example.contactapp.ui.theme.PrimaryGreen
+import com.example.contactapp.viewmodel.AppConfigViewModel
 
 @Composable
 fun AutoReplyScreen(
@@ -53,9 +56,26 @@ fun AutoReplyScreen(
         viewModel.setEnabled(granted)
     }
 
+    val appConfigViewModel: AppConfigViewModel = androidx.lifecycle.viewmodel.compose.viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val bannerAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.banner_8_on_off == "on") {
+            result.banner_8?.takeIf { it.isNotBlank() }
+        } else null
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            if (bannerAdUnitId != null) {
+                BannerAdView(adUnitId = bannerAdUnitId)
+            }
+        }
+    ) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(bottom = innerPadding.calculateBottomPadding())
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .verticalScroll(scrollState)
@@ -135,5 +155,6 @@ fun AutoReplyScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
     }
 }

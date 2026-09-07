@@ -2,7 +2,9 @@ package com.example.contactapp
 
 import android.Manifest
 import android.app.role.RoleManager
+import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -38,6 +40,12 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var preferenceManager: PreferenceManager
+
+    override fun attachBaseContext(newBase: Context) {
+        val config = Configuration(newBase.resources.configuration)
+        config.fontScale = config.fontScale.coerceAtMost(1.2f)
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Must run before super.onCreate() — hands off from the system splash to our own
@@ -124,16 +132,12 @@ class MainActivity : AppCompatActivity() {
                 insetsController.isAppearanceLightNavigationBars = !isDarkTheme
             }
 
-            // Bottom (gesture/nav) bar stays hidden for the duration of the splash branding
-            // animation — it reappears as soon as we hand off to onboarding/main navigation.
-            LaunchedEffect(showSplash) {
-                if (showSplash) {
-                    insetsController.systemBarsBehavior =
-                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    insetsController.hide(WindowInsetsCompat.Type.navigationBars())
-                } else {
-                    insetsController.show(WindowInsetsCompat.Type.navigationBars())
-                }
+            // Bottom (gesture/nav) bar stays hidden throughout the app, not just during splash —
+            // a swipe from the edge still reveals it briefly (standard immersive behavior).
+            LaunchedEffect(Unit) {
+                insetsController.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                insetsController.hide(WindowInsetsCompat.Type.navigationBars())
             }
 
             ContactAppTheme(darkTheme = isDarkTheme) {

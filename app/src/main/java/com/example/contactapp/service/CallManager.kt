@@ -15,10 +15,29 @@ object CallManager {
     private val _callState = MutableStateFlow<Int>(Call.STATE_DISCONNECTED)
     val callState = _callState.asStateFlow()
 
-    // Telecom often grants CAPABILITY_HOLD via onDetailsChanged, not a state change — collecting
-    // this counter as State forces a recompose so Hold/Add Call buttons don't stay stuck disabled.
-    private val _detailsVersion = MutableStateFlow(0)
-    val detailsVersion = _detailsVersion.asStateFlow()
+    // Telecom often grants CAPABILITY_HOLD via onDetailsChanged, not a state change — exposing the
+    // actual computed booleans as their own StateFlow (instead of a side-channel "version" counter
+    // callers were expected to collect-but-ignore just to force a recompose) means whichever
+    // composable collects .value directly gets recomposed the moment Telecom updates the
+    // capability, regardless of which composition scope that collection happens to sit in.
+    /** Whether the current call can be put on hold — false on some carriers/SIMs even for an
+     *  otherwise-normal active call, so the Hold button should hide/disable rather than assume. */
+    private val _canHold = MutableStateFlow(false)
+    val canHold = _canHold.asStateFlow()
+
+    /** Whether "Add call" should be offered right now — requires an existing call that can be
+     *  held (so the second call can be placed) and no second call already in progress. Whether
+     *  a second call can actually be *placed and answered* still depends on carrier/SIM support
+     *  for multi-party calls. */
+    private val _canAddCall = MutableStateFlow(false)
+    val canAddCall = _canAddCall.asStateFlow()
+
+    private fun recomputeCapabilities() {
+        val call = _currentCall.value
+        _canHold.value = call?.details?.can(Call.Details.CAPABILITY_HOLD) == true
+        _canAddCall.value = call != null && _secondaryCall.value == null &&
+            call.details.can(Call.Details.CAPABILITY_HOLD)
+    }
 
     private val _isSpam = MutableStateFlow(false)
     val isSpam = _isSpam.asStateFlow()
@@ -39,7 +58,7 @@ object CallManager {
         }
 
         override fun onDetailsChanged(call: Call, details: Call.Details) {
-            _detailsVersion.value++
+            recomputeCapabilities()
         }
     }
 
@@ -65,6 +84,7 @@ object CallManager {
             _isSpam.value = false
         }
         call?.registerCallback(callCallback)
+        recomputeCapabilities()
     }
 
     fun setSpam(isSpam: Boolean) {
@@ -84,12 +104,6 @@ object CallManager {
     /** Ends a call that's already dialing/active. */
     fun disconnect() {
         _currentCall.value?.disconnect()
-    }
-
-    /** Whether the current call can be put on hold — false on some carriers/SIMs even for an
-     *  otherwise-normal active call, so the Hold button should hide/disable rather than assume. */
-    fun canHold(): Boolean {
-        return _currentCall.value?.details?.can(Call.Details.CAPABILITY_HOLD) == true
     }
 
     /** Toggles hold on the current call — Telecom exposes hold/unhold as separate calls, not a
@@ -148,15 +162,6 @@ object CallManager {
         }
     }
 
-    /** Whether "Add call" should be offered right now — requires an existing call that can be
-     *  held (so the second call can be placed) and no second call already in progress. Whether
-     *  a second call can actually be *placed and answered* still depends on carrier/SIM support
-     *  for multi-party calls. */
-    fun canAddCall(): Boolean {
-        val call = _currentCall.value ?: return false
-        return _secondaryCall.value == null && call.details.can(Call.Details.CAPABILITY_HOLD)
-    }
-
     /** Registers the second simultaneous call placed via "Add call". Telecom itself decides
      *  whether two calls can coexist on this SIM/carrier — this just tracks whichever call
      *  isn't the primary once it exists. */
@@ -166,12 +171,14 @@ object CallManager {
         _secondaryCall.value = call
         _secondaryCallState.value = call.state
         call.registerCallback(secondaryCallCallback)
+        recomputeCapabilities()
     }
 
     fun clearSecondaryCall() {
         _secondaryCall.value?.unregisterCallback(secondaryCallCallback)
         _secondaryCall.value = null
         _secondaryCallState.value = Call.STATE_DISCONNECTED
+        recomputeCapabilities()
     }
 
     /** The primary call ended while a secondary one was still up — promote the survivor so the

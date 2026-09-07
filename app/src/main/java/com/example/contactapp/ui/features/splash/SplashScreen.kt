@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,8 +38,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.AdLoadingLottie
 import com.example.contactapp.ads.AppOpenAdManager
 import com.example.contactapp.ads.AppOpenCounter
 import com.example.contactapp.ads.BannerAdCache
@@ -116,6 +117,11 @@ fun SplashScreen(
             }
         } else {
             // Already set up — Recents (Home) is the very next screen.
+            if (result.native_3_on_off == "on") {
+                result.native_3?.takeIf { it.isNotBlank() }?.let {
+                    NativeAdCache.preload(context, it)
+                }
+            }
             if (result.banner_1_on_off == "on") {
                 result.banner_1?.takeIf { it.isNotBlank() }?.let {
                     BannerAdCache.preload(context, it)
@@ -177,15 +183,25 @@ fun SplashScreen(
 
     // Matches Theme.App.Starting's windowSplashScreenBackground (@color/splash_background, same
     // hex as PrimaryGreen) so the handoff from the system splash to this composable is seamless
-    // instead of flashing from green to the app's normal (grey/dark) background.
+    // instead of flashing from green to the app's normal (grey/dark) background — but only while
+    // the branding animation itself is showing. The ad-loading state isn't part of that branded
+    // handoff moment, so it uses the app's normal light/dark background instead of forcing green.
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PrimaryGreen),
+            .background(if (showAdLoader) MaterialTheme.colorScheme.background else PrimaryGreen),
         contentAlignment = Alignment.Center
     ) {
         if (showAdLoader) {
-            CircularProgressIndicator(color = Color.White)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                AdLoadingLottie(modifier = Modifier.size(200.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.ad_is_loading),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 14.sp
+                )
+            }
         } else {
             BrandingAnimation()
         }

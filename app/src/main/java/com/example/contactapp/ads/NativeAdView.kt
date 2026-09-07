@@ -6,10 +6,12 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -41,7 +43,7 @@ import com.example.contactapp.R
 import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.util.AnalyticsManager
 
-enum class NativeAdTemplate { SMALL, MEDIUM }
+enum class NativeAdTemplate { SMALL, MEDIUM, LARGE }
 
 // Driven by the app's own dark/light state (LocalIsDarkTheme), not system config — these views
 // are plain Android widgets, not Compose, so they can't pick colors up from values-night on their
@@ -66,6 +68,10 @@ private val MediumNativeAdHeight = 280.dp
  * somewhere tight (e.g. right above a keyboard/input) that shouldn't eat as much vertical space
  * as the full-size card. */
 private val CompactMediumNativeAdHeight = 220.dp
+
+/** Skeleton height for [NativeAdTemplate.LARGE] — the horizontal (media-left, text-right) card
+ * used on the Recents home screen, matching how many real network ads render there. */
+private val LargeNativeAdHeight = 130.dp
 
 /**
  * Reusable native ad, not placed on any screen yet. [template] picks the layout: SMALL for a
@@ -121,6 +127,7 @@ fun NativeAdView(
         when (template) {
             NativeAdTemplate.SMALL -> SmallNativeAdSkeleton(modifier, isDarkTheme)
             NativeAdTemplate.MEDIUM -> MediumNativeAdSkeleton(modifier, compact, isDarkTheme)
+            NativeAdTemplate.LARGE -> LargeNativeAdSkeleton(modifier, isDarkTheme)
         }
         return
     }
@@ -135,18 +142,20 @@ fun NativeAdView(
                     // No fixed height here — at large font sizes the text can wrap past
                     // MediumNativeAdHeight, and forcing it would clip the CTA button.
                     NativeAdTemplate.MEDIUM -> Modifier
+                    NativeAdTemplate.LARGE -> Modifier
                 }
             ),
         factory = { ctx ->
             val layoutRes = when (template) {
                 NativeAdTemplate.SMALL -> R.layout.native_ad_small
                 NativeAdTemplate.MEDIUM -> R.layout.native_ad_medium
+                NativeAdTemplate.LARGE -> R.layout.native_ad_large
             }
             LayoutInflater.from(ctx).inflate(layoutRes, null) as com.google.android.gms.ads.nativead.NativeAdView
         },
         update = { adView ->
             applyCardColors(adView, template, isDarkTheme)
-            bindNativeAd(adView, ad, compact)
+            bindNativeAd(adView, ad, template, compact)
         }
     )
 }
@@ -165,7 +174,7 @@ private fun applyCardColors(
 
     when (template) {
         NativeAdTemplate.SMALL -> adView.setBackgroundColor(cardBg.toArgb())
-        NativeAdTemplate.MEDIUM -> {
+        NativeAdTemplate.MEDIUM, NativeAdTemplate.LARGE -> {
             // native_ad_medium_card_bg.xml is a rounded-rect <shape>, inflated as a
             // GradientDrawable — mutate() first so recoloring this instance doesn't also
             // recolor every other view still sharing the drawable's default constant state.
@@ -178,8 +187,10 @@ private fun applyCardColors(
     adView.findViewById<TextView>(R.id.ad_body)?.setTextColor(bodyColor.toArgb())
     adView.findViewById<TextView>(R.id.ad_attribution)?.let { attribution ->
         // Small template's "Ad" badge stays white-on-color regardless of theme (native_ad_small.xml);
-        // only the Medium template's plain attribution label follows the body text color.
-        if (template == NativeAdTemplate.MEDIUM) attribution.setTextColor(bodyColor.toArgb())
+        // Medium and Large's plain attribution label follows the body text color instead.
+        if (template == NativeAdTemplate.MEDIUM || template == NativeAdTemplate.LARGE) {
+            attribution.setTextColor(bodyColor.toArgb())
+        }
     }
 }
 
@@ -252,10 +263,43 @@ private fun MediumNativeAdSkeleton(modifier: Modifier = Modifier, compact: Boole
     }
 }
 
-private fun bindNativeAd(adView: com.google.android.gms.ads.nativead.NativeAdView, nativeAd: NativeAd, compact: Boolean = false) {
+/** Skeleton for [NativeAdTemplate.LARGE] — a 50/50 media-left, text-right split matching
+ * native_ad_large.xml, with the button sitting under the text column (50% width), not full-width. */
+@Composable
+private fun LargeNativeAdSkeleton(modifier: Modifier = Modifier, isDarkTheme: Boolean = false) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(LargeNativeAdHeight)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (isDarkTheme) NativeAdCardBgDark else NativeAdCardBgLight)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(modifier = Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp)).adShimmerEffect())
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            Box(modifier = Modifier.fillMaxWidth(0.8f).height(15.dp).clip(RoundedCornerShape(4.dp)).adShimmerEffect())
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(modifier = Modifier.width(24.dp).height(11.dp).clip(RoundedCornerShape(4.dp)).adShimmerEffect())
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(4.dp)).adShimmerEffect())
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(modifier = Modifier.fillMaxWidth(0.6f).height(12.dp).clip(RoundedCornerShape(4.dp)).adShimmerEffect())
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(24.dp).clip(RoundedCornerShape(18.dp)).adShimmerEffect())
+        }
+    }
+}
+
+private fun bindNativeAd(
+    adView: com.google.android.gms.ads.nativead.NativeAdView,
+    nativeAd: NativeAd,
+    template: NativeAdTemplate,
+    compact: Boolean = false
+) {
     val headlineView = adView.findViewById<TextView>(R.id.ad_headline)
     val bodyView = adView.findViewById<TextView>(R.id.ad_body)
-    val iconView = adView.findViewById<ImageView>(R.id.ad_app_icon)
+    val iconView = adView.findViewById<ImageView?>(R.id.ad_app_icon)
     val ctaView = adView.findViewById<Button>(R.id.ad_call_to_action)
     val mediaView = adView.findViewById<MediaView?>(R.id.ad_media)
 
@@ -270,14 +314,18 @@ private fun bindNativeAd(adView: com.google.android.gms.ads.nativead.NativeAdVie
     }
     adView.bodyView = bodyView
 
-    val icon = nativeAd.icon
-    if (icon == null) {
-        iconView.visibility = View.GONE
-    } else {
-        iconView.setImageDrawable(icon.drawable)
-        iconView.visibility = View.VISIBLE
+    // null on templates like LARGE that don't declare an ad_app_icon view at all — the big
+    // MediaView is the primary visual there, so there's nothing to bind.
+    if (iconView != null) {
+        val icon = nativeAd.icon
+        if (icon == null) {
+            iconView.visibility = View.GONE
+        } else {
+            iconView.setImageDrawable(icon.drawable)
+            iconView.visibility = View.VISIBLE
+        }
+        adView.iconView = iconView
     }
-    adView.iconView = iconView
 
     if (nativeAd.callToAction == null) {
         ctaView.visibility = View.INVISIBLE
@@ -294,9 +342,11 @@ private fun bindNativeAd(adView: com.google.android.gms.ads.nativead.NativeAdVie
 
         // MediaView letterboxes its content to fit a fixed height, leaving most of the box
         // empty if the asset's own aspect ratio is very different — size the box to the ad's
-        // actual aspect ratio instead so the image/video fills it edge to edge.
+        // actual aspect ratio instead so the image/video fills it edge to edge. Skipped for
+        // LARGE, whose MediaView is a fixed 100x100 square thumbnail by design, not a
+        // full-width variable-height block.
         val aspectRatio = mediaContent?.aspectRatio
-        if (aspectRatio != null && aspectRatio > 0f) {
+        if (template != NativeAdTemplate.LARGE && aspectRatio != null && aspectRatio > 0f) {
             mediaView.post {
                 val width = mediaView.width
                 if (width > 0) {

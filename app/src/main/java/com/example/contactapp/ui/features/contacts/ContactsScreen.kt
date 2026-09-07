@@ -120,8 +120,7 @@ fun ContactsScreen(
                     onClick = { viewModel.showAddContactSheet(true) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    modifier = Modifier.offset(y = 24.dp)
+                    shape = androidx.compose.foundation.shape.CircleShape
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Contact")
                 }

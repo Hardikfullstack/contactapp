@@ -128,8 +128,7 @@ fun ToolsScreen(
                 onClick = onKeypadClick,
                 containerColor = PrimaryGreen,
                 contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.offset(y = 24.dp)
+                shape = CircleShape
             ) {
                 Icon(Icons.Default.Dialpad, contentDescription = "Keypad")
             }

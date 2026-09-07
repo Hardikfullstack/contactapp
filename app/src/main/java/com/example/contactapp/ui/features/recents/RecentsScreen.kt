@@ -29,6 +29,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
 import com.example.contactapp.ads.AppOpenBackgroundReturnTrigger
 import com.example.contactapp.ads.AppOpenCounter
+import com.example.contactapp.ads.NativeAdTemplate
+import com.example.contactapp.ads.NativeAdView
 import com.example.contactapp.ui.components.*
 import com.example.contactapp.ui.components.dialogs.RateUsDialog
 import com.example.contactapp.ui.components.dialogs.UpdateAppDialog
@@ -61,6 +63,11 @@ fun RecentsScreen(
     // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
     val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val homeNativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_3_on_off == "on") {
+            result.native_3?.takeIf { it.isNotBlank() }
+        } else null
+    }
 
     // In-app update: extra_data_2_message carries the latest version to prompt for; extra_data_5_on_off
     // picks soft vs hard update, extra_data_2_on_off picks Play's in-app API vs plain Play Store.
@@ -163,8 +170,7 @@ fun RecentsScreen(
                 onClick = onKeypadClick,
                 containerColor = PrimaryGreen,
                 contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.offset(y = 24.dp)
+                shape = CircleShape
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Dialpad,
@@ -205,6 +211,14 @@ fun RecentsScreen(
                     }
                 }
             )
+
+            if (homeNativeAdUnitId != null) {
+                NativeAdView(
+                    adUnitId = homeNativeAdUnitId,
+                    template = NativeAdTemplate.LARGE,
+                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)
+                )
+            }
 
             if (uiState.spamNumbers.isNotEmpty()) {
                 SpamBanner(

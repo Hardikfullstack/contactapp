@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -29,6 +28,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.contactapp.R
+import com.example.contactapp.ui.components.animatedPulse
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.CallReliabilityUtils
 import com.example.contactapp.util.PreferenceManager
@@ -54,12 +54,15 @@ fun AdvancedPermissionScreen(
         val canDrawOverlays = Settings.canDrawOverlays(context)
         val forceOverlayOnMiui = CallReliabilityUtils.isMiui() && !hasForcedOverlayStep
         val step = if (!canDrawOverlays || forceOverlayOnMiui) PermissionStep.OVERLAY
-        else if (!CallReliabilityUtils.hasFullScreenIntentPermission(context)) PermissionStep.FULL_SCREEN_INTENT
+        // Full-screen-intent permission request commented out for now.
+        // else if (!CallReliabilityUtils.hasFullScreenIntentPermission(context) && !prefs.isFullScreenIntentCompleted()) PermissionStep.FULL_SCREEN_INTENT
         else if (CallReliabilityUtils.isMiui() && !CallReliabilityUtils.isMiuiBackgroundPopupGranted(context) && !prefs.isMiuiPermissionsCompleted()) PermissionStep.MIUI_PERMISSIONS
         else if (CallReliabilityUtils.isMiui() && !CallReliabilityUtils.isMiuiAutostartGranted(context) && !prefs.isMiuiAutostartCompleted()) PermissionStep.MIUI_AUTOSTART
-        else if (CallReliabilityUtils.isOnePlusOrOppo() && !prefs.isOemAutostartCompleted()) PermissionStep.ONEPLUS_AUTOSTART
+        // OnePlus/Oppo autostart step not forced during onboarding — matches Messages, which only
+        // forces MIUI's autostart step automatically (its own ONEPLUS_AUTOSTART branch exists but
+        // is never reached from computeNextStep() either).
+        // else if (CallReliabilityUtils.isOnePlusOrOppo() && !prefs.isOemAutostartCompleted()) PermissionStep.ONEPLUS_AUTOSTART
         else PermissionStep.DONE
-        Log.d("AdvPermDebug", "computeNextStep: canDrawOverlays=$canDrawOverlays, forced=$forceOverlayOnMiui, isMiui=${CallReliabilityUtils.isMiui()}, autoPrompted=${prefs.isOverlayPermissionAutoPrompted()} -> $step")
         return step
     }
 
@@ -73,13 +76,13 @@ fun AdvancedPermissionScreen(
 
     val overlayLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
+    ) { _ ->
         checkNextStepAfterOverlay()
     }
 
     val miuiPermissionsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
+    ) { _ ->
         if (CallReliabilityUtils.isMiuiBackgroundPopupGranted(context)) {
             prefs.setMiuiPermissionsCompleted()
         }
@@ -88,7 +91,7 @@ fun AdvancedPermissionScreen(
 
     val miuiAutoStartLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
+    ) { _ ->
         if (CallReliabilityUtils.isMiuiAutostartGranted(context)) {
             prefs.setMiuiAutostartCompleted()
         }
@@ -97,13 +100,16 @@ fun AdvancedPermissionScreen(
 
     val fullScreenIntentLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
+    ) { _ ->
+        if (CallReliabilityUtils.hasFullScreenIntentPermission(context)) {
+            prefs.setFullScreenIntentCompleted()
+        }
         checkNextStepAfterOverlay()
     }
 
     val onePlusAutoStartLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
+    ) { _ ->
         prefs.setOemAutostartCompleted()
         checkNextStepAfterOverlay()
     }
@@ -140,6 +146,11 @@ fun AdvancedPermissionScreen(
     LaunchedEffect(Unit) {
         if (!Settings.canDrawOverlays(context) && !prefs.isOverlayPermissionAutoPrompted()) {
             prefs.setOverlayPermissionAutoPrompted()
+            // Marks the MIUI force-recheck (see computeNextStep) as satisfied too — this auto-prompt
+            // IS the forced OVERLAY step, so without setting this here the step kept recomputing to
+            // OVERLAY forever even after the user actually granted the permission, since this flag
+            // was previously only ever set from the manual onPermissionActionClick tap handler.
+            hasForcedOverlayStep = true
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${context.packageName}")
@@ -352,7 +363,8 @@ fun AdvancedPermissionScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(62.dp)
-                        .padding(bottom = 8.dp),
+                        .padding(bottom = 8.dp)
+                        .animatedPulse(PrimaryGreen),
                     shape = RoundedCornerShape(100.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                 ) {

@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.PictureInPicture
 import androidx.compose.material.icons.outlined.PlayCircleOutline
@@ -27,14 +26,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.ComponentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.BannerAdView
 import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
 import com.example.contactapp.ui.components.SettingsDivider
 import com.example.contactapp.ui.components.SettingsItem
 import com.example.contactapp.ui.components.SettingsSectionHeader
 import com.example.contactapp.util.AfterCallState
+import com.example.contactapp.viewmodel.AppConfigViewModel
 
 /**
  * Dedicated screen for the After Call feature — the main on/off switch plus every OEM permission
@@ -104,6 +106,18 @@ fun AfterCallSettingsScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+        },
+        bottomBar = {
+            val appConfigViewModel: AppConfigViewModel = androidx.lifecycle.viewmodel.compose.viewModel(context as ComponentActivity)
+            val adConfig by appConfigViewModel.appResponse.collectAsState()
+            val bannerAdUnitId = adConfig?.result?.let { result ->
+                if (result.google_ads_on_off == "on" && result.banner_7_on_off == "on") {
+                    result.banner_7?.takeIf { it.isNotBlank() }
+                } else null
+            }
+            if (bannerAdUnitId != null) {
+                BannerAdView(adUnitId = bannerAdUnitId)
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -176,22 +190,6 @@ fun AfterCallSettingsScreen(
                             }
                         }
                     )
-                    SettingsDivider()
-                    SettingsItem(
-                        title = "Battery Optimization",
-                        icon = Icons.Outlined.BatteryChargingFull,
-                        value = if (uiState.isBatteryOptimizationIgnored) "Allowed" else "Restricted – tap to fix",
-                        showChevron = false,
-                        onClick = {
-                            if (!uiState.isBatteryOptimizationIgnored) {
-                                try {
-                                    systemSettingsLauncher.launch(viewModel.getBatteryOptimizationIntent())
-                                } catch (e: Exception) {
-                                    android.widget.Toast.makeText(context, "Couldn't open battery settings", android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }
-                    )
                     if (uiState.hasAutoStartSettings) {
                         SettingsDivider()
                         SettingsItem(
@@ -220,7 +218,7 @@ fun AfterCallSettingsScreen(
     if (showDisableDialog) {
         AlertDialog(
             onDismissRequest = { showDisableDialog = false },
-            containerColor = if (LocalIsDarkTheme.current) AlertDialogDefaults.containerColor else Color(0xFFF3F3F3),
+            containerColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surface else Color(0xFFF3F3F3),
             title = { Text("Turn off After Call screen?") },
             text = { Text("You won't see quick actions after your calls end. You can turn this back on anytime.") },
             confirmButton = {

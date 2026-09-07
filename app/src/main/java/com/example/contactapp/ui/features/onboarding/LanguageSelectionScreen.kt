@@ -2,6 +2,7 @@ package com.example.contactapp.ui.features.onboarding
 
 import android.app.Activity
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -28,6 +29,7 @@ import com.example.contactapp.R
 import com.example.contactapp.ads.InterstitialAdManager
 import com.example.contactapp.ads.NativeAdTemplate
 import com.example.contactapp.ads.NativeAdView
+import com.example.contactapp.ui.components.animatedPulse
 import com.example.contactapp.ui.theme.*
 import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.LocaleChangeState
@@ -101,6 +103,12 @@ fun LanguageSelectionScreen(
         mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags().ifEmpty { "" })
     }
 
+    // This is the last onboarding step — the system back gesture/button would otherwise pop
+    // back to AdvancedPermissionScreen, letting the user re-enter a completed permission flow.
+    // Swallow it here instead; there's no UI back arrow shown in this mode either (onBackClick
+    // stays null for first-run callers), so the only way forward is picking a language and Done.
+    BackHandler(enabled = isFirstRun) {}
+
     // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
     val context = LocalContext.current
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
@@ -171,6 +179,15 @@ fun LanguageSelectionScreen(
                             onDone()
                         }
                     },
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .then(
+                            if (isFirstRun) {
+                                Modifier.animatedPulse(MaterialTheme.colorScheme.primary, maxAlpha = 0.25f)
+                            } else {
+                                Modifier
+                            }
+                        ),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     contentPadding = PaddingValues(horizontal = 24.dp)

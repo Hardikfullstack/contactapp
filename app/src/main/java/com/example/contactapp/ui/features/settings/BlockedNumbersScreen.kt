@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
+import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.util.getAvatarColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,6 +32,7 @@ fun BlockedNumbersScreen(
     viewModel: BlockedNumbersViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var pendingUnblock by remember { mutableStateOf<Contact?>(null) }
 
     Scaffold(
         topBar = {
@@ -68,7 +71,7 @@ fun BlockedNumbersScreen(
                     .padding(innerPadding),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                items(uiState.blockedContacts) { contact ->
+                items(uiState.blockedContacts, key = { it.number }) { contact ->
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -119,7 +122,7 @@ fun BlockedNumbersScreen(
                                 }
                             }
                             
-                            IconButton(onClick = { viewModel.unblockNumber(contact.number) }) {
+                            IconButton(onClick = { pendingUnblock = contact }) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Unblock",
@@ -127,6 +130,58 @@ fun BlockedNumbersScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    val contactToUnblock = pendingUnblock
+    if (contactToUnblock != null) {
+        ModalBottomSheet(
+            onDismissRequest = { pendingUnblock = null },
+            dragHandle = null,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 20.dp, bottom = 12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.unblock_number),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.unblock_confirmation),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { pendingUnblock = null },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(26.dp)
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.unblockNumber(contactToUnblock.number)
+                            pendingUnblock = null
+                        },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(26.dp)
+                    ) {
+                        Text(stringResource(R.string.unblock))
                     }
                 }
             }

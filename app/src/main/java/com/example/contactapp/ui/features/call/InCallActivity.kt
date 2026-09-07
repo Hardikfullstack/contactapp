@@ -1,16 +1,11 @@
 package com.example.contactapp.ui.features.call
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.telecom.Call
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -18,15 +13,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import com.example.contactapp.R
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.service.AutoReplyManager
 import com.example.contactapp.service.CallManager
 import com.example.contactapp.service.CallNotificationManager
-import com.example.contactapp.service.CallRecorder
 import com.example.contactapp.service.SpamManager
 import com.example.contactapp.ui.theme.ContactAppTheme
 import com.example.contactapp.util.CallAccentColors
@@ -44,6 +36,13 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class InCallActivity : ComponentActivity() {
 
+    companion object {
+        /** True while this Activity is started — lets ContactCallService check, after a short
+         * delay, whether its startActivity() call actually resulted in this screen showing, so
+         * it knows whether the incoming-call notification fallback is needed. */
+        var isVisible = false
+    }
+
     @Inject
     lateinit var preferenceManager: PreferenceManager
 
@@ -60,10 +59,17 @@ class InCallActivity : ComponentActivity() {
     lateinit var spamManager: SpamManager
 
     @Inject
-    lateinit var callRecorder: CallRecorder
-
-    @Inject
     lateinit var callNotificationManager: CallNotificationManager
+
+    override fun onStart() {
+        super.onStart()
+        isVisible = true
+    }
+
+    override fun onStop() {
+        super.onStop()
+        isVisible = false
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,28 +89,9 @@ class InCallActivity : ComponentActivity() {
 
         setContent {
             val callState by CallManager.callState.collectAsState()
-            // Not read directly — collecting it forces a recompose when Telecom updates call
-            // capabilities without a state change, so canHold()/canAddCall() get re-checked.
-            @Suppress("UNUSED_VARIABLE")
-            val detailsVersion by CallManager.detailsVersion.collectAsState()
             val call by CallManager.currentCall.collectAsState()
             val rawNumber = call?.details?.handle?.schemeSpecificPart
             val secondaryCall by CallManager.secondaryCall.collectAsState()
-            val isRecording by callRecorder.isRecording.collectAsState()
-            val recordingSeconds by callRecorder.elapsedSeconds.collectAsState()
-
-            var pendingRecordingStart by remember { mutableStateOf(false) }
-            val recordAudioLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestPermission()
-            ) { granted ->
-                if (granted && pendingRecordingStart) {
-                    val started = callRecorder.start(rawNumber ?: "call")
-                    if (!started) {
-                        Toast.makeText(this@InCallActivity, R.string.recording_not_supported, Toast.LENGTH_LONG).show()
-                    }
-                }
-                pendingRecordingStart = false
-            }
 
             // Telecom's number format can differ from the contact's stored one — resolve via
             // the same PhoneLookup-backed matching the rest of the app trusts, not raw comparison.
@@ -150,8 +137,6 @@ class InCallActivity : ComponentActivity() {
                 }
 
                 if (callState == Call.STATE_DISCONNECTED) {
-                    // Never leave a recording running past the call it belongs to.
-                    callRecorder.stop()
                     // Plain finish() can leave an empty task card behind in the system
                     // app-switcher for a singleInstance activity like this one — remove it
                     // outright instead, since there's nothing to return to in this task.
@@ -167,6 +152,8 @@ class InCallActivity : ComponentActivity() {
             ContactAppTheme(darkTheme = true) { // Always dark for call UI — matches FakeCallActivity
                 val isSpamByCallManager by CallManager.isSpam.collectAsState()
                 val audioState by CallManager.audioState.collectAsState()
+                val canHold by CallManager.canHold.collectAsState()
+                val canAddCall by CallManager.canAddCall.collectAsState()
 
                 InCallScreen(
                     contactName = resolvedContact?.name,
@@ -187,11 +174,11 @@ class InCallActivity : ComponentActivity() {
                     audioState = audioState,
                     onToggleMute = { CallManager.toggleMute() },
                     onToggleSpeaker = { CallManager.toggleSpeaker() },
-                    canHold = CallManager.canHold(),
+                    canHold = canHold,
                     onToggleHold = { CallManager.toggleHold() },
                     onPlayDtmf = { digit -> CallManager.playDtmfTone(digit) },
                     onStopDtmf = { CallManager.stopDtmfTone() },
-                    canAddCall = CallManager.canAddCall(),
+                    canAddCall = canAddCall,
                     secondaryCallNumber = secondaryCall?.details?.handle?.schemeSpecificPart,
                     onAddCall = { number ->
                         // Hold the current call first — Telecom generally does this
@@ -202,28 +189,6 @@ class InCallActivity : ComponentActivity() {
                         CallUtils.makeCall(this@InCallActivity, number)
                     },
                     onEndSecondaryCall = { secondaryCall?.disconnect() },
-                    isRecording = isRecording,
-                    recordingSeconds = recordingSeconds,
-                    onStartRecording = {
-                        val hasPermission = ContextCompat.checkSelfPermission(
-                            this@InCallActivity, Manifest.permission.RECORD_AUDIO
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (hasPermission) {
-                            val started = callRecorder.start(rawNumber ?: "call")
-                            if (!started) {
-                                Toast.makeText(this@InCallActivity, R.string.recording_not_supported, Toast.LENGTH_LONG).show()
-                            }
-                        } else {
-                            pendingRecordingStart = true
-                            recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    },
-                    onStopRecording = {
-                        val file = callRecorder.stop()
-                        if (file != null) {
-                            Toast.makeText(this@InCallActivity, getString(R.string.recording_saved, file.name), Toast.LENGTH_LONG).show()
-                        }
-                    },
                     selection = selection,
                     theme = callTheme
                 )

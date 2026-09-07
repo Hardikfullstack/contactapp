@@ -30,19 +30,16 @@ private const val TAG = "FakeCallDebug"
 /**
  * Fired by the AlarmManager alarm scheduled in FakeCallSetupScreen. Delivery has two layers:
  *
- * 1. A high-priority full-screen-intent notification — always posted, and the mechanism proven
- *    to reliably wake the call screen when the device is locked or idle.
- * 2. A best-effort attempt to also register the call as a self-managed Telecom call (see
+ * 1. A best-effort attempt to register the call as a self-managed Telecom call (see
  *    [FakeCallConnectionService]) — Telecom-driven calls are exempt from Android's restriction
  *    on starting an Activity from a background app, so when it succeeds it pops the screen open
  *    immediately even while the phone is unlocked and in active use.
- *
- * [android.telecom.TelecomManager.addNewIncomingCall] is fire-and-forget: Telecom can silently
- * decline to create the connection (stale/unregistered account, OEM policy, etc.) without ever
- * throwing back to the caller, so success there can't be assumed just because no exception was
- * thrown. The notification is therefore never gated on it — layer 2 is purely additive on top of
- * layer 1, not a replacement for it. [com.example.contactapp.ui.features.fakecall.FakeCallActivity]
- * cancels the notification the instant it's actually shown, so there's no cost when both fire.
+ * 2. A high-priority full-screen-intent notification — a true fallback, not a redundant
+ *    duplicate: [android.telecom.TelecomManager.addNewIncomingCall] is fire-and-forget, so
+ *    Telecom can silently decline the connection (stale/unregistered account, OEM policy, etc.)
+ *    without ever throwing back to the caller. After a short delay, this only posts if
+ *    [com.example.contactapp.ui.features.fakecall.FakeCallActivity] genuinely never became
+ *    visible — same pattern as the real incoming-call fallback in ContactCallService.
  */
 @AndroidEntryPoint
 class FakeCallReceiver : BroadcastReceiver() {
@@ -73,9 +70,15 @@ class FakeCallReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         scope.launch {
             try {
-                val status = spamManager.checkSpamStatus(number)
-                deliverAsNotification(context, name, number, photoUri, status.isSpam())
-                delay(2000L)
+                // A real fallback, not a redundant duplicate — deliverAsTelecomCall()/Telecom's own
+                // onShowIncomingCallUi() is expected to reliably show the fake call screen. Only post
+                // the ringing notification if, after giving it a moment, that screen genuinely never
+                // came up (Telecom rejected the connection, or an OEM background-start restriction).
+                delay(1000L)
+                if (!FakeCallActivity.isVisible) {
+                    val status = spamManager.checkSpamStatus(number)
+                    deliverAsNotification(context, name, number, photoUri, status.isSpam())
+                }
             } finally {
                 pendingResult.finish()
             }

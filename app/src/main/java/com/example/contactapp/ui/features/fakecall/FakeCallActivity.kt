@@ -17,14 +17,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -77,6 +75,15 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class FakeCallActivity : ComponentActivity() {
+
+    companion object {
+        const val EXTRA_AUTO_ANSWER = "auto_answer"
+
+        /** True while this Activity is started — lets FakeCallReceiver check, after a short
+         * delay, whether its startActivity() call actually resulted in this screen showing, so
+         * it knows whether the ringing notification fallback is needed. */
+        var isVisible = false
+    }
 
     @Inject
     lateinit var flashAlertManager: FlashAlertManager
@@ -221,8 +228,14 @@ class FakeCallActivity : ComponentActivity() {
         cancelActiveCallNotification(this)
     }
 
-    companion object {
-        const val EXTRA_AUTO_ANSWER = "auto_answer"
+    override fun onStart() {
+        super.onStart()
+        isVisible = true
+    }
+
+    override fun onStop() {
+        super.onStop()
+        isVisible = false
     }
 }
 
@@ -241,7 +254,7 @@ fun FakeCallContent(
     val isAccepted = state == Call.STATE_ACTIVE
     var timer by remember { mutableIntStateOf(0) }
     var buttonsVisible by remember { mutableStateOf(false) }
-    // Purely cosmetic, same as Add Call/Record below — no real Telecom call to actually hold.
+    // Purely cosmetic, same as Add Call below — no real Telecom call to actually hold.
     var isFakeOnHold by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { buttonsVisible = true }
 
@@ -273,22 +286,10 @@ fun FakeCallContent(
     var isSpeakerOn by remember { mutableStateOf(false) }
     var showKeypad by remember { mutableStateOf(false) }
 
-    // Add Call / Record here are purely cosmetic — there's no real second caller to add and no
-    // real audio to capture on a fake call, so this is only for the acting illusion.
+    // Add Call here is purely cosmetic — there's no real second caller to add on a fake call,
+    // so this is only for the acting illusion.
     var showAddCallDialog by remember { mutableStateOf(false) }
     var fakeSecondaryCallerName by remember { mutableStateOf<String?>(null) }
-    var isFakeRecording by remember { mutableStateOf(false) }
-    var fakeRecordingSeconds by remember { mutableIntStateOf(0) }
-    LaunchedEffect(isFakeRecording) {
-        if (isFakeRecording) {
-            while (true) {
-                delay(1000)
-                fakeRecordingSeconds++
-            }
-        } else {
-            fakeRecordingSeconds = 0
-        }
-    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -306,32 +307,6 @@ fun FakeCallContent(
         // Wallpaper Background
         CallWallpaperBackground(selection = selection, modifier = Modifier.fillMaxSize())
 
-        if (isFakeRecording) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(top = 8.dp),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(Color.Red)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(formatTimer(fakeRecordingSeconds), color = Color.White, fontSize = 13.sp)
-                }
-            }
-        }
 
         Column(
             modifier = Modifier
@@ -546,12 +521,6 @@ fun FakeCallContent(
                                     active = false,
                                     enabled = fakeSecondaryCallerName == null,
                                     onClick = { showAddCallDialog = true }
-                                )
-                                CallControlButton(
-                                    icon = if (isFakeRecording) Icons.Default.Stop else Icons.Default.Circle,
-                                    label = stringResource(if (isFakeRecording) R.string.stop_recording else R.string.record_call),
-                                    active = isFakeRecording,
-                                    onClick = { isFakeRecording = !isFakeRecording }
                                 )
                             }
 

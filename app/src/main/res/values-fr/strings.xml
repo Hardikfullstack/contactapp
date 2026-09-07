@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Contacts</string>
     <string name="app_launcher_name">#Contacts</string>
+    <string name="ad_is_loading">Chargement de l\'annonce…</string>
 
     <!-- Onboarding -->
     <string name="allow_permission">Contacts a besoin de permissions</string>
@@ -237,6 +238,8 @@
     <string name="edit_contact_title">Modifier le contact</string>
     <string name="copy_number">Copier le numéro</string>
     <string name="unblock_number">Débloquer le numéro</string>
+    <string name="unblock">Débloquer</string>
+    <string name="unblock_confirmation">Les appels et messages de ce contact ne seront plus bloqués.</string>
     <string name="block_or_report">Bloquer ou signaler</string>
     <string name="brightness_label">Luminosité</string>
     <string name="qr_code_label">Code QR</string>

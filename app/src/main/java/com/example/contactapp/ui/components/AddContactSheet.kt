@@ -138,7 +138,7 @@ fun AddContactSheet(
                 onClick = { onMoreDetailsClick(name, number) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF7F7F7)
+                    containerColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surface else Color(0xFFF3F3F3)
                 ),
                 border = BorderStroke(1.dp, PrimaryGreen),
                 shape = RoundedCornerShape(24.dp)

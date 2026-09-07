@@ -112,8 +112,10 @@ class AnalyticsViewModel @Inject constructor(
             when (log.type) {
                 CallType.INCOMING -> incoming++
                 CallType.OUTGOING -> outgoing++
-                CallType.MISSED, CallType.REJECTED -> missed++
-                else -> {}
+                // VOICEMAIL/BLOCKED/SPAM/OTHER never became a real two-way conversation either —
+                // grouping them with Missed/Rejected keeps this breakdown always summing to
+                // totalCalls, instead of silently under-counting and leaving the percentages off.
+                else -> missed++
             }
 
             val calendar = Calendar.getInstance().apply { timeInMillis = log.timestamp }
@@ -166,8 +168,8 @@ class AnalyticsViewModel @Inject constructor(
             when (log.type) {
                 CallType.INCOMING -> incoming++
                 CallType.OUTGOING -> outgoing++
-                CallType.MISSED, CallType.REJECTED -> missed++
-                else -> {}
+                // Same grouping as the top-level aggregate() loop — see its comment.
+                else -> missed++
             }
         }
 

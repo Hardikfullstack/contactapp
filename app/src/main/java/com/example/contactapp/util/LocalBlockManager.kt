@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,18 +27,16 @@ class LocalBlockManager @Inject constructor(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    // Flow of local blocked numbers
-    private val localBlockedFlow: Flow<List<String>> = _localChangeSignal
-        .onStart { emit(Unit) }
-        .map { 
-            prefs.all.filter { it.value == true }.map { it.key }
-        }
-
-    // Live stream of blocked numbers from the system source of truth
-    private val systemBlockedFlow: Flow<List<String>> = callbackFlow {
+    // A single trigger stream (system ContentObserver + this app's own local changes) driving
+    // ONE atomic read of both sources per trigger. Combining two independently-emitting flows
+    // (one per source) let a stale snapshot from whichever source hadn't updated yet briefly
+    // resurrect a number the other source had already correctly dropped, causing the blocked
+    // list to visibly flicker (item removed, then briefly reappears, then removed again).
+    // Reading both sources together in one step means every emission is internally consistent.
+    private val triggerFlow: Flow<Unit> = callbackFlow {
         val observer = object : ContentObserver(null) {
             override fun onChange(selfChange: Boolean) {
-                trySend(querySystemBlockedNumbers())
+                trySend(Unit)
             }
         }
 
@@ -47,17 +46,21 @@ class LocalBlockManager @Inject constructor(
             observer
         )
 
-        trySend(querySystemBlockedNumbers())
-        awaitClose { contentResolver.unregisterContentObserver(observer) }
+        val localTriggerJob = launch {
+            _localChangeSignal.collect { trySend(Unit) }
+        }
+
+        trySend(Unit)
+        awaitClose {
+            contentResolver.unregisterContentObserver(observer)
+            localTriggerJob.cancel()
+        }
     }.flowOn(Dispatchers.IO)
 
-    // Hybrid flow: combined system and local blocks
-    val blockedNumbersFlow: Flow<List<String>> = combine(
-        systemBlockedFlow,
-        localBlockedFlow
-    ) { system, local ->
-        (system + local).distinct()
-    }.conflate()
+    val blockedNumbersFlow: Flow<List<String>> = triggerFlow
+        .map { (querySystemBlockedNumbers() + queryLocalBlockedNumbers()).distinct() }
+        .flowOn(Dispatchers.IO)
+        .conflate()
 
     fun isBlocked(number: String): Flow<Boolean> {
         val cleanTarget = number.replace(Regex("[^0-9]"), "")
@@ -75,7 +78,7 @@ class LocalBlockManager @Inject constructor(
     fun setLocalBlocked(number: String, blocked: Boolean) {
         val cleanNumber = number.replace(Regex("[^0-9]"), "")
         val last10 = cleanNumber.takeLast(10)
-        
+
         val editor = prefs.edit()
         if (blocked) {
             editor.putBoolean(number, true)
@@ -86,6 +89,15 @@ class LocalBlockManager @Inject constructor(
             editor.remove(number)
             if (last10.isNotEmpty()) {
                 editor.remove(last10)
+                // The number may have been blocked via a differently-formatted string than the one
+                // passed in here (e.g. blocked from a raw call-log number, unblocked via a contact's
+                // stored number) — exact-string removal alone leaves that original key behind, and
+                // it still normalizes to the same last-10 digits, so the number keeps showing as
+                // blocked no matter how many times it's "unblocked". Purge every stored key that
+                // matches by digits, not just the one exact string given here.
+                prefs.all.keys
+                    .filter { it.replace(Regex("[^0-9]"), "").takeLast(10) == last10 }
+                    .forEach { editor.remove(it) }
             }
         }
         editor.apply()
@@ -93,6 +105,9 @@ class LocalBlockManager @Inject constructor(
     }
 
     fun getBlockedNumbers(): Flow<List<String>> = blockedNumbersFlow
+
+    private fun queryLocalBlockedNumbers(): List<String> =
+        prefs.all.filter { it.value == true }.map { it.key }
 
     private fun querySystemBlockedNumbers(): List<String> {
         val blockedList = mutableListOf<String>()

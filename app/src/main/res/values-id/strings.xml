@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Contacts</string>
     <string name="app_launcher_name">#Contacts</string>
+    <string name="ad_is_loading">Iklan sedang dimuat…</string>
 
     <!-- Onboarding -->
     <string name="allow_permission">Contacts Memerlukan Izin</string>
@@ -237,6 +238,8 @@
     <string name="edit_contact_title">Edit kontak</string>
     <string name="copy_number">Salin nomor</string>
     <string name="unblock_number">Buka blokir nomor</string>
+    <string name="unblock">Buka Blokir</string>
+    <string name="unblock_confirmation">Panggilan dan pesan dari kontak ini tidak akan lagi diblokir.</string>
     <string name="block_or_report">Blokir atau laporkan</string>
     <string name="brightness_label">Kecerahan</string>
     <string name="qr_code_label">Kode QR</string>
