@@ -52,6 +52,11 @@ class ContactCallService : InCallService() {
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
 
+        // A call (incoming or outgoing) launching InCallActivity from the background is exactly
+        // the kind of return-to-foreground AppOpenBackgroundReturnTrigger normally watches for —
+        // skip its next check so a full-screen App Open ad never races on top of the call screen.
+        com.example.contactapp.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+
         val isFirstCall = CallManager.currentCall.value == null
         if (isFirstCall) {
             CallManager.updateCall(call)
@@ -69,8 +74,12 @@ class ContactCallService : InCallService() {
         // is what actually surfaces the saved name instead of silently falling back to the number.
         var resolvedDisplayName = call.details.callerDisplayName ?: number
 
-        // Trigger Call Announcer and Flash Alert for incoming calls
-        if (call.state == Call.STATE_RINGING) {
+        // Trigger Call Announcer and Flash Alert for incoming calls — only for the primary call.
+        // A second (call-waiting) call ringing in while already on a call gets Telecom's own
+        // native call-waiting tone; re-triggering flash/TTS-announce on top of an ongoing call
+        // would just be disruptive, and the fallback notification below is meaningless too since
+        // InCallActivity is already visible in that situation.
+        if (call.state == Call.STATE_RINGING && isFirstCall) {
             flashAlertManager.startBlinking()
 
             scope.launch {

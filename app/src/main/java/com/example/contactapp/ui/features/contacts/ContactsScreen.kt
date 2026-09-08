@@ -9,8 +9,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.unit.sp
@@ -25,7 +23,6 @@ import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -39,9 +36,7 @@ import com.example.contactapp.ui.components.AddContactSheet
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.HeaderActionButton
 import com.example.contactapp.ui.components.ContactItem
-import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.CallUtils
-import kotlinx.coroutines.CoroutineScope
 import kotlin.math.abs
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -218,7 +213,7 @@ fun ContactsScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+                        contentPadding = PaddingValues(top = 14.dp, bottom = 80.dp) // Space for FAB
                     ) {
                         uiState.groupedContacts.forEach { (initial, contacts) ->
                             stickyHeader(key = "header_$initial") {
@@ -226,7 +221,9 @@ fun ContactsScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(MaterialTheme.colorScheme.background)
-                                        .padding(horizontal = 24.dp, vertical = 2.dp)
+                                        // start matches CommonHeader's titleStartPadding (15dp) so
+                                        // this sticky letter lines up directly under "Contacts".
+                                        .padding(start = 15.dp, end = 24.dp, top = 2.dp, bottom = 2.dp)
                                 ) {
                                     Text(
                                         text = initial.toString(),

@@ -47,18 +47,18 @@ data class Language(
 
 private val languageCodes = listOf("en", "hi", "ar", "fr", "de", "id", "it", "pt", "es")
 
-// First letter of each language's own alphabet/script (not the first letter of its name) —
-// e.g. English/French/German/etc. all use the Latin alphabet, which starts with "A".
+// First letter of each language's own native name (English, हिन्दी, العربية, Français, Deutsch,
+// Bahasa Indonesia, Italiano, Português, Español).
 private val alphabetFirstLetterByCode = mapOf(
-    "en" to "A",
-    "hi" to "अ",
-    "ar" to "ا",
-    "fr" to "A",
-    "de" to "A",
-    "id" to "A",
-    "it" to "A",
-    "pt" to "A",
-    "es" to "A"
+    "en" to "E",
+    "hi" to "ह",
+    "ar" to "ع",
+    "fr" to "F",
+    "de" to "D",
+    "id" to "B",
+    "it" to "I",
+    "pt" to "P",
+    "es" to "E"
 )
 
 private fun getAvatarColorForCode(code: String): Color {
@@ -142,7 +142,7 @@ fun LanguageSelectionScreen(
             },
             navigationIcon = {
                 if (onBackClick != null) {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = onBackClick, modifier = Modifier.padding(start = 2.dp).size(40.dp)) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -171,12 +171,22 @@ fun LanguageSelectionScreen(
                         )
 
                         val activity = context as? Activity
+                        // setApplicationLocales() alone doesn't reliably refresh this running
+                        // Activity's already-resolved strings (MainActivity declares
+                        // configChanges="locale", so the system won't auto-recreate it) —
+                        // recreate() is required, same fix used in the Messages app. Navigate
+                        // first so the saved-instance-state recreate() restores from already
+                        // reflects the *next* screen (Onboarding-complete / back in Settings).
                         if (isFirstRun && activity != null && languageDoneInterstitialAdUnitId != null &&
                             InterstitialAdManager.isReady(languageDoneInterstitialAdUnitId)
                         ) {
-                            InterstitialAdManager.show(activity, languageDoneInterstitialAdUnitId) { onDone() }
+                            InterstitialAdManager.show(activity, languageDoneInterstitialAdUnitId) {
+                                onDone()
+                                activity.recreate()
+                            }
                         } else {
                             onDone()
+                            activity?.recreate()
                         }
                     },
                     modifier = Modifier
@@ -208,7 +218,8 @@ fun LanguageSelectionScreen(
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(top = 4.dp)
         ) {
             items(dynamicLanguages) { language ->
                 LanguageItem(

@@ -44,11 +44,15 @@ fun FavoritesScreen(
                 Text(text = stringResource(R.string.no_favorites_yet), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 14.dp)
+            ) {
                 items(uiState.favorites) { contact ->
                     ContactItem(
                         contact = contact,
-                        onClick = { onContactClick(contact.name, contact.number) }
+                        onClick = { onContactClick(contact.name, contact.number) },
+                        horizontalPadding = 4.dp
                     )
                 }
             }

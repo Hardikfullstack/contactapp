@@ -60,6 +60,7 @@ object AfterCallNotificationHelper {
         val builder = NotificationCompat.Builder(context, AFTER_CALL_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(label)
+            .setContentText(context.getString(R.string.see_call_information))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setContentIntent(pendingIntent)

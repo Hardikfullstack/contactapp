@@ -39,7 +39,7 @@ fun BlockedNumbersScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.blocked_numbers), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.padding(start = 2.dp).size(40.dp)) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.cancel),

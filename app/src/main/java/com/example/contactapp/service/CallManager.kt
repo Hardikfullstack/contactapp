@@ -181,6 +181,36 @@ object CallManager {
         recomputeCapabilities()
     }
 
+    /** Answers a genuine call-waiting call (secondary call still ringing) — holds the primary
+     *  first since Telecom doesn't automatically do this for a second simultaneous call. */
+    fun answerSecondaryCall() {
+        val secondary = _secondaryCall.value ?: return
+        _currentCall.value?.takeIf { it.state == Call.STATE_ACTIVE }?.hold()
+        secondary.answer(VideoProfile.STATE_AUDIO_ONLY)
+    }
+
+    /** Declines a still-ringing secondary (call-waiting) call — reject(), not disconnect(), same
+     *  reason as the primary's reject(): Telecom needs this to signal "declined" to the network. */
+    fun rejectSecondaryCall() {
+        _secondaryCall.value?.reject(false, null)
+    }
+
+    /** Swaps which of the two simultaneous calls is active vs held. */
+    fun swapCalls() {
+        val primary = _currentCall.value ?: return
+        val secondary = _secondaryCall.value ?: return
+        when (primary.state) {
+            Call.STATE_ACTIVE -> {
+                primary.hold()
+                secondary.unhold()
+            }
+            Call.STATE_HOLDING -> {
+                secondary.hold()
+                primary.unhold()
+            }
+        }
+    }
+
     /** The primary call ended while a secondary one was still up — promote the survivor so the
      *  UI has exactly one primary call again. */
     fun promoteSecondaryToPrimary() {

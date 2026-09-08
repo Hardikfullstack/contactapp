@@ -270,7 +270,7 @@ fun RecentsScreen(
                             item(key = "header_$key") {
                                 Text(
                                     text = stringResource(titleRes),
-                                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 12.dp),
+                                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 16.dp),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else TextSecondary,
                                     fontSize = 16.sp,
@@ -292,7 +292,7 @@ fun RecentsScreen(
 
                                 Surface(
                                     modifier = Modifier
-                                        .padding(horizontal = 15.dp)
+                                        .padding(horizontal = 16.dp)
                                         .fillMaxWidth(),
                                     shape = shape,
                                     color = MaterialTheme.colorScheme.surface,

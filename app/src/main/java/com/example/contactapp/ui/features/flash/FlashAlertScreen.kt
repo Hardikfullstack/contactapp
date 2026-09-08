@@ -107,8 +107,6 @@ fun FlashAlertScreen(
             onBackClick = onBack
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
-
         SettingsSectionHeader(title = stringResource(R.string.general_header))
         SettingsCard {
             SettingsItem(

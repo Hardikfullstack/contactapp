@@ -67,6 +67,8 @@ fun CallThemeScreen(
                 onBackClick = onBack
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
             LivePreview(
                 accentColor = selectedColor.color,
                 shape = uiState.selectedShape,

@@ -56,6 +56,7 @@
     <string name="unblock">अनब्लॉक करें</string>
     <string name="answer">जवाब दें</string>
     <string name="end_call">समाप्त करें</string>
+    <string name="swap">बदलें</string>
 
     <!-- Call Screen -->
     <string name="ongoing_call">कॉल चालू है</string>

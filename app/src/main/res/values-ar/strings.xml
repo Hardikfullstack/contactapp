@@ -61,6 +61,7 @@
     <string name="unblock">إلغاء الحظر</string>
     <string name="answer">رد</string>
     <string name="end_call">إنهاء</string>
+    <string name="swap">تبديل</string>
 
     <!-- Call Screen -->
     <string name="ongoing_call">مكالمة جارية</string>

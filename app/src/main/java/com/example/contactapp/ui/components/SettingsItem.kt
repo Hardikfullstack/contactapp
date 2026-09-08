@@ -82,7 +82,7 @@ fun SettingsItem(
 fun SettingsSectionHeader(title: String) {
     Text(
         text = title,
-        modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 8.dp),
+        modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp),
         fontSize = 13.sp,
         fontWeight = FontWeight.Normal,
         color = MaterialTheme.colorScheme.onSurfaceVariant

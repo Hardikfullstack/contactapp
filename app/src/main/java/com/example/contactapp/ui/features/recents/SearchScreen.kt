@@ -15,9 +15,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -46,6 +49,15 @@ fun SearchScreen(
     // instead of leaving the list wherever it was scrolled to for the previous query.
     LaunchedEffect(query) {
         listState.scrollToItem(0)
+    }
+
+    val searchFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    // Search is the entire point of this screen — the keyboard should already be up the moment
+    // it opens, not wait for the user to tap the field themselves.
+    LaunchedEffect(Unit) {
+        searchFocusRequester.requestFocus()
+        keyboardController?.show()
     }
 
     Column(
@@ -94,7 +106,9 @@ fun SearchScreen(
                             onValueChange = { viewModel.onQueryChanged(it) },
                             textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontFamily = DmSans),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(searchFocusRequester),
                             singleLine = true
                         )
                     }

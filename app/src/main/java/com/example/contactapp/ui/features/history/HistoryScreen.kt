@@ -99,7 +99,10 @@ fun HistoryScreen(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.padding(start = 2.dp).size(40.dp)
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -184,7 +187,7 @@ fun HistoryScreen(
                 confirmButton = {
                     TextButton(onClick = { viewModel.blockNumber() }) {
                         Text(
-                            text = if (uiState.isBlocked) stringResource(R.string.unblock) else stringResource(R.string.block),
+                            text = (if (uiState.isBlocked) stringResource(R.string.unblock) else stringResource(R.string.block)).uppercase(),
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
@@ -227,7 +230,7 @@ fun HistoryScreen(
                 text = { Text(text = stringResource(R.string.clear_history_text, uiState.name.ifBlank { uiState.number })) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.clearHistory() }) {
-                        Text(text = stringResource(R.string.clear_history), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text(text = stringResource(R.string.clear_history).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
@@ -269,7 +272,7 @@ fun HistoryScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
             ) {
                 item {
                     ContactDetailHeader(

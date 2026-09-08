@@ -108,6 +108,8 @@ fun CallReminderSetupScreen(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
                     text = stringResource(R.string.select_contact),
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),

@@ -46,7 +46,7 @@
     <string name="history">Riwayat</string>
     <string name="cancel">BATAL</string>
     <string name="save">Simpan</string>
-    <string name="delete">HAPUS</string>
+    <string name="delete">Hapus</string>
 
     <!-- Contacts Feature -->
     <string name="add_to_contacts">Tambah ke kontak</string>

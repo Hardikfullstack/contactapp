@@ -13,6 +13,7 @@
     <string name="action_grant_permission">Grant Permission</string>
     <string name="action_grant_autostart_permission">Grant Auto-Start Permission</string>
     <string name="after_call_permission_missing_title">⚠️ Caller ID Disabled</string>
+    <string name="see_call_information">See call information</string>
     <string name="after_call_permission_missing_desc">Tap to fix by giving Contacts the ability to display over other apps</string>
     <string name="settings_background_popup_permission">Background Pop-up Permission</string>
     <string name="background_popup_required_desc">Required for the call screen and After Call screen to open</string>
@@ -72,12 +73,13 @@
     <string name="history">History</string>
     <string name="cancel">CANCEL</string>
     <string name="save">Save</string>
-    <string name="delete">DELETE</string>
+    <string name="delete">Delete</string>
     <string name="share">Share</string>
     <string name="block">Block</string>
     <string name="unblock">Unblock</string>
     <string name="answer">Answer</string>
     <string name="end_call">End</string>
+    <string name="swap">Swap</string>
     <string name="decline_call">Decline</string>
 
     <!-- Call Screen -->

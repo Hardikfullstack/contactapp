@@ -47,7 +47,10 @@ fun RecycleBinScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = if (uiState.isSelectionMode) { { viewModel.clearSelection() } } else onBack) {
+                    IconButton(
+                        onClick = if (uiState.isSelectionMode) { { viewModel.clearSelection() } } else onBack,
+                        modifier = Modifier.padding(start = 2.dp).size(40.dp)
+                    ) {
                         Icon(
                             imageVector = if (uiState.isSelectionMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",

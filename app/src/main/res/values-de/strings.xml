@@ -46,7 +46,7 @@
     <string name="history">Verlauf</string>
     <string name="cancel">ABBRECHEN</string>
     <string name="save">Speichern</string>
-    <string name="delete">LÖSCHEN</string>
+    <string name="delete">Löschen</string>
 
     <!-- Contacts Feature -->
     <string name="add_to_contacts">Zu Kontakten hinzufügen</string>

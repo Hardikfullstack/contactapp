@@ -53,12 +53,13 @@
     <string name="history">Historial</string>
     <string name="cancel">CANCELAR</string>
     <string name="save">Guardar</string>
-    <string name="delete">ELIMINAR</string>
+    <string name="delete">Eliminar</string>
     <string name="share">Compartir</string>
     <string name="block">Bloquear</string>
     <string name="unblock">Desbloquear</string>
     <string name="answer">Responder</string>
     <string name="end_call">Finalizar</string>
+    <string name="swap">Cambiar</string>
 
     <!-- Call Screen -->
     <string name="ongoing_call">Llamada en curso</string>
@@ -169,9 +170,6 @@
     <string name="shape_sun">Sol</string>
     <string name="shape_stamp">Sello</string>
 
-    <string name="standard_tones">TONOS ESTÁNDAR</string>
-    <string name="soft_shades">TONOS SUAVES</string>
-    <string name="shaded_tones">TONOS SOMBREADOS</string>
     <string name="premium_tones">TONOS PREMIUM</string>
 
     <string name="color_light_mint">Menta clara</string>

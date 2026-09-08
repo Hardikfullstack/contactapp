@@ -32,13 +32,14 @@ fun ContactItem(
     isSelectionMode: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
-    onCallClick: () -> Unit = {}
+    onCallClick: () -> Unit = {},
+    horizontalPadding: androidx.compose.ui.unit.Dp = 10.dp
 ) {
     Surface(
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp)
+            .padding(horizontal = horizontalPadding, vertical = 2.dp)
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(
                 onClick = onClick,

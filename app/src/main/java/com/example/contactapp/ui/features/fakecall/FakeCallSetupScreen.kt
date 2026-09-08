@@ -93,7 +93,7 @@ fun FakeCallSetupScreen(
                     .weight(1f)
                     .verticalScroll(scrollState)
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Caller Info Section
                 Text(

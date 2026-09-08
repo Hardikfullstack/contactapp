@@ -38,15 +38,16 @@ fun CommonHeader(
         Row(
             modifier = Modifier
                 .padding(
-                    start = if (onBackClick != null) 12.dp else 0.dp,
+                    start = if (onBackClick != null) 6.dp else 0.dp,
                     end = 24.dp, top = 16.dp, bottom = 6.dp
-                ),
+                )
+                .heightIn(min = 40.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (onBackClick != null) {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = onBackClick, modifier = Modifier.size(40.dp)) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",

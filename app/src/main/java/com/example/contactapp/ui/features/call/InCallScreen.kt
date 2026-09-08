@@ -77,8 +77,12 @@ fun InCallScreen(
     onStopDtmf: () -> Unit = {},
     canAddCall: Boolean = false,
     secondaryCallNumber: String? = null,
+    secondaryCallState: Int = Call.STATE_DISCONNECTED,
     onAddCall: (String) -> Unit = {},
     onEndSecondaryCall: () -> Unit = {},
+    onAnswerSecondaryCall: () -> Unit = {},
+    onDeclineSecondaryCall: () -> Unit = {},
+    onSwapCalls: () -> Unit = {},
     selection: WallpaperSelection,
     theme: CallTheme = CallTheme(CallAccentColors.findById("green").color, CallButtonShape.CIRCLE)
 ) {
@@ -184,23 +188,58 @@ fun InCallScreen(
 
                 if (hasSecondaryCall) {
                     Spacer(modifier = Modifier.height(16.dp))
+                    val isSecondaryRinging = secondaryCallState == Call.STATE_RINGING
                     Surface(
                         color = Color.White.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = secondaryCallNumber ?: "",
-                                color = Color.White,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp,
-                                modifier = Modifier.weight(1f)
-                            )
-                            TextButton(onClick = onEndSecondaryCall) {
-                                Text(stringResource(R.string.end_call), color = Color(0xFFFF8A80), fontSize = 13.sp)
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    if (isSecondaryRinging) {
+                                        Text(
+                                            text = stringResource(R.string.incoming_call),
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    Text(
+                                        text = secondaryCallNumber ?: "",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                if (!isSecondaryRinging) {
+                                    TextButton(onClick = onSwapCalls) {
+                                        Text(stringResource(R.string.swap), color = Color.White, fontSize = 13.sp)
+                                    }
+                                    TextButton(onClick = onEndSecondaryCall) {
+                                        Text(stringResource(R.string.end_call), color = Color(0xFFFF8A80), fontSize = 13.sp)
+                                    }
+                                }
+                            }
+
+                            // A call-waiting call genuinely needs Answer/Decline — it's still
+                            // ringing, not just an already-connected second leg to swap to/end.
+                            if (isSecondaryRinging) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(
+                                        onClick = onDeclineSecondaryCall,
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(stringResource(R.string.decline_call_short))
+                                    }
+                                    Button(
+                                        onClick = onAnswerSecondaryCall,
+                                        colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(stringResource(R.string.answer))
+                                    }
+                                }
                             }
                         }
                     }

@@ -40,8 +40,14 @@ fun CallReminderScreen(
 
     Scaffold(
         floatingActionButton = {
+            // Recents/Contacts sit inside MainNavigation's shared bottom-bar Scaffold (CommonBottomBar,
+            // ~80dp tall), so their FABs float 80dp+16dp above the true screen edge for free. This is
+            // a standalone pushed screen with no bottom bar beneath it — navigationBarsPadding() alone
+            // does nothing here since the system nav bar is hidden (immersive mode, zero inset) — so
+            // match that same clearance with an explicit margin instead.
             FloatingActionButton(
                 onClick = onAddReminder,
+                modifier = Modifier.padding(bottom = 96.dp),
                 containerColor = PrimaryGreen,
                 contentColor = Color.White,
                 shape = CircleShape

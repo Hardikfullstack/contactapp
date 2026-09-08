@@ -228,7 +228,7 @@ fun PermissionScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.background else Color.White)
             .safeDrawingPadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
