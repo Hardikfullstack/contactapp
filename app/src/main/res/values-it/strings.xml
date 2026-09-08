@@ -204,10 +204,7 @@
     <string name="settings_battery_optimization">Ottimizzazione della batteria</string>
     <string name="state_allowed">Consentito</string>
     <string name="state_restricted_tap_to_fix">Limitato – tocca per risolvere</string>
-    <string name="settings_full_screen_notifications">Notifiche a schermo intero</string>
-    <string name="state_required_tap_to_fix">Richiesto – tocca per risolvere</string>
     <string name="toast_couldnt_open_battery_settings">Impossibile aprire le impostazioni della batteria</string>
-    <string name="toast_couldnt_open_notification_settings">Impossibile aprire le impostazioni delle notifiche</string>
     <string name="toast_couldnt_open_permission_settings">Impossibile aprire le impostazioni dei permessi</string>
     <string name="settings_autostart_permission">Autorizzazione all\'avvio automatico</string>
     <string name="autostart_required_desc">Richiesta su questo dispositivo per le chiamate in arrivo e la schermata dopo la chiamata</string>

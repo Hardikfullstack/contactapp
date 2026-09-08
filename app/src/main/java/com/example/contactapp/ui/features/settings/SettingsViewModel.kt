@@ -5,7 +5,6 @@ import android.app.role.RoleManager
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
@@ -34,8 +33,7 @@ data class SettingsUiState(
     val hasAutoStartSettings: Boolean = false,
     val showBackgroundPopupSettings: Boolean = false,
     val isMiuiBackgroundPopupGranted: Boolean = true,
-    val isMiuiAutostartGranted: Boolean = true,
-    val hasFullScreenIntentPermission: Boolean = true
+    val isMiuiAutostartGranted: Boolean = true
 )
 
 @HiltViewModel
@@ -68,15 +66,9 @@ class SettingsViewModel @Inject constructor(
             hasAutoStartSettings = CallReliabilityUtils.hasKnownAutoStartSettings(),
             showBackgroundPopupSettings = CallReliabilityUtils.isMiui(),
             isMiuiBackgroundPopupGranted = CallReliabilityUtils.isMiuiBackgroundPopupGranted(context),
-            isMiuiAutostartGranted = CallReliabilityUtils.isMiuiAutostartGranted(context),
-            hasFullScreenIntentPermission = CallReliabilityUtils.hasFullScreenIntentPermission(context)
+            isMiuiAutostartGranted = CallReliabilityUtils.isMiuiAutostartGranted(context)
         )
     }
-
-    fun fullScreenIntentIntent(): Intent = Intent(
-        Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
-        Uri.parse("package:${context.packageName}")
-    )
 
     /** Tries every known candidate for this device's manufacturer directly (explicit intents,
      * bypassing package-visibility filtering) — see CallReliabilityUtils' class doc comment.

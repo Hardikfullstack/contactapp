@@ -12,7 +12,8 @@ import com.example.contactapp.ui.features.keypad.dialPadKeys
 
 @Composable
 fun DialPad(
-    onDigitClick: (String) -> Unit
+    onDigitClick: (String) -> Unit,
+    showBackground: Boolean = true
 ) {
 
     Column(
@@ -32,6 +33,7 @@ fun DialPad(
                     DialButton(
                         digit = key.digit,
                         letters = key.letters,
+                        showBackground = showBackground,
 
                         onClick = {
 

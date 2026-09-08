@@ -25,7 +25,8 @@ fun DialButton(
     digit: String,
     letters: String,
     onClick: () -> Unit,
-    onLongClick: () -> Unit = {}
+    onLongClick: () -> Unit = {},
+    showBackground: Boolean = true
 ) {
 
     var pressed by remember {
@@ -43,7 +44,7 @@ fun DialButton(
             .size(66.dp)
             .scale(scale.value),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface,
+        color = if (showBackground) MaterialTheme.colorScheme.surface else Color.Transparent,
         tonalElevation = 0.dp
     ) {
 

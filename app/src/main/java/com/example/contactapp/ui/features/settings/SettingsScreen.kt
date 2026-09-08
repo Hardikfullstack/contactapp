@@ -3,6 +3,7 @@ package com.example.contactapp.ui.features.settings
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -51,7 +52,6 @@ fun SettingsScreen(
     onBlockedNumbersClick: () -> Unit,
     onLanguageClick: () -> Unit,
     onRecycleBinClick: () -> Unit,
-    onAfterCallClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -60,11 +60,26 @@ fun SettingsScreen(
     var showSortDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showRateUsDialog by remember { mutableStateOf(false) }
+    var showAfterCallDisableDialog by remember { mutableStateOf(false) }
     val afterCallEnabled by AfterCallState.enabled
 
     val systemSettingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { viewModel.refreshState() }
+
+    val couldntOpenPermissionSettingsMessage = stringResource(R.string.toast_couldnt_open_permission_settings)
+    fun enableAfterCall() {
+        AfterCallState.setEnabled(context, true)
+        if (!Settings.canDrawOverlays(context)) {
+            try {
+                systemSettingsLauncher.launch(
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))
+                )
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, couldntOpenPermissionSettingsMessage, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Autostart/MIUI-popup screens have no meaningful ActivityResult callback (see
     // CallReliabilityUtils) — catch the return trip via ON_RESUME instead.
@@ -86,7 +101,6 @@ fun SettingsScreen(
         }
     }
 
-    val couldntOpenNotificationSettingsMessage = stringResource(R.string.toast_couldnt_open_notification_settings)
     val callerIdProtectionActiveMessage = stringResource(R.string.toast_caller_id_protection_active)
     val shareAppMessage = stringResource(R.string.share_app_message)
     val shareViaLabel = stringResource(R.string.share_via)
@@ -186,45 +200,42 @@ fun SettingsScreen(
         SettingsSectionHeader(title = stringResource(R.string.settings_section_call_reliability))
         SettingsCard {
             val allowedLabel = stringResource(R.string.state_allowed)
-            SettingsItem(
-                title = stringResource(R.string.settings_full_screen_notifications),
-                icon = Icons.Outlined.NotificationsActive,
-                value = if (uiState.hasFullScreenIntentPermission) allowedLabel else stringResource(R.string.state_required_tap_to_fix),
-                showChevron = false,
-                onClick = {
-                    if (!uiState.hasFullScreenIntentPermission) {
-                        try {
-                            systemSettingsLauncher.launch(viewModel.fullScreenIntentIntent())
-                        } catch (e: Exception) {
-                            android.widget.Toast.makeText(context, couldntOpenNotificationSettingsMessage, android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            )
+            var hasPriorItem = false
             if (uiState.hasAutoStartSettings) {
-                SettingsDivider()
                 SettingsItem(
                     title = stringResource(R.string.settings_autostart_permission),
                     icon = Icons.Outlined.PlayCircleOutline,
                     value = if (uiState.isMiuiAutostartGranted) allowedLabel else stringResource(R.string.autostart_required_desc),
                     onClick = { viewModel.launchAutoStartSettings(context) }
                 )
+                hasPriorItem = true
             }
             if (uiState.showBackgroundPopupSettings) {
-                SettingsDivider()
+                if (hasPriorItem) SettingsDivider()
                 SettingsItem(
                     title = stringResource(R.string.settings_background_popup_permission),
                     icon = Icons.Outlined.PictureInPicture,
                     value = if (uiState.isMiuiBackgroundPopupGranted) allowedLabel else stringResource(R.string.background_popup_required_desc),
                     onClick = { viewModel.openMiuiBackgroundPopupSettings(context) }
                 )
+                hasPriorItem = true
             }
-            SettingsDivider()
+            if (hasPriorItem) SettingsDivider()
             SettingsItem(
                 title = stringResource(R.string.settings_after_call_screen_title),
                 icon = Icons.Outlined.NotificationsActive,
-                value = if (afterCallEnabled) stringResource(R.string.state_on) else stringResource(R.string.state_off),
-                onClick = onAfterCallClick
+                showChevron = false,
+                onClick = {
+                    if (afterCallEnabled) showAfterCallDisableDialog = true else enableAfterCall()
+                },
+                trailing = {
+                    CustomSwitch(
+                        checked = afterCallEnabled,
+                        onCheckedChange = { checked ->
+                            if (!checked) showAfterCallDisableDialog = true else enableAfterCall()
+                        }
+                    )
+                }
             )
         }
 
@@ -333,6 +344,28 @@ fun SettingsScreen(
                 RateUsHelper.handleRating(context, stars)
             },
             onDismiss = { showRateUsDialog = false }
+        )
+    }
+
+    if (showAfterCallDisableDialog) {
+        AlertDialog(
+            onDismissRequest = { showAfterCallDisableDialog = false },
+            containerColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surface else Color(0xFFF3F3F3),
+            title = { Text(stringResource(R.string.after_call_disable_dialog_title)) },
+            text = { Text(stringResource(R.string.after_call_disable_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    AfterCallState.setEnabled(context, false)
+                    showAfterCallDisableDialog = false
+                }) {
+                    Text(stringResource(R.string.turn_off), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAfterCallDisableDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         )
     }
 

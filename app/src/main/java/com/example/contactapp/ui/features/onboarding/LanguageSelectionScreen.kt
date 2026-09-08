@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
@@ -128,16 +129,19 @@ fun LanguageSelectionScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.surface)
             .navigationBarsPadding()
     ) {
         TopAppBar(
             title = {
                 Text(
                     text = stringResource(R.string.select_app_language),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 19.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             },
             navigationIcon = {
@@ -161,32 +165,33 @@ fun LanguageSelectionScreen(
                         }
                         // setApplicationLocales() recreates MainActivity to refresh strings —
                         // without this flag, that recreate replays the splash screen from scratch.
-                        LocaleChangeState.skipNextSplash = true
-                        AppCompatDelegate.setApplicationLocales(appLocale)
-                        AnalyticsManager.logEventWithAction(
-                            "language_changed",
-                            "LanguageSelectionScreen",
-                            selectedLanguageCode.ifEmpty { "system" },
-                            mapOf("first_run" to isFirstRun)
-                        )
-
                         val activity = context as? Activity
-                        // setApplicationLocales() alone doesn't reliably refresh this running
-                        // Activity's already-resolved strings (MainActivity declares
-                        // configChanges="locale", so the system won't auto-recreate it) —
-                        // recreate() is required, same fix used in the Messages app. Navigate
-                        // first so the saved-instance-state recreate() restores from already
-                        // reflects the *next* screen (Onboarding-complete / back in Settings).
+                        val applyLanguageAndNavigate = {
+                            LocaleChangeState.skipNextSplash = true
+                            AppCompatDelegate.setApplicationLocales(appLocale)
+                            AnalyticsManager.logEventWithAction(
+                                "language_changed",
+                                "LanguageSelectionScreen",
+                                selectedLanguageCode.ifEmpty { "system" },
+                                mapOf("first_run" to isFirstRun)
+                            )
+                            onDone()
+                            if (!isFirstRun) {
+                                // Delay recreate slightly so navigation completes and locale async save finishes
+                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    activity?.recreate()
+                                }, 250)
+                            }
+                        }
+                        
                         if (isFirstRun && activity != null && languageDoneInterstitialAdUnitId != null &&
                             InterstitialAdManager.isReady(languageDoneInterstitialAdUnitId)
                         ) {
                             InterstitialAdManager.show(activity, languageDoneInterstitialAdUnitId) {
-                                onDone()
-                                activity.recreate()
+                                applyLanguageAndNavigate()
                             }
                         } else {
-                            onDone()
-                            activity?.recreate()
+                            applyLanguageAndNavigate()
                         }
                     },
                     modifier = Modifier
@@ -214,6 +219,8 @@ fun LanguageSelectionScreen(
                 containerColor = MaterialTheme.colorScheme.surface
             )
         )
+
+        HorizontalDivider(thickness = 1.dp, color = Color(0xFFCDCDCD))
 
         LazyColumn(
             modifier = Modifier

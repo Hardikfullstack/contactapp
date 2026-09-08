@@ -36,7 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 enum class PermissionStep {
-    OVERLAY, FULL_SCREEN_INTENT, MIUI_PERMISSIONS, MIUI_AUTOSTART, ONEPLUS_AUTOSTART, DONE
+    OVERLAY, MIUI_PERMISSIONS, MIUI_AUTOSTART, ONEPLUS_AUTOSTART, DONE
 }
 
 @Composable
@@ -54,8 +54,6 @@ fun AdvancedPermissionScreen(
         val canDrawOverlays = Settings.canDrawOverlays(context)
         val forceOverlayOnMiui = CallReliabilityUtils.isMiui() && !hasForcedOverlayStep
         val step = if (!canDrawOverlays || forceOverlayOnMiui) PermissionStep.OVERLAY
-        // Full-screen-intent permission request commented out for now.
-        // else if (!CallReliabilityUtils.hasFullScreenIntentPermission(context) && !prefs.isFullScreenIntentCompleted()) PermissionStep.FULL_SCREEN_INTENT
         else if (CallReliabilityUtils.isMiui() && !CallReliabilityUtils.isMiuiBackgroundPopupGranted(context) && !prefs.isMiuiPermissionsCompleted()) PermissionStep.MIUI_PERMISSIONS
         else if (CallReliabilityUtils.isMiui() && !CallReliabilityUtils.isMiuiAutostartGranted(context) && !prefs.isMiuiAutostartCompleted()) PermissionStep.MIUI_AUTOSTART
         // OnePlus/Oppo autostart step not forced during onboarding — matches Messages, which only
@@ -94,15 +92,6 @@ fun AdvancedPermissionScreen(
     ) { _ ->
         if (CallReliabilityUtils.isMiuiAutostartGranted(context)) {
             prefs.setMiuiAutostartCompleted()
-        }
-        checkNextStepAfterOverlay()
-    }
-
-    val fullScreenIntentLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { _ ->
-        if (CallReliabilityUtils.hasFullScreenIntentPermission(context)) {
-            prefs.setFullScreenIntentCompleted()
         }
         checkNextStepAfterOverlay()
     }
@@ -210,17 +199,6 @@ fun AdvancedPermissionScreen(
                     overlayLauncher.launch(intent)
                     startAutoReturnPolling()
                 }
-                PermissionStep.FULL_SCREEN_INTENT -> {
-                    try {
-                        val intent = Intent(
-                            Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
-                            Uri.parse("package:${context.packageName}")
-                        )
-                        fullScreenIntentLauncher.launch(intent)
-                    } catch (e: Exception) {
-                        currentStep = computeNextStep()
-                    }
-                }
                 PermissionStep.MIUI_PERMISSIONS -> {
                     try {
                         val intent = Intent("miui.intent.action.APP_PERM_EDITOR")
@@ -298,7 +276,6 @@ fun AdvancedPermissionScreen(
                     PermissionStep.MIUI_PERMISSIONS -> strPermissionMiuiDesc
                     PermissionStep.MIUI_AUTOSTART -> strPermissionMiuiDesc
                     PermissionStep.ONEPLUS_AUTOSTART -> strPermissionMiuiDesc
-                    PermissionStep.FULL_SCREEN_INTENT -> strPermissionMiuiDesc
                     else -> ""
                 }
 
@@ -354,7 +331,6 @@ fun AdvancedPermissionScreen(
                     PermissionStep.MIUI_PERMISSIONS -> strActionGrantPermission
                     PermissionStep.MIUI_AUTOSTART -> strActionGrantAutostartPermission
                     PermissionStep.ONEPLUS_AUTOSTART -> strActionGrantAutostartPermission
-                    PermissionStep.FULL_SCREEN_INTENT -> strActionGrantPermission
                     else -> ""
                 }
 

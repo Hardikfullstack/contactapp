@@ -434,14 +434,14 @@
     <string name="settings_battery_optimization">Battery Optimization</string>
     <string name="state_allowed">Allowed</string>
     <string name="state_restricted_tap_to_fix">Restricted – tap to fix</string>
-    <string name="settings_full_screen_notifications">Full-Screen Notifications</string>
-    <string name="state_required_tap_to_fix">Required – tap to fix</string>
     <string name="toast_couldnt_open_battery_settings">Couldn\'t open battery settings</string>
-    <string name="toast_couldnt_open_notification_settings">Couldn\'t open notification settings</string>
     <string name="toast_couldnt_open_permission_settings">Couldn\'t open permission settings</string>
     <string name="settings_autostart_permission">Autostart Permission</string>
     <string name="autostart_required_desc">Required on this device for incoming calls and the After Call screen</string>
     <string name="settings_after_call_screen_title">After Call Screen</string>
+    <string name="after_call_disable_dialog_title">Turn off After Call screen?</string>
+    <string name="after_call_disable_dialog_message">You won\'t see quick actions after your calls end. You can turn this back on anytime.</string>
+    <string name="turn_off">Turn Off</string>
     <string name="state_on">On</string>
     <string name="state_off">Off</string>
     <string name="settings_section_privacy_data">Privacy &amp; Data</string>

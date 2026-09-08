@@ -1,0 +1,61 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- No background fill — just the handset + signal mark on a transparent canvas, so it can
+         sit directly on whatever surface (splash, etc.) already provides its own background. -->
+
+    <group
+        android:translateX="86"
+        android:translateY="128"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:fillColor="#064A2C"
+            android:fillAlpha="0.35"
+            android:pathData="M164.9,24.6c-7.7,-18.6 -28,-28.5 -47.4,-23.2l-88,24C12.1,30.2 0,46 0,64C0,311.4 200.6,512 448,512c18,0 33.8,-12.1 38.6,-29.5l24,-88c5.3,-19.4 -4.6,-39.7 -23.2,-47.4l-104,-43.2c-16.3,-6.8 -35.2,-2.1 -46.3,11.6l-43.9,53.6c-68.7,-32.5 -124.1,-87.9 -156.6,-156.6l53.6,-43.9c13.7,-11.2 18.4,-30 11.6,-46.3L164.9,24.6z" />
+    </group>
+
+    <!-- Phone handset (classic solid receiver glyph). -->
+    <group
+        android:translateX="78"
+        android:translateY="120"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M164.9,24.6c-7.7,-18.6 -28,-28.5 -47.4,-23.2l-88,24C12.1,30.2 0,46 0,64C0,311.4 200.6,512 448,512c18,0 33.8,-12.1 38.6,-29.5l24,-88c5.3,-19.4 -4.6,-39.7 -23.2,-47.4l-104,-43.2c-16.3,-6.8 -35.2,-2.1 -46.3,11.6l-43.9,53.6c-68.7,-32.5 -124.1,-87.9 -156.6,-156.6l53.6,-43.9c13.7,-11.2 18.4,-30 11.6,-46.3L164.9,24.6z" />
+    </group>
+
+    <path
+        android:pathData="M256,146 A115,115 0 0 1 371,261"
+        android:strokeColor="#064A2C"
+        android:strokeWidth="28"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.3"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M256,199 A62,62 0 0 1 318,261"
+        android:strokeColor="#064A2C"
+        android:strokeWidth="28"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.3"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M250,140 A115,115 0 0 1 365,255"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="28"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.7"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M250,193 A62,62 0 0 1 312,255"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="28"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.9"
+        android:fillColor="#00000000" />
+</vector>

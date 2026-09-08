@@ -264,10 +264,7 @@
     <string name="settings_battery_optimization">تحسين البطارية</string>
     <string name="state_allowed">مسموح</string>
     <string name="state_restricted_tap_to_fix">مقيد – اضغط للإصلاح</string>
-    <string name="settings_full_screen_notifications">إشعارات ملء الشاشة</string>
-    <string name="state_required_tap_to_fix">مطلوب – اضغط للإصلاح</string>
     <string name="toast_couldnt_open_battery_settings">تعذر فتح إعدادات البطارية</string>
-    <string name="toast_couldnt_open_notification_settings">تعذر فتح إعدادات الإشعارات</string>
     <string name="toast_couldnt_open_permission_settings">تعذر فتح إعدادات الأذونات</string>
     <string name="settings_autostart_permission">إذن التشغيل التلقائي</string>
     <string name="autostart_required_desc">مطلوب على هذا الجهاز للمكالمات الواردة وشاشة ما بعد المكالمة</string>

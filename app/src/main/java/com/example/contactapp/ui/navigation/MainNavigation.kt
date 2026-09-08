@@ -34,7 +34,6 @@ import com.example.contactapp.ui.features.favorites.FavoritesScreen
 import com.example.contactapp.ui.features.contacts.ContactsScreen
 import com.example.contactapp.ui.features.keypad.KeypadScreen
 import com.example.contactapp.ui.features.settings.SettingsScreen
-import com.example.contactapp.ui.features.settings.AfterCallSettingsScreen
 import com.example.contactapp.ui.features.settings.BlockedNumbersScreen
 import com.example.contactapp.ui.features.settings.RecycleBinScreen
 import com.example.contactapp.ui.features.tools.ToolsScreen
@@ -74,7 +73,6 @@ sealed class MainScreen(
     }
     object BlockedNumbers : MainScreen("blocked_numbers")
     object RecycleBin : MainScreen("recycle_bin")
-    object AfterCall : MainScreen("after_call_settings")
     object Language : MainScreen("language_settings")
     object Analytics : MainScreen("analytics")
     object CallAnnouncer : MainScreen("call_announcer")
@@ -244,21 +242,15 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
                     onSearchClick = { navController.navigate(MainScreen.Search.route) }
                 )
             }
-            composable(MainScreen.Settings.route) { 
+            composable(MainScreen.Settings.route) {
                 SettingsScreen(
                     onBlockedNumbersClick = { navController.navigate(MainScreen.BlockedNumbers.route) },
                     onLanguageClick = { navController.navigate(MainScreen.Language.route) },
-                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) },
-                    onAfterCallClick = { navController.navigate(MainScreen.AfterCall.route) }
+                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) }
                 )
             }
             composable(MainScreen.BlockedNumbers.route) {
                 BlockedNumbersScreen(
-                    onBack = { navController.popBackStack() }
-                )
-            }
-            composable(MainScreen.AfterCall.route) {
-                AfterCallSettingsScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

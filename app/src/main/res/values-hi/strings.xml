@@ -265,10 +265,7 @@
     <string name="settings_battery_optimization">बैटरी अनुकूलन</string>
     <string name="state_allowed">अनुमति है</string>
     <string name="state_restricted_tap_to_fix">प्रतिबंधित – ठीक करने के लिए टैप करें</string>
-    <string name="settings_full_screen_notifications">फ़ुल-स्क्रीन सूचनाएं</string>
-    <string name="state_required_tap_to_fix">आवश्यक – ठीक करने के लिए टैप करें</string>
     <string name="toast_couldnt_open_battery_settings">बैटरी सेटिंग्स नहीं खोल सके</string>
-    <string name="toast_couldnt_open_notification_settings">सूचना सेटिंग्स नहीं खोल सके</string>
     <string name="toast_couldnt_open_permission_settings">अनुमति सेटिंग्स नहीं खोल सके</string>
     <string name="settings_autostart_permission">ऑटोस्टार्ट अनुमति</string>
     <string name="autostart_required_desc">आने वाली कॉल और आफ्टर कॉल स्क्रीन के लिए इस डिवाइस पर आवश्यक है</string>

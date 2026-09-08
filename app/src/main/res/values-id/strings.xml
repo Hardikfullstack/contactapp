@@ -204,10 +204,7 @@
     <string name="settings_battery_optimization">Pengoptimalan Baterai</string>
     <string name="state_allowed">Diizinkan</string>
     <string name="state_restricted_tap_to_fix">Dibatasi – ketuk untuk memperbaiki</string>
-    <string name="settings_full_screen_notifications">Notifikasi Layar Penuh</string>
-    <string name="state_required_tap_to_fix">Diperlukan – ketuk untuk memperbaiki</string>
     <string name="toast_couldnt_open_battery_settings">Tidak dapat membuka pengaturan baterai</string>
-    <string name="toast_couldnt_open_notification_settings">Tidak dapat membuka pengaturan notifikasi</string>
     <string name="toast_couldnt_open_permission_settings">Tidak dapat membuka pengaturan izin</string>
     <string name="settings_autostart_permission">Izin Mulai Otomatis</string>
     <string name="autostart_required_desc">Diperlukan di perangkat ini untuk panggilan masuk dan layar setelah panggilan</string>

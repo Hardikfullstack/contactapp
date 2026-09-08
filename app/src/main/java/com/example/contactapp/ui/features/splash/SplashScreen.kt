@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -256,7 +257,7 @@ private fun BrandingAnimation() {
 }
 
 /** Two small dots slide in from either side and meet at the center — once "connected", they
- * crossfade into the full launcher icon (background + foreground layers) clipped into a circle. */
+ * crossfade into the app logo mark underneath. */
 @Composable
 private fun SplashLogo() {
     val dotOffset = remember { Animatable(1f) } // 1 = apart at the sides, 0 = merged at center
@@ -299,23 +300,14 @@ private fun SplashLogo() {
                 .background(Color.White.copy(alpha = 0.5f))
         )
 
-        Box(
+        Image(
+            painter = painterResource(R.drawable.logo),
+            contentDescription = null,
             modifier = Modifier
                 .size(96.dp)
                 .scale(circleScale.value)
                 .alpha(circleAlpha.value)
-                .clip(CircleShape)
-        ) {
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_background),
-                contentDescription = null,
-                modifier = Modifier.matchParentSize()
-            )
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                modifier = Modifier.matchParentSize()
-            )
-        }
+                .clip(RoundedCornerShape(10.dp))
+        )
     }
 }

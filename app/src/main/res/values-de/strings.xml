@@ -204,10 +204,7 @@
     <string name="settings_battery_optimization">Akkuoptimierung</string>
     <string name="state_allowed">Erlaubt</string>
     <string name="state_restricted_tap_to_fix">Eingeschränkt – zum Beheben tippen</string>
-    <string name="settings_full_screen_notifications">Vollbildbenachrichtigungen</string>
-    <string name="state_required_tap_to_fix">Erforderlich – zum Beheben tippen</string>
     <string name="toast_couldnt_open_battery_settings">Akkueinstellungen konnten nicht geöffnet werden</string>
-    <string name="toast_couldnt_open_notification_settings">Benachrichtigungseinstellungen konnten nicht geöffnet werden</string>
     <string name="toast_couldnt_open_permission_settings">Berechtigungseinstellungen konnten nicht geöffnet werden</string>
     <string name="settings_autostart_permission">Autostart-Berechtigung</string>
     <string name="autostart_required_desc">Auf diesem Gerät für eingehende Anrufe und den Bildschirm nach dem Anruf erforderlich</string>

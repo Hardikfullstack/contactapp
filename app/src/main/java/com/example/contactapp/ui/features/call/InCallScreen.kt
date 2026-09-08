@@ -641,7 +641,8 @@ fun DtmfKeypadSheet(
                             onDigitReleased()
                         }
                     }
-                }
+                },
+                showBackground = false
             )
         }
     }

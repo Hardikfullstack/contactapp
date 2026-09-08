@@ -2,7 +2,6 @@ package com.example.contactapp.util
 
 import android.app.Activity
 import android.app.AppOpsManager
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -52,18 +51,6 @@ object CallReliabilityUtils {
             Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
             Uri.parse("package:${context.packageName}")
         )
-    }
-
-    /** Android 14+ no longer auto-grants this — without it, a full-screen-intent notification
-     * (the After Call fallback used when a direct background startActivity() gets blocked, e.g.
-     * on MIUI without the background-popup permission) silently degrades to a plain heads-up
-     * banner instead of auto-launching the actual screen. On MIUI specifically this degraded
-     * banner can render with little to no visible content in the notification shade — which is
-     * exactly what a user missing this permission sees as an "empty" notification after a call. */
-    fun hasFullScreenIntentPermission(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        return notificationManager.canUseFullScreenIntent()
     }
 
     /** True on Xiaomi/Redmi/POCO/Black Shark devices (MIUI/HyperOS) — checked against both
