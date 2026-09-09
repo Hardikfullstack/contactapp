@@ -197,8 +197,10 @@ object CallReliabilityUtils {
 
     /** AppOps codes 10021 (background pop-up) and 10020 (lock-screen display) — undocumented MIUI
      * op codes, checked via reflection since AppOpsManager only exposes the standard Android
-     * op codes through the public checkOpNoThrow(String, ...) overload. If reflection fails for
-     * any reason, assume granted rather than blocking the user on a check that can't be trusted. */
+     * op codes through the public checkOpNoThrow(String, ...) overload. Newer Android's hidden-API
+     * restrictions can make this reflection call fail outright — when it does, assume NOT granted
+     * (rather than silently skipping the onboarding step) so the user still gets a chance to
+     * confirm it themselves instead of the step vanishing with no way to trigger it again. */
     fun isMiuiBackgroundPopupGranted(context: Context): Boolean {
         return try {
             val appOpsManager = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
@@ -209,7 +211,7 @@ object CallReliabilityUtils {
             val lockScreenResult = method.invoke(appOpsManager, 10020, Process.myUid(), context.packageName) as Int
             popupResult == AppOpsManager.MODE_ALLOWED && lockScreenResult == AppOpsManager.MODE_ALLOWED
         } catch (e: Exception) {
-            true
+            false
         }
     }
 
@@ -223,7 +225,7 @@ object CallReliabilityUtils {
             val result = method.invoke(appOpsManager, 10008, Process.myUid(), context.packageName) as Int
             result == AppOpsManager.MODE_ALLOWED
         } catch (e: Exception) {
-            true
+            false
         }
     }
 }

@@ -24,12 +24,10 @@
     <string name="notifications_description">Allow access to identify callers and stay informed.</string>
     <string name="enable_call_access">Enable Call Access</string>
     <string name="call_access_description">Enable call access to send messages from the after-call screen.</string>
-    <string name="set_as_default_title">Set as Default Phone App</string>
-    <string name="set_as_default_desc">To use our in-app call experience, please set this app as your default phone handler.</string>
-    <string name="dialer_required_title">Default Phone App Required</string>
-    <string name="dialer_required_desc">This app must be set as your default phone app for calling and call history to work. Please try again.</string>
     <string name="try_again">Try Again</string>
     <string name="agree_continue">Agree &amp; Continue</string>
+    <string name="set_default_banner_text">Set this app as your default phone app to make and receive calls.</string>
+    <string name="action_set_default">Set Default</string>
     <string name="privacy_policy_notice">By continuing, you agree to our Privacy Policy.</string>
     <string name="privacy_policy_prefix">By continuing, you agree to our </string>
     <string name="select_app_language">Select app Language</string>
@@ -49,7 +47,6 @@
     <string name="phone">Phone</string>
     <string name="search">Search</string>
     <string name="no_result_found">No Result found.</string>
-    <string name="call_log_permission_required">Call Log permission required</string>
 
     <!-- Call Status -->
     <string name="incoming">Incoming</string>

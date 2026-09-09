@@ -10,8 +10,6 @@
     <string name="notifications_description">Permita el acceso para identificar a las personas que llaman y mantenerse informado.</string>
     <string name="enable_call_access">Habilitar acceso a llamadas</string>
     <string name="call_access_description">Habilite el acceso a llamadas para enviar mensajes desde la pantalla posterior a la llamada.</string>
-    <string name="set_as_default_title">Establecer como aplicación de teléfono predeterminada</string>
-    <string name="set_as_default_desc">Para utilizar nuestra experiencia de llamada en la aplicación, configure esta aplicación como su controlador de teléfono predeterminado.</string>
     <string name="agree_continue">Aceptar y continuar</string>
     <string name="privacy_policy_notice">Al continuar, acepta nuestra Política de privacidad.</string>
     <string name="select_app_language">Seleccionar idioma de la aplicación</string>
@@ -71,7 +69,6 @@
     <string name="unknown">Desconocido</string>
 
     <!-- Misc -->
-    <string name="call_log_permission_required">Se requiere permiso del registro de llamadas</string>
 
     <!-- Contacts Feature -->
     <string name="add_to_contacts">Añadir a contactos</string>
@@ -218,8 +215,6 @@
 
     <string name="permission_permanently_denied_title">Permiso requerido</string>
     <string name="permission_permanently_denied_desc">Estos permisos son esenciales para que la app funcione. Actívalos desde Ajustes.</string>
-    <string name="dialer_required_title">Se requiere una app de teléfono predeterminada</string>
-    <string name="dialer_required_desc">Esta app debe estar configurada como tu app de teléfono predeterminada para que las llamadas y el historial de llamadas funcionen. Inténtalo de nuevo.</string>
     <string name="try_again">Reintentar</string>
     <string name="rate_us_title">Califícanos</string>
     <string name="rate_us_subtitle">¿Te gusta la app?\n¡Califícanos y ayúdanos a mejorar!</string>

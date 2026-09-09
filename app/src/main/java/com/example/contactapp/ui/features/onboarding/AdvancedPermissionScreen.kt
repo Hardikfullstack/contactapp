@@ -51,11 +51,14 @@ fun AdvancedPermissionScreen(
     var hasForcedOverlayStep by remember { mutableStateOf(false) }
 
     fun computeNextStep(): PermissionStep {
+        // Overlay is only forced during onboarding on MIUI — other OEMs skip straight through
+        // here (the After Call flow still requests it later, on-demand, if it's ever needed).
+        val isMiui = CallReliabilityUtils.isMiui()
         val canDrawOverlays = Settings.canDrawOverlays(context)
-        val forceOverlayOnMiui = CallReliabilityUtils.isMiui() && !hasForcedOverlayStep
-        val step = if (!canDrawOverlays || forceOverlayOnMiui) PermissionStep.OVERLAY
-        else if (CallReliabilityUtils.isMiui() && !CallReliabilityUtils.isMiuiBackgroundPopupGranted(context) && !prefs.isMiuiPermissionsCompleted()) PermissionStep.MIUI_PERMISSIONS
-        else if (CallReliabilityUtils.isMiui() && !CallReliabilityUtils.isMiuiAutostartGranted(context) && !prefs.isMiuiAutostartCompleted()) PermissionStep.MIUI_AUTOSTART
+        val forceOverlayOnMiui = isMiui && !hasForcedOverlayStep
+        val step = if (isMiui && (!canDrawOverlays || forceOverlayOnMiui)) PermissionStep.OVERLAY
+        else if (isMiui && !CallReliabilityUtils.isMiuiBackgroundPopupGranted(context)) PermissionStep.MIUI_PERMISSIONS
+        else if (isMiui && !CallReliabilityUtils.isMiuiAutostartGranted(context)) PermissionStep.MIUI_AUTOSTART
         // OnePlus/Oppo autostart step not forced during onboarding — matches Messages, which only
         // forces MIUI's autostart step automatically (its own ONEPLUS_AUTOSTART branch exists but
         // is never reached from computeNextStep() either).
@@ -133,7 +136,7 @@ fun AdvancedPermissionScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (!Settings.canDrawOverlays(context) && !prefs.isOverlayPermissionAutoPrompted()) {
+        if (CallReliabilityUtils.isMiui() && !Settings.canDrawOverlays(context) && !prefs.isOverlayPermissionAutoPrompted()) {
             prefs.setOverlayPermissionAutoPrompted()
             // Marks the MIUI force-recheck (see computeNextStep) as satisfied too — this auto-prompt
             // IS the forced OVERLAY step, so without setting this here the step kept recomputing to

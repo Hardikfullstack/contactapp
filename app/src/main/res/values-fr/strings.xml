@@ -150,8 +150,6 @@
 
     <string name="permission_permanently_denied_title">Autorisation requise</string>
     <string name="permission_permanently_denied_desc">Ces autorisations sont indispensables au fonctionnement de l\'application. Veuillez les activer dans les Paramètres.</string>
-    <string name="dialer_required_title">Application téléphonique par défaut requise</string>
-    <string name="dialer_required_desc">Cette application doit être définie comme application téléphonique par défaut pour que les appels et l\'historique des appels fonctionnent. Veuillez réessayer.</string>
     <string name="try_again">Réessayer</string>
     <string name="rate_us_title">Notez-nous</string>
     <string name="rate_us_subtitle">Vous aimez l\'application ?\nNotez-nous et aidez-nous à nous améliorer !</string>

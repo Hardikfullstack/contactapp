@@ -116,17 +116,19 @@ fun SplashScreen(
                     InterstitialAdManager.preload(context, it)
                 }
             }
-        } else {
-            // Already set up — Recents (Home) is the very next screen.
-            if (result.native_3_on_off == "on") {
-                result.native_3?.takeIf { it.isNotBlank() }?.let {
-                    NativeAdCache.preload(context, it)
-                }
+        }
+        // Recents (Home) is reached either way in this same cold start — right after onboarding
+        // for a first-time user, or immediately for a returning one — so its ads are preloaded
+        // unconditionally too. Without this, a fresh install's very first Home screen had to load
+        // its banner from scratch with no head start, unlike every app open after the first.
+        if (result.native_3_on_off == "on") {
+            result.native_3?.takeIf { it.isNotBlank() }?.let {
+                NativeAdCache.preload(context, it)
             }
-            if (result.banner_1_on_off == "on") {
-                result.banner_1?.takeIf { it.isNotBlank() }?.let {
-                    BannerAdCache.preload(context, it)
-                }
+        }
+        if (result.banner_1_on_off == "on") {
+            result.banner_1?.takeIf { it.isNotBlank() }?.let {
+                BannerAdCache.preload(context, it)
             }
         }
     }
@@ -182,15 +184,13 @@ fun SplashScreen(
         onTimeout()
     }
 
-    // Matches Theme.App.Starting's windowSplashScreenBackground (@color/splash_background, same
-    // hex as PrimaryGreen) so the handoff from the system splash to this composable is seamless
-    // instead of flashing from green to the app's normal (grey/dark) background — but only while
-    // the branding animation itself is showing. The ad-loading state isn't part of that branded
-    // handoff moment, so it uses the app's normal light/dark background instead of forcing green.
+    // White background during the branding animation, with the logo/app-name in brand green
+    // instead of white-on-green. The ad-loading state isn't part of that branded handoff moment,
+    // so it keeps using the app's normal light/dark background instead of forcing white.
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (showAdLoader) MaterialTheme.colorScheme.background else PrimaryGreen),
+            .background(if (showAdLoader) MaterialTheme.colorScheme.background else Color.White),
         contentAlignment = Alignment.Center
     ) {
         if (showAdLoader) {
@@ -246,7 +246,7 @@ private fun BrandingAnimation() {
                     text = letter.toString(),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = PrimaryGreen,
                     modifier = Modifier
                         .offset(x = offsets[index].value.dp)
                         .alpha(alphas[index].value)
@@ -289,7 +289,7 @@ private fun SplashLogo() {
                 .offset(x = (-38).dp * dotOffset.value)
                 .alpha(dotsAlpha.value)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.5f))
+                .background(PrimaryGreen.copy(alpha = 0.5f))
         )
         Box(
             modifier = Modifier
@@ -297,7 +297,7 @@ private fun SplashLogo() {
                 .offset(x = 38.dp * dotOffset.value)
                 .alpha(dotsAlpha.value)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.5f))
+                .background(PrimaryGreen.copy(alpha = 0.5f))
         )
 
         Image(
@@ -307,7 +307,6 @@ private fun SplashLogo() {
                 .size(96.dp)
                 .scale(circleScale.value)
                 .alpha(circleAlpha.value)
-                .clip(RoundedCornerShape(10.dp))
         )
     }
 }

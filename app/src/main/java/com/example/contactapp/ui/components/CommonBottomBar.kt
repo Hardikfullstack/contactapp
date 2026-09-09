@@ -27,7 +27,8 @@ data class BottomBarActionItem(
 fun CommonBottomBar(
     items: List<BottomBarActionItem>,
     modifier: Modifier = Modifier,
-    windowInsets: WindowInsets = NavigationBarDefaults.windowInsets
+    windowInsets: WindowInsets = NavigationBarDefaults.windowInsets,
+    enabled: Boolean = true
 ) {
     val unselectedColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF656565)
 
@@ -47,6 +48,7 @@ fun CommonBottomBar(
                 NavigationBarItem(
                     selected = isSelected,
                     onClick = item.onClick,
+                    enabled = enabled,
                     icon = {
                         Icon(
                             imageVector = if (isSelected && item.selectedIcon != null) item.selectedIcon else item.icon,

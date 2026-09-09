@@ -1,10 +1,12 @@
 package com.example.contactapp.service
 
+import android.app.role.RoleManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.ContentObserver
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.CallLog
@@ -20,6 +22,7 @@ import com.example.contactapp.ui.features.aftercall.AfterCallActivity
 import com.example.contactapp.util.AfterCallMiniOverlay
 import com.example.contactapp.util.AfterCallNotificationHelper
 import com.example.contactapp.util.AfterCallState
+import com.example.contactapp.util.CallReliabilityUtils
 import com.example.contactapp.viewmodel.AppConfigViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,8 +62,20 @@ class AfterCallReceiver : BroadcastReceiver() {
             Log.d(TAG, "onReceive: skipped — After Call is disabled in Settings")
             return
         }
-        if (!Settings.canDrawOverlays(context)) {
-            Log.w(TAG, "onReceive: skipped — 'Display over other apps' permission not granted")
+        // MIUI has its own separate "background pop-up" AppOp, distinct from — and not satisfied
+        // by — the standard overlay permission, so it needs its own check instead of
+        // Settings.canDrawOverlays() there. Being the default dialer alone lets Android treat the
+        // post-call startActivity() as a legitimate continuation of a Telecom-handled call, so it
+        // doesn't need the display permission on top of that — same as the reference app, which
+        // only nags for it when the app is ALSO not the default dialer. Only bail out (and nudge
+        // the user to fix it) when neither is true.
+        val hasDisplayPermission = if (CallReliabilityUtils.isMiui()) {
+            CallReliabilityUtils.isMiuiBackgroundPopupGranted(context)
+        } else {
+            Settings.canDrawOverlays(context)
+        }
+        if (!hasDisplayPermission && !isDefaultDialer(context)) {
+            Log.w(TAG, "onReceive: skipped — no display-over-other-apps permission and not the default dialer")
             AfterCallNotificationHelper.showOverlayPermissionMissingNotification(context.applicationContext)
             return
         }
@@ -224,6 +239,12 @@ class AfterCallReceiver : BroadcastReceiver() {
         } finally {
             context.contentResolver.unregisterContentObserver(observer)
         }
+    }
+
+    private fun isDefaultDialer(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        return roleManager?.isRoleHeld(RoleManager.ROLE_DIALER) == true
     }
 
     /** Best-effort contact name lookup for the number, matching the pattern used elsewhere in the app. */

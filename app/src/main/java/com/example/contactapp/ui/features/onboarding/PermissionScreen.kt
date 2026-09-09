@@ -2,8 +2,6 @@ package com.example.contactapp.ui.features.onboarding
 
 import android.Manifest
 import android.app.Activity
-import android.app.role.RoleManager
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -49,11 +47,6 @@ import com.example.contactapp.ui.components.animatedPulse
 import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.ui.theme.PrimaryGreen
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Smartphone
-import com.example.contactapp.util.AnalyticsManager
-import com.example.contactapp.util.CallReliabilityUtils
-import com.example.contactapp.util.PreferenceManager
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.result.ActivityResultLauncher
@@ -63,112 +56,32 @@ fun PermissionScreen(
     onContinue: () -> Unit
 ) {
     val context = LocalContext.current
-    // Not Hilt-injected here — PermissionScreen is a plain composable with no ViewModel of its
-    // own, and PreferenceManager holds no in-memory state (every read/write goes straight to
-    // SharedPreferences), so a manually-constructed instance behaves identically to the DI one.
-    val prefs = remember { PreferenceManager(context.applicationContext) }
 
     // Requested as separate sequential groups (not one flat array) so the system dialogs are
-    // guaranteed to appear in THIS order — Notification, then Phone/Calls, then Contacts, then
-    // Call Log — matching what was asked for. A single RequestMultiplePermissions() call with a
-    // flat array does not reliably preserve array order across OEMs/Android versions.
+    // guaranteed to appear in THIS order — Notification, then Phone/Calls — matching what was
+    // asked for. A single RequestMultiplePermissions() call with a flat array does not reliably
+    // preserve array order across OEMs/Android versions.
+    //
+    // Contacts/Call Log are intentionally NOT requested here anymore — they're asked for lazily
+    // when the user first opens a screen that actually needs them (matching the reference
+    // competitor flow), instead of upfront during onboarding.
     val permissionGroups = remember {
         buildList<List<String>> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(listOf(Manifest.permission.POST_NOTIFICATIONS))
             }
             add(listOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE))
-            add(
-                listOf(
-                    Manifest.permission.READ_CONTACTS,
-                    Manifest.permission.WRITE_CONTACTS,
-                    // Without this, AccountManager.accounts can't see the user's Google account, so
-                    // every contact this app creates falls back to a local-only (non-syncable)
-                    // account — it can never receive data like a profile photo from Google no
-                    // matter how often it's synced.
-                    Manifest.permission.GET_ACCOUNTS
-                )
-            )
-            add(listOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG))
         }
     }
     val permissionsToRequest = remember(permissionGroups) { permissionGroups.flatten() }
     var permissionGroupIndex by remember { mutableIntStateOf(0) }
 
-    // The background reliability chain (overlay, MIUI autostart, etc) is now handled
-    // by AdvancedPermissionScreen.kt after this screen.
-
-    // Being the default dialer only makes Telecom offer calls to this app — OEM battery
-    // managers can still kill it in the background before an incoming call arrives, so
-    // proactively ask for the battery-optimization exemption once the role is granted.
-    val batteryOptimizationLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { _ ->
-        onContinue()
-    }
-
-    var showDialerRequiredDialog by remember { mutableStateOf(false) }
-
-    val roleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { _ ->
-        val roleManager = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
-        if (!roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
-            // Declining this is not a dead end like a permanently-denied runtime permission —
-            // the role request can simply be shown again, so offer a retry instead of
-            // silently letting onboarding finish with calling features broken.
-            showDialerRequiredDialog = true
-        } else {
-            AnalyticsManager.logEventWithAction("default_dialer_set", "PermissionScreen", "completed")
-            // Battery-optimization exemption request commented out for now.
-            // val ignoring = CallReliabilityUtils.isIgnoringBatteryOptimizations(context)
-            // Log.d(TAG, "roleLauncher: role held, isIgnoringBatteryOptimizations=$ignoring")
-            // if (!ignoring) {
-            //     try {
-            //         val intent = CallReliabilityUtils.batteryOptimizationIntent(context)
-            //         Log.d(TAG, "roleLauncher: launching battery optimization intent $intent")
-            //         batteryOptimizationLauncher.launch(intent)
-            //     } catch (e: Exception) {
-            //         Log.e(TAG, "roleLauncher: battery optimization intent launch failed", e)
-            //         onContinue()
-            //     }
-            // } else {
-            //     Log.d(TAG, "roleLauncher: already ignoring battery optimizations — skipping, calling onContinue()")
-            //     onContinue()
-            // }
-            onContinue()
-        }
-    }
-
+    // The background reliability chain (overlay, MIUI autostart, etc) is handled by
+    // AdvancedPermissionScreen.kt after this screen. The "set as default dialer" role request
+    // no longer happens during onboarding at all — it's now prompted once on the Home screen
+    // (see RecentsScreen.kt) right after onboarding finishes.
     fun proceedAfterPermissions() {
-        // Request Role
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
-            val roleHeld = roleManager.isRoleHeld(RoleManager.ROLE_DIALER)
-            if (!roleHeld) {
-                roleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER))
-            } else {
-                // Battery-optimization exemption request commented out for now.
-                // val ignoring = CallReliabilityUtils.isIgnoringBatteryOptimizations(context)
-                // Log.d(TAG, "proceedAfterPermissions: role already held, isIgnoringBatteryOptimizations=$ignoring")
-                // if (!ignoring) {
-                //     try {
-                //         val intent = CallReliabilityUtils.batteryOptimizationIntent(context)
-                //         Log.d(TAG, "proceedAfterPermissions: launching battery optimization intent $intent")
-                //         batteryOptimizationLauncher.launch(intent)
-                //     } catch (e: Exception) {
-                //         Log.e(TAG, "proceedAfterPermissions: battery optimization intent launch failed", e)
-                //         onContinue()
-                //     }
-                // } else {
-                //     Log.d(TAG, "proceedAfterPermissions: already ignoring battery optimizations — skipping, calling onContinue()")
-                //     onContinue()
-                // }
-                onContinue()
-            }
-        } else {
-            onContinue()
-        }
+        onContinue()
     }
 
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -278,8 +191,6 @@ fun PermissionScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Note: the "set as default dialer" request still happens automatically after
-                // permissions are granted (see permissionLauncher below) even without a card for it here.
                 PermissionItem(
                     icon = Icons.Outlined.NotificationsNone,
                     title = stringResource(R.string.smart_notifications),
@@ -293,15 +204,6 @@ fun PermissionScreen(
                     icon = Icons.Default.Call,
                     title = stringResource(R.string.enable_call_access),
                     description = stringResource(R.string.call_access_description),
-                    onClick = { launchPermissions() }
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                PermissionItem(
-                    icon = Icons.Default.Smartphone,
-                    title = stringResource(R.string.set_as_default_title),
-                    description = stringResource(R.string.set_as_default_desc),
                     onClick = { launchPermissions() }
                 )
             }
@@ -391,27 +293,6 @@ fun PermissionScreen(
         )
     }
 
-    if (showDialerRequiredDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialerRequiredDialog = false },
-            title = { Text(stringResource(R.string.dialer_required_title)) },
-            text = { Text(stringResource(R.string.dialer_required_desc)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDialerRequiredDialog = false
-                    val roleManager = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
-                    roleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER))
-                }) {
-                    Text(stringResource(R.string.try_again), color = PrimaryGreen, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialerRequiredDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        )
-    }
 }
 
 @Composable

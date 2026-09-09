@@ -160,13 +160,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Only the permissions PermissionScreen.kt actually requests during onboarding now — Contacts
+    // and Call Log are requested lazily on first use instead, so checking for them here would
+    // always fail and incorrectly bounce the user back into onboarding right after it just finished.
     private fun hasRequiredPermissions(): Boolean {
         val permissions = arrayOf(
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.WRITE_CONTACTS,
             Manifest.permission.CALL_PHONE,
-            Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.WRITE_CALL_LOG
+            Manifest.permission.READ_PHONE_STATE
         )
         return permissions.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED

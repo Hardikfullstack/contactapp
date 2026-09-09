@@ -10,8 +10,6 @@
     <string name="notifications_description">السماح بالوصول لتحديد المتصلين والبقاء على اطلاع.</string>
     <string name="enable_call_access">تمكين الوصول إلى المكالمات</string>
     <string name="call_access_description">تمكين الوصول إلى المكالمات لإرسال الرسائل من شاشة ما بعد المكالمة.</string>
-    <string name="set_as_default_title">تعيين كتطبيق افتراضي للهاتف</string>
-    <string name="set_as_default_desc">لاستخدام تجربة الاتصال داخل التطبيق، يرجى تعيين هذا التطبيق كمعالج افتراضي للهاتف.</string>
     <string name="agree_continue">الموافقة والمتابعة</string>
     <string name="privacy_policy_notice">بالمتابعة، فإنك توافق على سياسة الخصوصية الخاصة بنا.</string>
     <string name="select_app_language">اختر لغة التطبيق</string>
@@ -31,7 +29,6 @@
     <string name="phone">الهاتف</string>
     <string name="search">بحث</string>
     <string name="no_result_found">لم يتم العثور على نتائج.</string>
-    <string name="call_log_permission_required">مطلوب إذن سجل المكالمات</string>
 
     <!-- Call Status -->
     <string name="incoming">واردة</string>
@@ -210,8 +207,6 @@
 
     <string name="permission_permanently_denied_title">الإذن مطلوب</string>
     <string name="permission_permanently_denied_desc">هذه الأذونات ضرورية لعمل التطبيق. يرجى تفعيلها من الإعدادات.</string>
-    <string name="dialer_required_title">تطبيق الهاتف الافتراضي مطلوب</string>
-    <string name="dialer_required_desc">يجب تعيين هذا التطبيق كتطبيق الهاتف الافتراضي حتى تعمل المكالمات وسجل المكالمات. يرجى المحاولة مرة أخرى.</string>
     <string name="try_again">أعد المحاولة</string>
     <string name="rate_us_title">قيّم التطبيق</string>
     <string name="rate_us_subtitle">هل يعجبك التطبيق؟\nقيّمنا وساعدنا على التحسين!</string>

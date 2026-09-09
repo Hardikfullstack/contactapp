@@ -1,5 +1,6 @@
 package com.example.contactapp.ui.features.recents
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -20,11 +21,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.Manifest
 import android.app.Activity
+import android.app.role.RoleManager
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
 import com.example.contactapp.ads.AppOpenBackgroundReturnTrigger
@@ -39,7 +52,9 @@ import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.ui.theme.TextSecondary
 import com.example.contactapp.util.AppUpdateHelper
 import com.example.contactapp.util.CallUtils
+import com.example.contactapp.util.DefaultDialerState
 import com.example.contactapp.util.MessageUtils
+import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.util.RateUsHelper
 import com.example.contactapp.util.isRemoteVersionNewer
 import com.example.contactapp.viewmodel.AppConfigViewModel
@@ -58,6 +73,117 @@ fun RecentsScreen(
 
     LaunchedEffect(Unit) {
         viewModel.checkPermissionAndFetch()
+    }
+
+    // "Set as default dialer" now lives here instead of onboarding, matching the reference app's
+    // own flow: Home prompts for the role itself, and declining it (Cancel/"Don't allow" on the
+    // role picker) falls straight through to requesting Phone/Call Log/Contacts together — the
+    // same permission set the reference app's Home screen requests in that situation. A second
+    // "Don't allow" on any of those (no more rationale to show) surfaces a Settings dialog, same
+    // as onboarding's own permanently-denied handling. A persistent banner also lets the user
+    // retry "Set Default" any time, not just on the one-time auto-prompt.
+    val isDefaultDialerState by DefaultDialerState.isDefault
+    var showPermanentlyDeniedDialog by remember { mutableStateOf(false) }
+
+    fun refreshDefaultDialerState() {
+        DefaultDialerState.refresh(context)
+    }
+
+    val fallbackPermissions = remember {
+        buildList {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
+            add(Manifest.permission.CALL_PHONE)
+            add(Manifest.permission.READ_PHONE_STATE)
+            add(Manifest.permission.WRITE_CALL_LOG)
+            add(Manifest.permission.READ_CALL_LOG)
+            add(Manifest.permission.READ_CONTACTS)
+            add(Manifest.permission.WRITE_CONTACTS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) add(Manifest.permission.ANSWER_PHONE_CALLS)
+        }
+    }
+
+    val fallbackPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        viewModel.checkPermissionAndFetch()
+        // A permission the system will no longer show a rationale for means the user picked
+        // "Don't allow" a second time — the request dialog won't reappear on its own, so offer
+        // Settings instead, same as onboarding's own permanently-denied dialog.
+        val activity = context as? Activity
+        val anyPermanentlyDenied = activity != null && fallbackPermissions.any { permission ->
+            ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED &&
+                !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+        }
+        if (anyPermanentlyDenied) {
+            showPermanentlyDeniedDialog = true
+        }
+    }
+
+    val defaultDialerRoleLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        refreshDefaultDialerState()
+        if (!isDefaultDialerState) {
+            fallbackPermissionLauncher.launch(fallbackPermissions.toTypedArray())
+        } else {
+            // Being default dialer doesn't itself grant Call Log/Contacts — without this, the
+            // list stayed stuck on whatever hasPermission/isLoading was at first mount until the
+            // user left this tab and came back (which re-runs the LaunchedEffect(Unit) below).
+            viewModel.checkPermissionAndFetch()
+        }
+    }
+
+    fun launchDefaultDialerRequest() {
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        if (roleManager != null) {
+            defaultDialerRoleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshDefaultDialerState()
+        val prefs = PreferenceManager(context.applicationContext)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !isDefaultDialerState && !prefs.isDefaultDialerPrompted()) {
+            prefs.setDefaultDialerPrompted()
+            launchDefaultDialerRequest()
+        }
+    }
+
+    // The role/permissions can change from system Settings while this screen is backgrounded.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshDefaultDialerState()
+                viewModel.checkPermissionAndFetch()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (showPermanentlyDeniedDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermanentlyDeniedDialog = false },
+            title = { Text(stringResource(R.string.permission_permanently_denied_title)) },
+            text = { Text(stringResource(R.string.permission_permanently_denied_desc)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermanentlyDeniedDialog = false
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                }) {
+                    Text(stringResource(R.string.open_settings), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermanentlyDeniedDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
     }
 
     // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
@@ -167,7 +293,7 @@ fun RecentsScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onKeypadClick,
+                onClick = { if (isDefaultDialerState) onKeypadClick() },
                 containerColor = PrimaryGreen,
                 contentColor = Color.White,
                 shape = CircleShape
@@ -190,16 +316,16 @@ fun RecentsScreen(
                 actions = {
                     HeaderActionButton(
                         icon = Icons.Outlined.Search,
-                        onClick = onSearchClick
+                        onClick = { if (isDefaultDialerState) onSearchClick() }
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    
+
                     var showFilterMenu by remember { mutableStateOf(false) }
-                    
+
                     Box {
                         HeaderActionButton(
                             icon = Icons.Outlined.FilterList,
-                            onClick = { showFilterMenu = true }
+                            onClick = { if (isDefaultDialerState) showFilterMenu = true }
                         )
                         
                         FilterDropdown(
@@ -220,7 +346,7 @@ fun RecentsScreen(
                 )
             }
 
-            if (uiState.spamNumbers.isNotEmpty()) {
+            if (isDefaultDialerState && uiState.spamNumbers.isNotEmpty()) {
                 SpamBanner(
                     count = uiState.spamNumbers.size,
                     onClearClick = { viewModel.showClearSpamConfirmation(true) }
@@ -231,14 +357,18 @@ fun RecentsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
+            } else if (!isDefaultDialerState) {
+                // Replaces the whole list area (not just a banner above it) with a centered
+                // prompt, matching the reference app's own full-screen "Set Default" placeholder.
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    SetDefaultDialerBanner(onSetDefaultClick = { launchDefaultDialerRequest() })
+                }
             } else if (!uiState.hasPermission || uiState.groupedCalls.isEmpty()) {
-                // Empty State
+                // Empty State — reached only once this app IS the default dialer, so a missing
+                // permission here means Call Log specifically still needs to be granted.
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = if (!uiState.hasPermission) 
-                            stringResource(R.string.call_log_permission_required) 
-                        else 
-                            stringResource(R.string.no_result_found),
+                        text = stringResource(R.string.no_result_found),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -368,6 +498,59 @@ fun RecentsScreen(
         )
     }
 
+}
+
+@Composable
+private fun SetDefaultDialerBanner(onSetDefaultClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 15.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surface else Color(0xFFF3F3F3),
+        border = BorderStroke(1.dp, PrimaryGreen)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Phone,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.set_default_banner_text),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onSetDefaultClick,
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(48.dp)
+                    .animatedPulse(PrimaryGreen),
+                shape = RoundedCornerShape(77.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+            ) {
+                Text(
+                    text = stringResource(R.string.action_set_default),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
 }
 
 @Composable

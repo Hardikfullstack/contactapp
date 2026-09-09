@@ -10,8 +10,6 @@
     <string name="notifications_description">कॉल करने वालों की पहचान करने और सूचित रहने के लिए पहुँच की अनुमति दें।</string>
     <string name="enable_call_access">कॉल एक्सेस सक्षम करें</string>
     <string name="call_access_description">कॉल के बाद स्क्रीन से संदेश भेजने के लिए कॉल एक्सेस सक्षम करें।</string>
-    <string name="set_as_default_title">डिफ़ॉल्ट फ़ोन ऐप के रूप में सेट करें</string>
-    <string name="set_as_default_desc">हमारे इन-ऐप कॉल अनुभव का उपयोग करने के लिए, कृपया इस ऐप को अपने डिफ़ॉल्ट फ़ोन हैंडलर के रूप में सेट करें।</string>
     <string name="agree_continue">सहमत हों और जारी रखें</string>
     <string name="privacy_policy_notice">जारी रखकर, आप हमारी गोपनीयता नीति से सहमत होते हैं।</string>
     <string name="select_app_language">ऐप की भाषा चुनें</string>
@@ -31,7 +29,6 @@
     <string name="phone">फ़ोन</string>
     <string name="search">खोजें</string>
     <string name="no_result_found">कोई परिणाम नहीं मिला।</string>
-    <string name="call_log_permission_required">कॉल लॉग अनुमति आवश्यक है</string>
 
     <!-- Call Status -->
     <string name="incoming">आने वाली</string>
@@ -211,8 +208,6 @@
 
     <string name="permission_permanently_denied_title">अनुमति आवश्यक है</string>
     <string name="permission_permanently_denied_desc">ऐप को काम करने के लिए ये अनुमतियां ज़रूरी हैं। कृपया इन्हें सेटिंग्स से चालू करें।</string>
-    <string name="dialer_required_title">डिफ़ॉल्ट फ़ोन ऐप आवश्यक है</string>
-    <string name="dialer_required_desc">कॉलिंग और कॉल हिस्ट्री के काम करने के लिए इस ऐप को आपका डिफ़ॉल्ट फ़ोन ऐप सेट होना ज़रूरी है। कृपया फिर से कोशिश करें।</string>
     <string name="try_again">फिर से कोशिश करें</string>
     <string name="rate_us_title">हमें रेट करें</string>
     <string name="rate_us_subtitle">ऐप पसंद आ रहा है?\nहमें रेट करें और बेहतर बनाने में मदद करें!</string>

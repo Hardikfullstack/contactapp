@@ -150,8 +150,6 @@
 
     <string name="permission_permanently_denied_title">Autorizzazione richiesta</string>
     <string name="permission_permanently_denied_desc">Queste autorizzazioni sono essenziali per il funzionamento dell\'app. Attivale dalle Impostazioni.</string>
-    <string name="dialer_required_title">È richiesta l\'app Telefono predefinita</string>
-    <string name="dialer_required_desc">Questa app deve essere impostata come app Telefono predefinita per far funzionare le chiamate e la cronologia chiamate. Riprova.</string>
     <string name="try_again">Riprova</string>
     <string name="rate_us_title">Valutaci</string>
     <string name="rate_us_subtitle">Ti piace l\'app?\nValutaci e aiutaci a migliorare!</string>

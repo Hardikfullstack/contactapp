@@ -150,8 +150,6 @@
 
     <string name="permission_permanently_denied_title">Berechtigung erforderlich</string>
     <string name="permission_permanently_denied_desc">Diese Berechtigungen sind für die Funktion der App unerlässlich. Bitte aktiviere sie in den Einstellungen.</string>
-    <string name="dialer_required_title">Standard-Telefon-App erforderlich</string>
-    <string name="dialer_required_desc">Diese App muss als deine Standard-Telefon-App festgelegt sein, damit Anrufe und der Anrufverlauf funktionieren. Bitte versuche es erneut.</string>
     <string name="try_again">Erneut versuchen</string>
     <string name="rate_us_title">Bewerte uns</string>
     <string name="rate_us_subtitle">Gefällt dir die App?\nBewerte uns und hilf uns, besser zu werden!</string>

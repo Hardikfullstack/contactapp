@@ -150,8 +150,6 @@
 
     <string name="permission_permanently_denied_title">Izin Diperlukan</string>
     <string name="permission_permanently_denied_desc">Izin ini penting agar aplikasi dapat berfungsi. Silakan aktifkan melalui Pengaturan.</string>
-    <string name="dialer_required_title">Aplikasi Telepon Default Diperlukan</string>
-    <string name="dialer_required_desc">Aplikasi ini harus disetel sebagai aplikasi telepon default agar panggilan dan riwayat panggilan berfungsi. Silakan coba lagi.</string>
     <string name="try_again">Coba Lagi</string>
     <string name="rate_us_title">Beri Nilai</string>
     <string name="rate_us_subtitle">Menikmati aplikasi ini?\nBeri nilai dan bantu kami menjadi lebih baik!</string>

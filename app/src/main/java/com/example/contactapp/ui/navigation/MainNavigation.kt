@@ -19,7 +19,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.contactapp.util.DefaultDialerState
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -132,6 +136,20 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
     // so the remote ad config isn't refetched per screen.
     val context = LocalContext.current
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
+
+    // Bottom nav is locked (matching RecentsScreen's own content lockdown) until this app is the
+    // default dialer — refreshed here too, not just from RecentsScreen, so it's correct even if
+    // Recents was never the active tab yet.
+    val isDefaultDialerState by DefaultDialerState.isDefault
+    LaunchedEffect(Unit) { DefaultDialerState.refresh(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) DefaultDialerState.refresh(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val adConfig by appConfigViewModel.appResponse.collectAsState()
     val bannerAdUnitId = adConfig?.result?.let { result ->
         if (result.google_ads_on_off == "on" && result.banner_1_on_off == "on") {
@@ -166,7 +184,7 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
                     }
                 }
                 Column(modifier = Modifier.navigationBarsPadding()) {
-                    CommonBottomBar(items = items, windowInsets = WindowInsets(0.dp))
+                    CommonBottomBar(items = items, windowInsets = WindowInsets(0.dp), enabled = isDefaultDialerState)
                     if (bannerAdUnitId != null) {
                         BannerAdView(adUnitId = bannerAdUnitId)
                     }
