@@ -6,8 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,7 +32,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.activity.ComponentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
-import com.example.contactapp.ads.BannerAdView
+import com.example.contactapp.ads.NativeOrBannerAdView
 import com.example.contactapp.service.FakeCallReceiver
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.CustomSwitch
@@ -58,6 +60,23 @@ fun FakeCallSetupScreen(
     var shakeCallerNumber by remember { mutableStateOf(viewModel.getShakeCallerNumber()) }
     var shakeEnabled by remember { mutableStateOf(viewModel.isShakeTriggerEnabled()) }
 
+    // Re-checked on resume, not just once — the "Fix" button below sends the user to system
+    // Settings and back, and a plain function-call check in the composable body wouldn't
+    // otherwise trigger a recomposition, leaving the warning shown even after it's fixed.
+    var isIgnoringBatteryOptimizations by remember {
+        mutableStateOf(CallReliabilityUtils.isIgnoringBatteryOptimizations(context))
+    }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                isIgnoringBatteryOptimizations = CallReliabilityUtils.isIgnoringBatteryOptimizations(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val now = remember { LocalTime.now() }
     var useCustomTime by remember { mutableStateOf(false) }
     var customHour by remember { mutableIntStateOf(now.hour) }
@@ -71,6 +90,13 @@ fun FakeCallSetupScreen(
     val bannerAdUnitId = adConfig?.result?.let { result ->
         if (result.google_ads_on_off == "on" && result.banner_6_on_off == "on") {
             result.banner_6?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_11 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_6 above only if it fails to load.
+    val nativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_11_on_off == "on") {
+            result.native_11?.takeIf { it.isNotBlank() }
         } else null
     }
 
@@ -230,6 +256,10 @@ fun FakeCallSetupScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
+                    val nameIsInvalid = shakeEnabled && shakeCallerName.isBlank()
+                    val numberIsInvalid = shakeEnabled && shakeCallerNumber.isBlank()
+                    val fillProfileFirstMessage = stringResource(R.string.fill_shake_profile_first)
+
                     OutlinedTextField(
                         value = shakeCallerName,
                         onValueChange = { shakeCallerName = it },
@@ -239,6 +269,10 @@ fun FakeCallSetupScreen(
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(12.dp),
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        isError = nameIsInvalid,
+                        supportingText = if (nameIsInvalid) {
+                            { Text(fillProfileFirstMessage) }
+                        } else null,
                         singleLine = true
                     )
 
@@ -256,6 +290,10 @@ fun FakeCallSetupScreen(
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
                         ),
+                        isError = numberIsInvalid,
+                        supportingText = if (numberIsInvalid) {
+                            { Text(fillProfileFirstMessage) }
+                        } else null,
                         singleLine = true
                     )
 
@@ -279,17 +317,11 @@ fun FakeCallSetupScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         CustomSwitch(
                             checked = shakeEnabled,
-                            onCheckedChange = { checked ->
-                                if (checked && (shakeCallerName.isBlank() || shakeCallerNumber.isBlank())) {
-                                    Toast.makeText(context, context.getString(R.string.fill_shake_profile_first), Toast.LENGTH_SHORT).show()
-                                    return@CustomSwitch
-                                }
-                                shakeEnabled = checked
-                            }
+                            onCheckedChange = { checked -> shakeEnabled = checked }
                         )
                     }
 
-                    if (shakeEnabled && !CallReliabilityUtils.isIgnoringBatteryOptimizations(context)) {
+                    if (shakeEnabled && !isIgnoringBatteryOptimizations) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -313,22 +345,31 @@ fun FakeCallSetupScreen(
                         }
                     }
 
+                    val isShakeProfileInvalid = nameIsInvalid || numberIsInvalid
+                    // Same "primary light" tint AfterCallCard uses for its bottom bar.
+                    val isDarkTheme = isSystemInDarkTheme()
+                    val primaryLightBg = if (isDarkTheme) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    } else {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    }
+
                     Button(
                         onClick = {
-                            if (shakeEnabled && (shakeCallerName.isBlank() || shakeCallerNumber.isBlank())) {
-                                Toast.makeText(context, context.getString(R.string.fill_shake_profile_first), Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
                             viewModel.saveShakeProfile(shakeCallerName, shakeCallerNumber, shakeEnabled)
                             Toast.makeText(context, context.getString(R.string.shake_profile_saved), Toast.LENGTH_SHORT).show()
                         },
+                        enabled = !isShakeProfileInvalid,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
                         shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, PrimaryGreen),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            containerColor = primaryLightBg,
+                            contentColor = PrimaryGreen,
+                            disabledContainerColor = primaryLightBg,
+                            disabledContentColor = PrimaryGreen.copy(alpha = 0.4f)
                         )
                     ) {
                         Text(text = stringResource(R.string.save_quick_trigger_profile))
@@ -336,10 +377,6 @@ fun FakeCallSetupScreen(
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-            }
-
-            if (bannerAdUnitId != null) {
-                BannerAdView(adUnitId = bannerAdUnitId)
             }
 
             Box(
@@ -368,6 +405,10 @@ fun FakeCallSetupScreen(
                 ) {
                     Text(text = stringResource(R.string.schedule_call), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+
+            if (nativeAdUnitId != null || bannerAdUnitId != null) {
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
             }
         }
     }

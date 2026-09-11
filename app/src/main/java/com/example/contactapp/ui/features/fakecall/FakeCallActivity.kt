@@ -3,6 +3,7 @@ package com.example.contactapp.ui.features.fakecall
 import android.os.Bundle
 import android.telecom.Call
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
@@ -139,6 +140,14 @@ class FakeCallActivity : ComponentActivity() {
 
         setContent {
             val fakeCallState by FakeCallManager.callState.collectAsState()
+
+            // Without this, system back just backgrounds this singleInstance Activity instead of
+            // ending the call — onDestroy() (where the ringtone actually stops) never runs, so the
+            // ringtone keeps playing forever and the only way out is the notification's hang-up
+            // action. Treat back exactly like the decline gesture/button.
+            BackHandler {
+                FakeCallManager.endFromUi()
+            }
 
             var isSpam by remember { mutableStateOf(false) }
             LaunchedEffect(number) {

@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.activity.ComponentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
-import com.example.contactapp.ads.BannerAdView
+import com.example.contactapp.ads.NativeOrBannerAdView
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.ui.theme.PrimaryGreen
@@ -64,12 +64,19 @@ fun RingtoneScreen(
             result.banner_5?.takeIf { it.isNotBlank() }
         } else null
     }
+    // native_10 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_5 above only if it fails to load.
+    val nativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_10_on_off == "on") {
+            result.native_10?.takeIf { it.isNotBlank() }
+        } else null
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (bannerAdUnitId != null) {
-                BannerAdView(adUnitId = bannerAdUnitId)
+            if (nativeAdUnitId != null || bannerAdUnitId != null) {
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
             }
         }
     ) { innerPadding ->

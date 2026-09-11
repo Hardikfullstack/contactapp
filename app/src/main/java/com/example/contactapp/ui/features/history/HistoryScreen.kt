@@ -41,7 +41,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.contactapp.R
-import com.example.contactapp.ads.BannerAdView
+import com.example.contactapp.ads.NativeOrBannerAdView
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.ui.components.BottomBarActionItem
 import com.example.contactapp.ui.components.CommonBottomBar
@@ -91,6 +91,13 @@ fun HistoryScreen(
     val bannerAdUnitId = adConfig?.result?.let { result ->
         if (result.google_ads_on_off == "on" && result.banner_2_on_off == "on") {
             result.banner_2?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_7 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_2 above only if it fails to load.
+    val nativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_7_on_off == "on") {
+            result.native_7?.takeIf { it.isNotBlank() }
         } else null
     }
 
@@ -156,10 +163,10 @@ fun HistoryScreen(
                 )
             )
             Column(modifier = Modifier.navigationBarsPadding()) {
-                CommonBottomBar(items = footerItems, windowInsets = WindowInsets(0.dp))
-                if (bannerAdUnitId != null) {
-                    BannerAdView(adUnitId = bannerAdUnitId)
+                if (nativeAdUnitId != null || bannerAdUnitId != null) {
+                    NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
                 }
+                CommonBottomBar(items = footerItems, windowInsets = WindowInsets(0.dp))
             }
         },
         containerColor = MaterialTheme.colorScheme.background

@@ -1,7 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.ContactApp" parent="Theme.AppCompat.Light.NoActionBar" />
+    <!-- DayNight (not plain .Light) so the native window — the brief frame Android draws from
+         this XML theme alone, before Compose's own dark/light logic (ContactAppTheme) gets to run
+         — resolves to the system's actual night-mode setting instead of always being light. Without
+         this, an Activity recreate() (e.g. right after a language change) briefly flashes a light/
+         white status bar even in system dark mode, since that split-second native-theme frame has
+         no idea the app should be dark. windowBackground is set explicitly to this app's own
+         BackgroundLight (see Color.kt) rather than left as AppCompat's generic default — otherwise
+         that same brief frame flashes AppCompat's own light color instead of ours, which is just as
+         visible a mismatch as the white-in-dark-mode flash this was added to fix (see
+         values-night/themes.xml for the dark counterpart). -->
+    <style name="Theme.ContactApp" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">#FFF7F7F7</item>
+    </style>
 
     <!-- Android 12+ always shows a system splash screen on cold start, before the first frame is
          drawn. windowSplashScreenBackground is transparent (no green flash before SplashScreen.kt's

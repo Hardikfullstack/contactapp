@@ -75,10 +75,18 @@ class RecentsViewModel @Inject constructor(
             combine(
                 repository.fetchCallLogs(),
                 repository.getBlockedNumbers(),
-                _uiState.map { it.selectedFilter }.distinctUntilChanged()
-            ) { logs, blockedNumbers, filter ->
+                _uiState.map { it.selectedFilter }.distinctUntilChanged(),
+                // Re-runs this block when any preference changes (including the Caller ID &
+                // Spam toggle) so flipping it takes effect immediately, not just on the next
+                // unrelated call-log/filter change.
+                preferenceManager.preferencesFlow
+            ) { logs, blockedNumbers, filter, _ ->
                 val normalizedBlocked = blockedNumbers.map { it.replace(Regex("[^0-9]"), "").takeLast(10) }
-                val spamNumbers = SpamDetector.detectSpamNumbers(logs)
+                val spamNumbers = if (preferenceManager.isCallerIdSpamProtectionEnabled()) {
+                    SpamDetector.detectSpamNumbers(logs)
+                } else {
+                    emptySet()
+                }
 
                 val mapped = logs.map { log ->
                     val cleanNum = log.number.replace(Regex("[^0-9]"), "").takeLast(10)

@@ -34,6 +34,20 @@ class AppUpdateHelper(context: Context) {
             }
     }
 
+    /** Google's own guidance: an IMMEDIATE update can get interrupted mid-flow (a call comes in,
+     * the app backgrounds, etc.) and silently stall instead of resuming on its own — call this on
+     * every app resume/entry to re-launch the flow if one was left in that state. [onResumable] is
+     * only invoked when there's genuinely something to resume; a normal "no update in progress"
+     * result stays silent. */
+    fun resumeStalledUpdateIfAny(onResumable: (AppUpdateInfo) -> Unit) {
+        appUpdateManager.appUpdateInfo
+            .addOnSuccessListener { info ->
+                if (info.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                    onResumable(info)
+                }
+            }
+    }
+
     fun startUpdate(
         activity: Activity,
         appUpdateInfo: AppUpdateInfo,

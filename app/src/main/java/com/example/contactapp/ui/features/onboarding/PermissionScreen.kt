@@ -272,6 +272,7 @@ fun PermissionScreen(
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text(stringResource(R.string.permission_permanently_denied_title)) },
             text = { Text(stringResource(R.string.permission_permanently_denied_desc)) },
             confirmButton = {

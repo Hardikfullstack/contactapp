@@ -13,7 +13,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.contactapp.R
-import com.example.contactapp.util.CallReliabilityUtils
 import com.example.contactapp.util.PreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,13 +26,8 @@ data class SettingsUiState(
     val isDefaultDialer: Boolean = false,
     val contactSortOrder: String = "First Name",
     val appTheme: String = "System",
-    val appVersion: String = "1.0.0",
     val isSyncing: Boolean = false,
-    val currentLanguage: String = "System Language",
-    val hasAutoStartSettings: Boolean = false,
-    val showBackgroundPopupSettings: Boolean = false,
-    val isMiuiBackgroundPopupGranted: Boolean = true,
-    val isMiuiAutostartGranted: Boolean = true
+    val currentLanguage: String = "System Language"
 )
 
 @HiltViewModel
@@ -61,30 +55,8 @@ class SettingsViewModel @Inject constructor(
             isDefaultDialer = checkDefaultDialer(),
             contactSortOrder = preferenceManager.getContactSortOrder(),
             appTheme = preferenceManager.getAppTheme(),
-            appVersion = getVersionName(),
-            currentLanguage = languageDisplayName,
-            hasAutoStartSettings = CallReliabilityUtils.hasKnownAutoStartSettings(),
-            showBackgroundPopupSettings = CallReliabilityUtils.isMiui(),
-            isMiuiBackgroundPopupGranted = CallReliabilityUtils.isMiuiBackgroundPopupGranted(context),
-            isMiuiAutostartGranted = CallReliabilityUtils.isMiuiAutostartGranted(context)
+            currentLanguage = languageDisplayName
         )
-    }
-
-    /** Tries every known candidate for this device's manufacturer directly (explicit intents,
-     * bypassing package-visibility filtering) — see CallReliabilityUtils' class doc comment.
-     * Takes the caller's (Activity) context rather than always using the injected Application
-     * context — launching from an Activity context keeps the OEM settings screen on this app's
-     * own task, so back actually returns here instead of going to the home screen. */
-    fun launchAutoStartSettings(callerContext: Context = context) {
-        CallReliabilityUtils.launchAutoStartSettings(callerContext)
-    }
-
-    fun openMiuiAutoStartSettings(callerContext: Context = context) {
-        CallReliabilityUtils.openMiuiAutoStartSettings(callerContext)
-    }
-
-    fun openMiuiBackgroundPopupSettings(callerContext: Context = context) {
-        CallReliabilityUtils.openMiuiBackgroundPopupSettings(callerContext)
     }
 
     /**
@@ -152,15 +124,6 @@ class SettingsViewModel @Inject constructor(
             roleManager.isRoleHeld(RoleManager.ROLE_DIALER)
         } else {
             false
-        }
-    }
-
-    private fun getVersionName(): String {
-        return try {
-            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.0.0"
-        } catch (e: Exception) {
-            "1.0.0"
         }
     }
 

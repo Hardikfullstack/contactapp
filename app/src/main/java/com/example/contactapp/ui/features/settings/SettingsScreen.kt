@@ -52,6 +52,8 @@ fun SettingsScreen(
     onBlockedNumbersClick: () -> Unit,
     onLanguageClick: () -> Unit,
     onRecycleBinClick: () -> Unit,
+    onCallerIdSpamClick: () -> Unit,
+    onAboutUsClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -101,11 +103,9 @@ fun SettingsScreen(
         }
     }
 
-    val callerIdProtectionActiveMessage = stringResource(R.string.toast_caller_id_protection_active)
     val shareAppMessage = stringResource(R.string.share_app_message)
     val shareViaLabel = stringResource(R.string.share_via)
     val feedbackEmailSubject = stringResource(R.string.email_subject_app_feedback)
-    val appVersionMessage = stringResource(R.string.toast_app_version_template, uiState.appVersion)
 
     val firstNameLabel = stringResource(R.string.sort_first_name)
     val lastNameLabel = stringResource(R.string.sort_last_name)
@@ -199,31 +199,9 @@ fun SettingsScreen(
         // this app even after it's set as the default dialer.
         SettingsSectionHeader(title = stringResource(R.string.settings_section_call_reliability))
         SettingsCard {
-            val allowedLabel = stringResource(R.string.state_allowed)
-            var hasPriorItem = false
-            if (uiState.hasAutoStartSettings) {
-                SettingsItem(
-                    title = stringResource(R.string.settings_autostart_permission),
-                    icon = Icons.Outlined.PlayCircleOutline,
-                    value = if (uiState.isMiuiAutostartGranted) allowedLabel else stringResource(R.string.autostart_required_desc),
-                    onClick = { viewModel.launchAutoStartSettings(context) }
-                )
-                hasPriorItem = true
-            }
-            if (uiState.showBackgroundPopupSettings) {
-                if (hasPriorItem) SettingsDivider()
-                SettingsItem(
-                    title = stringResource(R.string.settings_background_popup_permission),
-                    icon = Icons.Outlined.PictureInPicture,
-                    value = if (uiState.isMiuiBackgroundPopupGranted) allowedLabel else stringResource(R.string.background_popup_required_desc),
-                    onClick = { viewModel.openMiuiBackgroundPopupSettings(context) }
-                )
-                hasPriorItem = true
-            }
-            if (hasPriorItem) SettingsDivider()
             SettingsItem(
                 title = stringResource(R.string.settings_after_call_screen_title),
-                icon = Icons.Outlined.NotificationsActive,
+                icon = Icons.Outlined.Call,
                 showChevron = false,
                 onClick = {
                     if (afterCallEnabled) showAfterCallDisableDialog = true else enableAfterCall()
@@ -245,9 +223,7 @@ fun SettingsScreen(
             SettingsItem(
                 title = stringResource(R.string.settings_caller_id_spam),
                 icon = Icons.Outlined.Report,
-                onClick = {
-                    android.widget.Toast.makeText(context, callerIdProtectionActiveMessage, android.widget.Toast.LENGTH_SHORT).show()
-                }
+                onClick = onCallerIdSpamClick
             )
             SettingsDivider()
             SettingsItem(
@@ -276,9 +252,14 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_share_app),
                 icon = Icons.Outlined.Share,
                 onClick = {
+                    // Always built from the app's own package name — never a remote-configured
+                    // link — so a share can never go out pointing at nothing (or the wrong app).
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, shareAppMessage)
+                        putExtra(
+                            Intent.EXTRA_TEXT,
+                            String.format(shareAppMessage, "https://play.google.com/store/apps/details?id=${context.packageName}")
+                        )
                     }
                     context.startActivity(Intent.createChooser(intent, shareViaLabel))
                 }
@@ -299,9 +280,7 @@ fun SettingsScreen(
             SettingsItem(
                 title = stringResource(R.string.settings_about_us),
                 icon = Icons.Outlined.Info,
-                onClick = {
-                    android.widget.Toast.makeText(context, appVersionMessage, android.widget.Toast.LENGTH_LONG).show()
-                }
+                onClick = onAboutUsClick
             )
         }
         

@@ -69,10 +69,19 @@ fun AfterCallScreen(
     val appConfigViewModel: AppConfigViewModel = viewModel()
     val adConfig by appConfigViewModel.appResponse.collectAsState()
     val nativeAdUnitId = adConfig?.result?.let { result ->
-        if (result.google_ads_on_off == "on" && result.native_2_on_off == "on") {
-            result.native_2?.takeIf { it.isNotBlank() }
+        if (result.google_ads_on_off == "on" && result.native_4_on_off == "on") {
+            result.native_4?.takeIf { it.isNotBlank() }
         } else null
     }
+    // Tried only if native_4 fails to load — matches the primary+fallback pattern the reference
+    // app uses for its own after-call native ad, instead of relying on a single ad unit.
+    // native_5 is unused elsewhere.
+    val fallbackNativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_5_on_off == "on") {
+            result.native_5?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    var primaryNativeAdFailed by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -96,9 +105,18 @@ fun AfterCallScreen(
             }
         },
         bottomBar = {
-            if (nativeAdUnitId != null) {
+            if (nativeAdUnitId != null && !primaryNativeAdFailed) {
                 NativeAdView(
                     adUnitId = nativeAdUnitId,
+                    template = NativeAdTemplate.MEDIUM,
+                    modifier = Modifier
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    onFailed = { primaryNativeAdFailed = true }
+                )
+            } else if (primaryNativeAdFailed && fallbackNativeAdUnitId != null) {
+                NativeAdView(
+                    adUnitId = fallbackNativeAdUnitId,
                     template = NativeAdTemplate.MEDIUM,
                     modifier = Modifier
                         .navigationBarsPadding()
@@ -129,9 +147,9 @@ fun AfterCallScreen(
 
 @Composable
 private fun AfterCallHistoryTab(number: String, onQuickMessageClick: () -> Unit, onOpenMainApp: (String) -> Unit) {
-    val strContact = "Contact"
-    val strQuickMessage = "Quick Message"
-    val strRecentCall = "Recent Call"
+    val strContact = stringResource(R.string.after_call_contact)
+    val strQuickMessage = stringResource(R.string.after_call_quick_message)
+    val strRecentCall = stringResource(R.string.after_call_recent_call)
 
     Column(
         modifier = Modifier

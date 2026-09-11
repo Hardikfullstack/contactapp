@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +45,7 @@ import com.example.contactapp.R
 import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.util.AnalyticsManager
 
-enum class NativeAdTemplate { SMALL, MEDIUM, LARGE }
+enum class NativeAdTemplate { SMALL, MEDIUM, LARGE, EXIT }
 
 // Driven by the app's own dark/light state (LocalIsDarkTheme), not system config — these views
 // are plain Android widgets, not Compose, so they can't pick colors up from values-night on their
@@ -84,14 +86,28 @@ fun NativeAdView(
     adUnitId: String,
     template: NativeAdTemplate,
     modifier: Modifier = Modifier,
-    compact: Boolean = false
+    compact: Boolean = false,
+    onFailed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isDarkTheme = LocalIsDarkTheme.current
     var nativeAd by remember(adUnitId) { mutableStateOf(NativeAdCache.take(adUnitId)) }
     var hasFailed by remember(adUnitId) { mutableStateOf(false) }
 
-    DisposableEffect(adUnitId) {
+    // Retries a failed load once connectivity comes back — without this, a load that failed
+    // while offline just sits failed forever, since the DisposableEffect below only fires once
+    // per composable lifetime on its own.
+    var retryGeneration by remember(adUnitId) { mutableStateOf(0) }
+    val reconnectTick by AdConnectivityRetry.tick.collectAsState()
+    LaunchedEffect(reconnectTick) {
+        if (hasFailed) {
+            hasFailed = false
+            nativeAd = null
+            retryGeneration++
+        }
+    }
+
+    DisposableEffect(adUnitId, retryGeneration) {
         // A cached ad (preloaded ahead of time via NativeAdCache) is already in hand — skip
         // loading a fresh one.
         if (nativeAd != null) {
@@ -107,6 +123,7 @@ fun NativeAdView(
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     hasFailed = true
                     AnalyticsManager.logAdEvent("native", adUnitId, "failed_to_load")
+                    onFailed()
                 }
 
                 override fun onAdClicked() {
@@ -128,6 +145,7 @@ fun NativeAdView(
             NativeAdTemplate.SMALL -> SmallNativeAdSkeleton(modifier, isDarkTheme)
             NativeAdTemplate.MEDIUM -> MediumNativeAdSkeleton(modifier, compact, isDarkTheme)
             NativeAdTemplate.LARGE -> LargeNativeAdSkeleton(modifier, isDarkTheme)
+            NativeAdTemplate.EXIT -> ExitNativeAdSkeleton(modifier, isDarkTheme)
         }
         return
     }
@@ -143,6 +161,7 @@ fun NativeAdView(
                     // MediumNativeAdHeight, and forcing it would clip the CTA button.
                     NativeAdTemplate.MEDIUM -> Modifier
                     NativeAdTemplate.LARGE -> Modifier
+                    NativeAdTemplate.EXIT -> Modifier
                 }
             ),
         factory = { ctx ->
@@ -150,6 +169,7 @@ fun NativeAdView(
                 NativeAdTemplate.SMALL -> R.layout.native_ad_small
                 NativeAdTemplate.MEDIUM -> R.layout.native_ad_medium
                 NativeAdTemplate.LARGE -> R.layout.native_ad_large
+                NativeAdTemplate.EXIT -> R.layout.native_ad_exit
             }
             LayoutInflater.from(ctx).inflate(layoutRes, null) as com.google.android.gms.ads.nativead.NativeAdView
         },
@@ -181,6 +201,8 @@ private fun applyCardColors(
             (adView.background?.mutate() as? android.graphics.drawable.GradientDrawable)
                 ?.setColor(cardBg.toArgb())
         }
+        // No card background — sits directly on the exit sheet's own surface color.
+        NativeAdTemplate.EXIT -> {}
     }
 
     adView.findViewById<TextView>(R.id.ad_headline)?.setTextColor(titleColor.toArgb())
@@ -291,6 +313,31 @@ private fun LargeNativeAdSkeleton(modifier: Modifier = Modifier, isDarkTheme: Bo
     }
 }
 
+/** Skeleton for [NativeAdTemplate.EXIT] — matches native_ad_exit.xml: a media-left/text-right
+ * row (no inline CTA), followed by a full-width outlined pill button below the row. */
+@Composable
+private fun ExitNativeAdSkeleton(modifier: Modifier = Modifier, isDarkTheme: Boolean = false) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.weight(0.6f).height(130.dp).clip(RoundedCornerShape(12.dp)).adShimmerEffect())
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(0.4f), verticalArrangement = Arrangement.Center) {
+                Box(modifier = Modifier.fillMaxWidth(0.8f).height(17.dp).clip(RoundedCornerShape(4.dp)).adShimmerEffect())
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(4.dp)).adShimmerEffect())
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(modifier = Modifier.fillMaxWidth(0.6f).height(12.dp).clip(RoundedCornerShape(4.dp)).adShimmerEffect())
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp)).adShimmerEffect())
+    }
+}
+
 private fun bindNativeAd(
     adView: com.google.android.gms.ads.nativead.NativeAdView,
     nativeAd: NativeAd,
@@ -343,10 +390,11 @@ private fun bindNativeAd(
         // MediaView letterboxes its content to fit a fixed height, leaving most of the box
         // empty if the asset's own aspect ratio is very different — size the box to the ad's
         // actual aspect ratio instead so the image/video fills it edge to edge. Skipped for
-        // LARGE, whose MediaView is a fixed 100x100 square thumbnail by design, not a
-        // full-width variable-height block.
+        // LARGE and EXIT, whose MediaViews are fixed square thumbnails by design, not a
+        // full-width variable-height block — letting this run on them shrinks the box down to
+        // ~28-42% of its own width instead of leaving it as the fixed square it's declared as.
         val aspectRatio = mediaContent?.aspectRatio
-        if (template != NativeAdTemplate.LARGE && aspectRatio != null && aspectRatio > 0f) {
+        if (template != NativeAdTemplate.LARGE && template != NativeAdTemplate.EXIT && aspectRatio != null && aspectRatio > 0f) {
             mediaView.post {
                 val width = mediaView.width
                 if (width > 0) {

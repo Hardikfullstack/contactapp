@@ -82,7 +82,7 @@ fun ContactActionBottomSheet(
 
             ActionItem(
                 icon = Icons.Outlined.Delete,
-                label = "Delete",
+                label = stringResource(R.string.delete),
                 onClick = {
                     onDeleteClick()
                     onDismiss()

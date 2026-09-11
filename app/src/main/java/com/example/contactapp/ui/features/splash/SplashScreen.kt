@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,11 +36,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
 import com.example.contactapp.ads.AdLoadingLottie
@@ -50,6 +53,7 @@ import com.example.contactapp.ads.ColdStartAdType
 import com.example.contactapp.ads.InterstitialAdManager
 import com.example.contactapp.ads.NativeAdCache
 import com.example.contactapp.ads.waitUntilAdReady
+import com.example.contactapp.ui.theme.LocalIsDarkTheme
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.viewmodel.AppConfigViewModel
 import kotlinx.coroutines.delay
@@ -80,6 +84,26 @@ fun SplashScreen(
 ) {
     val context = LocalContext.current
     var showAdLoader by remember { mutableStateOf(false) }
+
+    // The branding-animation state below forces a white background regardless of theme
+    // (deliberate — see that Box's own background comment), so status bar icons must stay dark
+    // there to stay visible against it — MainActivity's own theme-based rule (light icons
+    // whenever dark mode is on) would otherwise make them just as light as that white background
+    // and functionally invisible. Once showAdLoader switches to the theme's own background color,
+    // follow the theme normally like MainActivity does everywhere else in the app. MainActivity
+    // skips setting this itself while this screen is showing, so this is the only thing driving
+    // it for as long as Splash is on screen.
+    val isDarkTheme = LocalIsDarkTheme.current
+    val view = LocalView.current
+    SideEffect {
+        val window = (context as? Activity)?.window
+        if (window != null) {
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            val lightIcons = if (showAdLoader) !isDarkTheme else true
+            insetsController.isAppearanceLightStatusBars = lightIcons
+            insetsController.isAppearanceLightNavigationBars = lightIcons
+        }
+    }
 
     // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
@@ -121,14 +145,21 @@ fun SplashScreen(
         // for a first-time user, or immediately for a returning one — so its ads are preloaded
         // unconditionally too. Without this, a fresh install's very first Home screen had to load
         // its banner from scratch with no head start, unlike every app open after the first.
-        if (result.native_3_on_off == "on") {
-            result.native_3?.takeIf { it.isNotBlank() }?.let {
+        if (result.native_2_on_off == "on") {
+            result.native_2?.takeIf { it.isNotBlank() }?.let {
                 NativeAdCache.preload(context, it)
             }
         }
         if (result.banner_1_on_off == "on") {
             result.banner_1?.takeIf { it.isNotBlank() }?.let {
                 BannerAdCache.preload(context, it)
+            }
+        }
+        // Bottom nav tries native_6 before falling back to banner_1 (see NativeOrBannerAdView) —
+        // preload it too, otherwise the native-first attempt always starts from scratch on Home.
+        if (result.native_6_on_off == "on") {
+            result.native_6?.takeIf { it.isNotBlank() }?.let {
+                NativeAdCache.preload(context, it)
             }
         }
     }
@@ -149,7 +180,11 @@ fun SplashScreen(
 
             val activity = context as? Activity
             val result = appConfigViewModel.appResponse.value?.result
-            val adsEnabled = result?.google_ads_on_off == "on"
+            // google_ads_on_off reflects the last successful config fetch (cached or live), so it
+            // can still read "on" even while currently offline — checking isOnline too avoids
+            // showing "Ad is loading" for the full timeout only to fail, when there's clearly no
+            // network to load an ad with in the first place.
+            val adsEnabled = result?.google_ads_on_off == "on" && appConfigViewModel.isOnline.value
 
             // 1st/2nd cold open after setup → App Open; 3rd (and every 3rd after) → Interstitial.
             val openCount = AppOpenCounter.incrementAndGet(context)
@@ -280,31 +315,31 @@ private fun SplashLogo() {
     }
 
     Box(
-        modifier = Modifier.size(96.dp),
+        modifier = Modifier.size(104.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(20.dp)
-                .offset(x = (-38).dp * dotOffset.value)
+                .size(22.dp)
+                .offset(x = (-41).dp * dotOffset.value)
                 .alpha(dotsAlpha.value)
                 .clip(CircleShape)
                 .background(PrimaryGreen.copy(alpha = 0.5f))
         )
         Box(
             modifier = Modifier
-                .size(20.dp)
-                .offset(x = 38.dp * dotOffset.value)
+                .size(22.dp)
+                .offset(x = 41.dp * dotOffset.value)
                 .alpha(dotsAlpha.value)
                 .clip(CircleShape)
                 .background(PrimaryGreen.copy(alpha = 0.5f))
         )
 
         Image(
-            painter = painterResource(R.drawable.logo),
+            painter = painterResource(R.drawable.logo_cotntacts),
             contentDescription = null,
             modifier = Modifier
-                .size(96.dp)
+                .size(104.dp)
                 .scale(circleScale.value)
                 .alpha(circleAlpha.value)
         )

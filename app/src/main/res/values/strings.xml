@@ -1,7 +1,15 @@
+
 <resources>
     <string name="app_name">Contacts</string>
     <string name="app_launcher_name">#Contacts</string>
     <string name="ad_is_loading">Ad is loading…</string>
+    <string name="no_internet_connection">No Internet Connection</string>
+    <string name="no_internet_connection_desc">Please check your internet connection to use all features.</string>
+    <string name="offline_dialog_button_wifi">Wi-Fi</string>
+    <string name="offline_dialog_button_mobile_data">Mobile Data</string>
+    <string name="maintenance_dialog_title">Under Maintenance</string>
+    <string name="maintenance_dialog_desc">We\'re making some improvements right now. Please check back in a little while.</string>
+    <string name="maintenance_dialog_exit_button">Exit App</string>
 
     <!-- Onboarding -->
     <!-- Advanced Permissions -->
@@ -15,8 +23,6 @@
     <string name="after_call_permission_missing_title">⚠️ Caller ID Disabled</string>
     <string name="see_call_information">See call information</string>
     <string name="after_call_permission_missing_desc">Tap to fix by giving Contacts the ability to display over other apps</string>
-    <string name="settings_background_popup_permission">Background Pop-up Permission</string>
-    <string name="background_popup_required_desc">Required for the call screen and After Call screen to open</string>
 
     <string name="allow_permission">Allow Permission</string>
     <string name="permission_description">Enable the necessary permissions to continue and access all features.</string>
@@ -28,6 +34,7 @@
     <string name="agree_continue">Agree &amp; Continue</string>
     <string name="set_default_banner_text">Set this app as your default phone app to make and receive calls.</string>
     <string name="action_set_default">Set Default</string>
+    <string name="tap_here_to_exit">Tap here to exit</string>
     <string name="privacy_policy_notice">By continuing, you agree to our Privacy Policy.</string>
     <string name="privacy_policy_prefix">By continuing, you agree to our </string>
     <string name="select_app_language">Select app Language</string>
@@ -113,16 +120,10 @@
     <string name="unblock_confirmation">Calls and messages from this contact will no longer be blocked.</string>
     <string name="export_success">Contacts exported successfully</string>
     <string name="export_failed">Export failed</string>
-    <string name="importing_from">Importing from %1$s...</string>
     <string name="import_success">Imported %1$d contacts successfully</string>
     <string name="import_failed">Import failed</string>
 
     <!-- Settings Feature -->
-    <string name="call_settings_header">CALL SETTINGS</string>
-    <string name="contact_display_header">CONTACT DISPLAY</string>
-    <string name="appearance_header">APPEARANCE</string>
-    <string name="about_header">ABOUT</string>
-    <string name="system_header">SYSTEM</string>
     <string name="default_phone_app">Default Phone App</string>
     <string name="current_default">Current default</string>
     <string name="not_set_as_default">Not set as default</string>
@@ -133,6 +134,8 @@
     <string name="theme">Theme</string>
     <string name="app_version">App Version</string>
     <string name="privacy_policy">Privacy Policy</string>
+    <string name="terms_and_conditions">Terms &amp; Conditions</string>
+    <string name="about_version_label">Version: %1$s</string>
     <string name="language">Language</string>
     <string name="change_app_language">Change app language</string>
 
@@ -145,7 +148,6 @@
     <string name="filter_spam">Spam Call</string>
 
     <!-- Fake Call Feature -->
-    <string name="fake_call">Fake Call</string>
     <string name="fake_call_setup">Fake Call Setup</string>
     <string name="caller_name">Caller Name</string>
     <string name="caller_number">Caller Number</string>
@@ -154,16 +156,10 @@
     <string name="call_scheduled_at">Fake call scheduled for %1$s</string>
     <string name="custom_time">Custom Time</string>
     <string name="pick_time">Pick Time</string>
-    <string name="seconds">%1$d seconds</string>
-    <string name="minutes">%1$d minutes</string>
 
     <!-- Call Announcer Feature -->
     <string name="call_announcer">Call Announcer</string>
-    <string name="call_announcer_settings">Call Announcer Settings</string>
     <string name="enable_announcer">Enable Call Announcer</string>
-    <string name="announcer_repeat">Announcement Repetition</string>
-    <string name="announcer_delay">Delay between announcements</string>
-    <string name="announcer_message_prefix">Message Prefix</string>
     <string name="incoming_call_from">Incoming call from %1$s</string>
     <string name="times_1">1 time</string>
     <string name="times_2">2 times</string>
@@ -173,16 +169,10 @@
     <!-- Call Wallpaper Feature -->
     <string name="call_wallpaper">Call Wallpaper</string>
     <string name="select_wallpaper">Select Wallpaper</string>
-    <string name="preview_wallpaper">Preview Wallpaper</string>
-    <string name="apply_wallpaper">Apply Wallpaper</string>
     <string name="custom_image">Gallery</string>
-    <string name="custom_color">Custom Color</string>
     <string name="pick_color">Pick Color</string>
     <string name="color_picker_title">Choose Background Color</string>
     <string name="select">Select</string>
-    <string name="none_wallpaper">None (Solid)</string>
-    <string name="wallpaper_applied">Wallpaper applied successfully</string>
-    <string name="built_in_wallpapers">Wallpapers</string>
 
     <!-- Call Analytics -->
     <string name="call_analytics">Call Analytics</string>
@@ -196,7 +186,6 @@
     <string name="call_breakdown">Call Breakdown</string>
     <string name="no_call_history">No call history yet</string>
     <string name="no_call_history_desc">Make or receive a few calls to see your analytics here.</string>
-    <string name="refresh">Refresh</string>
     <string name="recent_activity">Recent Activity</string>
     <string name="no_recent_activity">No recent activity</string>
 
@@ -218,9 +207,7 @@
 
     <!-- Flash Alert Feature -->
     <string name="flash_alert">Flash Alert</string>
-    <string name="flash_alert_settings">Flash Alert Settings</string>
     <string name="enable_flash_alert">Enable Flash Alert</string>
-    <string name="blink_speed">Blink Speed</string>
     <string name="slow">Slow</string>
     <string name="medium">Medium</string>
     <string name="fast">Fast</string>
@@ -238,9 +225,7 @@
     <string name="tool_call_wallpaper_desc">Set a custom background for your dialer</string>
     <string name="tool_call_themes">Call Themes</string>
     <string name="tool_call_themes_desc">Personalize your call button style</string>
-    <string name="call_themes_desc">Choose the accent color, avatar frame, and button shape for your call screen. This is independent of your Call Wallpaper background.</string>
     <string name="button_shape">Button Shape</string>
-    <string name="accent_color">Accent Color</string>
     <string name="shape_circle">Circle</string>
     <string name="shape_rounded_square">Rounded Square</string>
     <string name="shape_square">Square</string>
@@ -300,8 +285,6 @@
     <string name="permission_permanently_denied_desc">These permissions are essential for the app to work. Please enable them from Settings.</string>
     <string name="open_settings">Open Settings</string>
     <string name="apply">Apply</string>
-    <string name="tool_import_export">Import/Export</string>
-    <string name="tool_import_export_desc">Easily transfer contacts to and from your device</string>
     <string name="fake_call_active_notification_channel">Active Fake Call</string>
     <string name="fake_call_active_notification_channel_desc">Shows a persistent notification while a fake call is active</string>
     <string name="report_spam">Report as Spam</string>
@@ -353,12 +336,7 @@
     <string name="quick_reply_2">I\'ll call you back.</string>
     <string name="quick_reply_3">Sorry, I\'m busy right now.</string>
     <string name="quick_reply_4">On my way.</string>
-    <string name="more_options">More options</string>
-    <string name="more_options_short">More</string>
     <string name="add_call">Add call</string>
-    <string name="swap_calls">Swap</string>
-    <string name="merge_calls">Merge</string>
-    <string name="enter_number">Enter a number</string>
 
     <!-- Shake-to-Fake-Call -->
     <string name="quick_trigger_profile">QUICK TRIGGER PROFILE</string>
@@ -406,7 +384,6 @@
     <string name="after_call_add_reminder">Add Reminder</string>
     <string name="after_call_remind_me_about">Remind me about…</string>
     <string name="after_call_reminder_notification_title_template">Call back %1$s</string>
-    <string name="after_call_action_add_contact">Add Contact</string>
     <string name="after_call_action_message">Message</string>
     <string name="after_call_action_send_mail">Send Mail</string>
     <string name="after_call_action_calendar">Add to Calendar</string>
@@ -428,28 +405,21 @@
     <string name="theme_system">System</string>
     <string name="settings_sound_vibration">Sound &amp; Vibration</string>
     <string name="settings_section_call_reliability">Call Reliability</string>
-    <string name="settings_battery_optimization">Battery Optimization</string>
-    <string name="state_allowed">Allowed</string>
-    <string name="state_restricted_tap_to_fix">Restricted – tap to fix</string>
-    <string name="toast_couldnt_open_battery_settings">Couldn\'t open battery settings</string>
     <string name="toast_couldnt_open_permission_settings">Couldn\'t open permission settings</string>
-    <string name="settings_autostart_permission">Autostart Permission</string>
-    <string name="autostart_required_desc">Required on this device for incoming calls and the After Call screen</string>
     <string name="settings_after_call_screen_title">After Call Screen</string>
     <string name="after_call_disable_dialog_title">Turn off After Call screen?</string>
     <string name="after_call_disable_dialog_message">You won\'t see quick actions after your calls end. You can turn this back on anytime.</string>
     <string name="turn_off">Turn Off</string>
-    <string name="state_on">On</string>
-    <string name="state_off">Off</string>
     <string name="settings_section_privacy_data">Privacy &amp; Data</string>
     <string name="settings_caller_id_spam">Caller ID &amp; Spam</string>
-    <string name="toast_caller_id_protection_active">Caller ID protection is active</string>
+    <string name="enable_caller_id_spam_protection">Enable Caller ID &amp; Spam Protection</string>
+    <string name="caller_id_spam_protection_desc">Automatically flags unknown numbers with frequent short calls as spam in Recents. Numbers you report manually are always blocked, regardless of this setting.</string>
     <string name="settings_blocking">Blocking</string>
     <string name="recycle_bin_title">Recycle Bin</string>
     <string name="settings_section_other">Other</string>
     <string name="settings_rate_us">Rate Us</string>
     <string name="settings_share_app">Share App</string>
-    <string name="share_app_message">Check out this Contact App!</string>
+    <string name="share_app_message">Check out this Contact App! Give it a try: %1$s</string>
     <string name="share_via">Share via</string>
     <string name="settings_feedback">Feedback</string>
     <string name="email_subject_app_feedback">App Feedback</string>
@@ -468,6 +438,9 @@
     <string name="copy_number">Copy number</string>
     <string name="unblock_number">Unblock number</string>
     <string name="block_or_report">Block or report</string>
+    <string name="after_call_contact">Contact</string>
+    <string name="after_call_quick_message">Quick Message</string>
+    <string name="after_call_recent_call">Recent Call</string>
     <string name="brightness_label">Brightness</string>
     <string name="qr_code_label">QR Code</string>
     <string name="share_history_chooser_title">Share History</string>

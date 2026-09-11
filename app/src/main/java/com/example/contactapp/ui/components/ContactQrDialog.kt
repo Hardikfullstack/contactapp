@@ -144,7 +144,7 @@ fun ContactQrDialog(
                     onClick = onDismiss,
                     modifier = Modifier.padding(top = 8.dp)
                 ) {
-                    Text(text = "CLOSE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                    Text(text = stringResource(R.string.close).uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
             }
         }

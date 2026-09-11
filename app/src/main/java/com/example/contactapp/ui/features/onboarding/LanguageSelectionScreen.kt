@@ -177,8 +177,15 @@ fun LanguageSelectionScreen(
                             )
                             onDone()
                             if (!isFirstRun) {
-                                // Delay recreate slightly so navigation completes and locale async save finishes
+                                // setApplicationLocales() above already triggers its own automatic
+                                // recreate almost immediately, which consumes skipNextSplash (resets
+                                // it to false) right then. Without setting it again here, this
+                                // second, manual recreate — needed so navigation finishes and the
+                                // locale's async save completes before Settings re-renders — would
+                                // find the flag already spent and show the splash screen a second
+                                // time right after the first recreate already skipped it correctly.
                                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    LocaleChangeState.skipNextSplash = true
                                     activity?.recreate()
                                 }, 250)
                             }

@@ -2,6 +2,7 @@ package com.example.contactapp.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.appcompat.app.AppCompatDelegate
 import kotlinx.coroutines.flow.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -42,6 +43,22 @@ class PreferenceManager @Inject constructor(
         _preferenceUpdateEvent.value = System.currentTimeMillis()
     }
 
+    /** Set right after the basic runtime-permissions step (Contacts/Call/SMS/default-dialer) —
+     * well before [isOnboardingCompleted], which only flips once the whole flow (including the
+     * MIUI-specific steps and Language) finishes. Lets MainActivity tell "never started onboarding"
+     * apart from "started it, but got interrupted before finishing the MIUI-permission steps" —
+     * the latter should resume directly on those steps instead of restarting from scratch, and
+     * should also be re-checked (see CallReliabilityUtils) if a MIUI permission gets silently
+     * revoked from system Settings well after onboarding, same as the Messages app does. */
+    fun isBasicOnboardingCompleted(): Boolean {
+        return sharedPreferences.getBoolean(KEY_BASIC_ONBOARDING_COMPLETED, false)
+    }
+
+    fun setBasicOnboardingCompleted(completed: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_BASIC_ONBOARDING_COMPLETED, completed).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
     fun getContactSortOrder(): String {
         return sharedPreferences.getString(KEY_CONTACT_SORT_ORDER, "First Name") ?: "First Name"
     }
@@ -58,6 +75,27 @@ class PreferenceManager @Inject constructor(
     fun setAppTheme(theme: String) {
         sharedPreferences.edit().putString(KEY_APP_THEME, theme).apply()
         _preferenceUpdateEvent.value = System.currentTimeMillis()
+        applyNightMode(theme)
+    }
+
+    /** Syncs the OS-level night-mode resolution (AppCompatDelegate) with this app's own in-app
+     * Light/Dark/System theme choice — without this, values-night/ resources (e.g. themes.xml's
+     * native windowBackground, used for the brief pre-Compose frame during an Activity recreate)
+     * only ever follow the raw system setting, so forcing "Light" while the system is in dark
+     * mode (or "Dark" while the system is light) would still flash the WRONG native background —
+     * the opposite-direction version of the white-in-dark-mode bug this was added to fix. Call
+     * once at app startup (see ContactApplication.onCreate) and again from [setAppTheme] whenever
+     * it changes.
+     */
+    fun applyNightMode(theme: String = getAppTheme()) {
+        val mode = when (theme) {
+            "Dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            "Light" -> AppCompatDelegate.MODE_NIGHT_NO
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        if (AppCompatDelegate.getDefaultNightMode() != mode) {
+            AppCompatDelegate.setDefaultNightMode(mode)
+        }
     }
 
     fun isCallAnnouncerEnabled(): Boolean {
@@ -164,6 +202,19 @@ class PreferenceManager @Inject constructor(
         _preferenceUpdateEvent.value = System.currentTimeMillis()
     }
 
+    /** Gates only the automatic pattern-detection half of spam flagging (SpamManager/SpamDetector)
+     * — manually reported numbers (see [getSpamNumbers]) still count as spam regardless, since
+     * that's a direct user action rather than automatic protection. Defaults to true, matching
+     * the always-on behavior this toggle is being added in front of. */
+    fun isCallerIdSpamProtectionEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_CALLER_ID_SPAM_PROTECTION_ENABLED, true)
+    }
+
+    fun setCallerIdSpamProtectionEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_CALLER_ID_SPAM_PROTECTION_ENABLED, enabled).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
     val spamNumbersFlow: Flow<Set<String>> = _preferenceUpdateEvent
         .map { getSpamNumbers() }
         .distinctUntilChanged()
@@ -244,6 +295,7 @@ class PreferenceManager @Inject constructor(
     companion object {
         private const val PREF_NAME = "contact_app_prefs"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        private const val KEY_BASIC_ONBOARDING_COMPLETED = "basic_onboarding_completed"
         private const val KEY_CONTACT_SORT_ORDER = "contact_sort_order"
         private const val KEY_APP_THEME = "app_theme"
         private const val KEY_CALL_ANNOUNCER_ENABLED = "call_announcer_enabled"
@@ -255,6 +307,7 @@ class PreferenceManager @Inject constructor(
         private const val KEY_CALL_BUTTON_SHAPE = "call_button_shape"
         private const val KEY_AUTO_REPLY_ENABLED = "auto_reply_enabled"
         private const val KEY_AUTO_REPLY_MESSAGE = "auto_reply_message"
+        private const val KEY_CALLER_ID_SPAM_PROTECTION_ENABLED = "caller_id_spam_protection_enabled"
         private const val DEFAULT_AUTO_REPLY_MESSAGE = "Can't talk right now, I'll call you back."
         private const val KEY_SPAM_NUMBERS = "spam_numbers"
         private const val KEY_CALL_REMINDERS = "call_reminders"

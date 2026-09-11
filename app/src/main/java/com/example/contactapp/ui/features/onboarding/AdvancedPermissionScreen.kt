@@ -1,6 +1,5 @@
 package com.example.contactapp.ui.features.onboarding
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -28,6 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.contactapp.R
+import com.example.contactapp.ads.AppOpenBackgroundReturnTrigger
 import com.example.contactapp.ui.components.animatedPulse
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.CallReliabilityUtils
@@ -46,16 +46,17 @@ fun AdvancedPermissionScreen(
     val context = LocalContext.current
     val prefs = remember { PreferenceManager(context.applicationContext) }
 
-    // MIUI quirk: canDrawOverlays() can falsely report true right after install, silently skipping
-    // the OVERLAY step — force it to show once on MIUI regardless, until the user's acted on it.
-    var hasForcedOverlayStep by remember { mutableStateOf(false) }
-
     fun computeNextStep(): PermissionStep {
         // Overlay is only forced during onboarding on MIUI — other OEMs skip straight through
         // here (the After Call flow still requests it later, on-demand, if it's ever needed).
         val isMiui = CallReliabilityUtils.isMiui()
         val canDrawOverlays = Settings.canDrawOverlays(context)
-        val forceOverlayOnMiui = isMiui && !hasForcedOverlayStep
+        // MIUI quirk: canDrawOverlays() can falsely report true right after install, silently
+        // skipping the OVERLAY step — force it to show once on MIUI regardless, until the user's
+        // acted on it. Persisted (not just remember{} state) so a kill+relaunch mid-step, or
+        // between onboarding sessions, doesn't forget it was already forced and force it again
+        // even after the permission was genuinely granted.
+        val forceOverlayOnMiui = isMiui && !prefs.isOverlayPermissionAutoPrompted()
         val step = if (isMiui && (!canDrawOverlays || forceOverlayOnMiui)) PermissionStep.OVERLAY
         else if (isMiui && !CallReliabilityUtils.isMiuiBackgroundPopupGranted(context)) PermissionStep.MIUI_PERMISSIONS
         else if (isMiui && !CallReliabilityUtils.isMiuiAutostartGranted(context)) PermissionStep.MIUI_AUTOSTART
@@ -137,19 +138,18 @@ fun AdvancedPermissionScreen(
 
     LaunchedEffect(Unit) {
         if (CallReliabilityUtils.isMiui() && !Settings.canDrawOverlays(context) && !prefs.isOverlayPermissionAutoPrompted()) {
-            prefs.setOverlayPermissionAutoPrompted()
             // Marks the MIUI force-recheck (see computeNextStep) as satisfied too — this auto-prompt
             // IS the forced OVERLAY step, so without setting this here the step kept recomputing to
-            // OVERLAY forever even after the user actually granted the permission, since this flag
-            // was previously only ever set from the manual onPermissionActionClick tap handler.
-            hasForcedOverlayStep = true
+            // OVERLAY forever even after the user actually granted the permission.
+            prefs.setOverlayPermissionAutoPrompted()
+            AppOpenBackgroundReturnTrigger.isAdPaused = true
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${context.packageName}")
             )
             overlayLauncher.launch(intent)
             startAutoReturnPolling()
-        } else if (!CallReliabilityUtils.isMiui() || hasForcedOverlayStep) {
+        } else if (!CallReliabilityUtils.isMiui() || prefs.isOverlayPermissionAutoPrompted()) {
             // Don't auto-advance past a force-shown OVERLAY step just because the API already
             // (possibly falsely) reports true — let the user tap through onPermissionActionClick.
             checkNextStepAfterOverlay()
@@ -194,7 +194,13 @@ fun AdvancedPermissionScreen(
                 PermissionStep.OVERLAY -> {
                     // Always open Settings here regardless of what canDrawOverlays() claims —
                     // trusting it (which can lie "true" on MIUI) is what used to skip this step.
-                    hasForcedOverlayStep = true
+                    prefs.setOverlayPermissionAutoPrompted()
+                    // Bouncing to system Settings and back would otherwise count as an app-switch
+                    // return and trigger an App Open ad — this can happen even outside the very
+                    // first onboarding run now (e.g. a returning user re-granting a permission
+                    // that got revoked later), where AppOpenBackgroundReturnTrigger's own
+                    // "onboarding not completed" guard no longer applies.
+                    AppOpenBackgroundReturnTrigger.isAdPaused = true
                     val intent = Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:${context.packageName}")
@@ -210,6 +216,7 @@ fun AdvancedPermissionScreen(
                             "com.miui.permcenter.permissions.PermissionsEditorActivity"
                         )
                         intent.putExtra("extra_pkgname", context.packageName)
+                        AppOpenBackgroundReturnTrigger.isAdPaused = true
                         miuiPermissionsLauncher.launch(intent)
                     } catch (e: Exception) {
                         prefs.setMiuiPermissionsCompleted()
@@ -223,6 +230,7 @@ fun AdvancedPermissionScreen(
                             "com.miui.securitycenter",
                             "com.miui.permcenter.autostart.AutoStartManagementActivity"
                         )
+                        AppOpenBackgroundReturnTrigger.isAdPaused = true
                         miuiAutoStartLauncher.launch(intent)
                     } catch (e: Exception) {
                         prefs.setMiuiAutostartCompleted()
@@ -230,6 +238,7 @@ fun AdvancedPermissionScreen(
                     }
                 }
                 PermissionStep.ONEPLUS_AUTOSTART -> {
+                    AppOpenBackgroundReturnTrigger.isAdPaused = true
                     val launched = CallReliabilityUtils.launchAutoStartSettings(context)
                     if (!launched) {
                         try {
@@ -301,10 +310,10 @@ fun AdvancedPermissionScreen(
                     if (isGenericExtraStep) {
                         Image(
                             painter = painterResource(
-                                id = if (currentStep == PermissionStep.MIUI_PERMISSIONS) {
-                                    R.drawable.display_pop_up_main
-                                } else {
-                                    R.drawable.auto_start_main
+                                id = when (currentStep) {
+                                    PermissionStep.MIUI_PERMISSIONS -> R.drawable.display_pop_up_main
+                                    PermissionStep.MIUI_AUTOSTART, PermissionStep.ONEPLUS_AUTOSTART -> R.drawable.auto_start_main
+                                    else -> R.drawable.allow_display_over_other_apps_main
                                 }
                             ),
                             contentDescription = null,

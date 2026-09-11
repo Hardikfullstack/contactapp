@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,6 +57,20 @@ fun BannerAdView(
         }
     }
 
+    // Retries a failed load once connectivity comes back — without this, a load that failed
+    // while offline just sits failed (collapsed) forever, since AndroidView's factory only runs
+    // once per composable lifetime on its own. Wrapping AndroidView in key(retryGeneration) below
+    // forces Compose to discard and recreate its underlying AdView when this bumps.
+    var retryGeneration by remember(adUnitId) { mutableStateOf(0) }
+    val reconnectTick by AdConnectivityRetry.tick.collectAsState()
+    LaunchedEffect(reconnectTick) {
+        if (hasFailed) {
+            hasFailed = false
+            isLoaded = false
+            retryGeneration++
+        }
+    }
+
     LaunchedEffect(adSize, hasFailed) {
         // Collapses back to 0 on failure so callers reserving space above this banner (e.g. a
         // FAB) don't leave a permanent gap for an ad that never showed.
@@ -65,40 +81,44 @@ fun BannerAdView(
     if (hasFailed) return
 
     Box(modifier = modifier.fillMaxWidth()) {
-        AndroidView(
-            modifier = Modifier.fillMaxWidth(),
-            factory = { ctx ->
-                // Reuses the preloaded AdView as-is (same ad unit id/size it was created with) if
-                // one's cached; otherwise creates+loads a fresh one exactly as before.
-                (cachedAdView ?: AdView(ctx).apply {
-                    this.adUnitId = adUnitId
-                    setAdSize(adSize)
-                }).apply {
-                    // Overwrites BannerAdCache's own bookkeeping listener (if this came from
-                    // there) — this composable's isLoaded/hasFailed need the callback from here on.
-                    adListener = object : AdListener() {
-                        override fun onAdLoaded() {
-                            isLoaded = true
-                            AnalyticsManager.logAdEvent("banner", adUnitId, "loaded")
-                        }
+        key(retryGeneration) {
+            AndroidView(
+                modifier = Modifier.fillMaxWidth(),
+                factory = { ctx ->
+                    // Reuses the preloaded AdView as-is (same ad unit id/size it was created with)
+                    // only on the very first attempt — a retry (retryGeneration > 0) means the
+                    // original cachedAdView already failed once, so always create a fresh one then.
+                    val reusable = if (retryGeneration == 0) cachedAdView else null
+                    (reusable ?: AdView(ctx).apply {
+                        this.adUnitId = adUnitId
+                        setAdSize(adSize)
+                    }).apply {
+                        // Overwrites BannerAdCache's own bookkeeping listener (if this came from
+                        // there) — this composable's isLoaded/hasFailed need the callback from here on.
+                        adListener = object : AdListener() {
+                            override fun onAdLoaded() {
+                                isLoaded = true
+                                AnalyticsManager.logAdEvent("banner", adUnitId, "loaded")
+                            }
 
-                        override fun onAdFailedToLoad(error: LoadAdError) {
-                            hasFailed = true
-                            AnalyticsManager.logAdEvent("banner", adUnitId, "failed_to_load")
-                        }
+                            override fun onAdFailedToLoad(error: LoadAdError) {
+                                hasFailed = true
+                                AnalyticsManager.logAdEvent("banner", adUnitId, "failed_to_load")
+                            }
 
-                        override fun onAdClicked() {
-                            AnalyticsManager.logAdEvent("banner", adUnitId, "clicked")
+                            override fun onAdClicked() {
+                                AnalyticsManager.logAdEvent("banner", adUnitId, "clicked")
+                            }
+                        }
+                        if (reusable == null) {
+                            AnalyticsManager.logAdEvent("banner", adUnitId, "request")
+                            loadAd(AdRequest.Builder().build())
                         }
                     }
-                    if (cachedAdView == null) {
-                        AnalyticsManager.logAdEvent("banner", adUnitId, "request")
-                        loadAd(AdRequest.Builder().build())
-                    }
-                }
-            },
-            onRelease = { it.destroy() }
-        )
+                },
+                onRelease = { it.destroy() }
+            )
+        }
 
         if (!isLoaded) {
             Box(

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Dark counterpart of values/themes.xml's Theme.ContactApp — same style name, so this
+         simply overrides windowBackground for the system-dark case. Matches this app's own
+         DarkBackground (see Color.kt), not AppCompat's generic dark default, so the brief native
+         frame during an Activity recreate() (e.g. right after a language change) shows this app's
+         actual dark background instead of a visibly different generic gray. -->
+    <style name="Theme.ContactApp" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">#FF121412</item>
+    </style>
+</resources>

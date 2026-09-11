@@ -1,5 +1,6 @@
 package com.example.contactapp.ui.features.settings
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,8 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.NativeOrBannerAdView
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.getAvatarColor
+import com.example.contactapp.viewmodel.AppConfigViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +40,28 @@ fun RecycleBinScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    val context = LocalContext.current
+    val appConfigViewModel: AppConfigViewModel = androidx.lifecycle.viewmodel.compose.viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val bannerAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.banner_10_on_off == "on") {
+            result.banner_10?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_15 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_10 above only if it fails to load.
+    val nativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_15_on_off == "on") {
+            result.native_15?.takeIf { it.isNotBlank() }
+        } else null
+    }
+
     Scaffold(
+        bottomBar = {
+            if (nativeAdUnitId != null || bannerAdUnitId != null) {
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -74,11 +99,11 @@ fun RecycleBinScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (uiState.deletedContacts.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         imageVector = Icons.Default.DeleteOutline,

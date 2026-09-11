@@ -1,5 +1,6 @@
 package com.example.contactapp.ui.features.settings
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -22,8 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.NativeOrBannerAdView
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.util.getAvatarColor
+import com.example.contactapp.viewmodel.AppConfigViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +38,28 @@ fun BlockedNumbersScreen(
     val uiState by viewModel.uiState.collectAsState()
     var pendingUnblock by remember { mutableStateOf<Contact?>(null) }
 
+    val context = LocalContext.current
+    val appConfigViewModel: AppConfigViewModel = androidx.lifecycle.viewmodel.compose.viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val bannerAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.banner_7_on_off == "on") {
+            result.banner_7?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_12 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_7 above only if it fails to load.
+    val nativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_12_on_off == "on") {
+            result.native_12?.takeIf { it.isNotBlank() }
+        } else null
+    }
+
     Scaffold(
+        bottomBar = {
+            if (nativeAdUnitId != null || bannerAdUnitId != null) {
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.blocked_numbers), fontWeight = FontWeight.Bold) },
@@ -57,11 +82,11 @@ fun BlockedNumbersScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (uiState.blockedContacts.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 Text(text = stringResource(R.string.no_blocked_numbers), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
@@ -138,53 +163,33 @@ fun BlockedNumbersScreen(
 
     val contactToUnblock = pendingUnblock
     if (contactToUnblock != null) {
-        ModalBottomSheet(
+        AlertDialog(
             onDismissRequest = { pendingUnblock = null },
-            dragHandle = null,
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(top = 20.dp, bottom = 12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.unblock_number),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.unblock_confirmation),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { pendingUnblock = null },
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        shape = RoundedCornerShape(26.dp)
-                    ) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                    Button(
-                        onClick = {
-                            viewModel.unblockNumber(contactToUnblock.number)
-                            pendingUnblock = null
-                        },
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        shape = RoundedCornerShape(26.dp)
-                    ) {
-                        Text(stringResource(R.string.unblock))
-                    }
+            title = {
+                Text(text = stringResource(R.string.unblock_number), fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(text = stringResource(R.string.unblock_confirmation))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.unblockNumber(contactToUnblock.number)
+                    pendingUnblock = null
+                }) {
+                    Text(
+                        text = stringResource(R.string.unblock).uppercase(),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-            }
-        }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingUnblock = null }) {
+                    Text(text = stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(28.dp)
+        )
     }
 }

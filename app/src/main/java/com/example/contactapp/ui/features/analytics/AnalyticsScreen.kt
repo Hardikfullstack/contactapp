@@ -38,7 +38,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
-import com.example.contactapp.ads.BannerAdView
+import com.example.contactapp.ads.NativeOrBannerAdView
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.ContactAvatarImage
 import com.example.contactapp.ui.components.HeaderActionButton
@@ -71,12 +71,19 @@ fun AnalyticsScreen(
             result.banner_3?.takeIf { it.isNotBlank() }
         } else null
     }
+    // native_8 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_3 above only if it fails to load.
+    val nativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_8_on_off == "on") {
+            result.native_8?.takeIf { it.isNotBlank() }
+        } else null
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (bannerAdUnitId != null) {
-                BannerAdView(adUnitId = bannerAdUnitId)
+            if (nativeAdUnitId != null || bannerAdUnitId != null) {
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
             }
         }
     ) { innerPadding ->

@@ -2,21 +2,34 @@ package com.example.contactapp
 
 import android.app.Application
 import android.util.Log
+import com.example.contactapp.ads.AdConnectivityRetry
 import com.example.contactapp.service.FakeCallConnectionService
 import com.example.contactapp.util.AfterCallState
 import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.CrashlyticsManager
+import com.example.contactapp.util.PreferenceManager
 import com.google.android.gms.ads.MobileAds
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 @HiltAndroidApp
 class ContactApplication : Application() {
+
+    @Inject
+    lateinit var preferenceManager: PreferenceManager
+
     override fun onCreate() {
         super.onCreate()
         Log.d("FakeCallDebug", "ContactApplication.onCreate: process started")
         AnalyticsManager.init()
         CrashlyticsManager.init()
         AfterCallState.applyPersistedMode(this)
+        // As early as possible — the OS-level night-mode resolution (values-night/ resources,
+        // including themes.xml's native windowBackground) needs to match this app's own in-app
+        // Light/Dark/System theme choice from the very first frame, not just once Compose gets to
+        // run ContactAppTheme moments later.
+        preferenceManager.applyNightMode()
+        AdConnectivityRetry.start(this)
 
         // Off the main thread — MobileAds.initialize() does blocking I/O internally.
         Thread { MobileAds.initialize(this) }.start()

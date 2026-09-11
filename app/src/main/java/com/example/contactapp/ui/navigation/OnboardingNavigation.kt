@@ -17,6 +17,7 @@ sealed class OnboardingScreen(val route: String) {
 
 @Composable
 fun OnboardingNavHost(
+    onBasicPermissionsGranted: () -> Unit = {},
     onOnboardingComplete: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -28,6 +29,7 @@ fun OnboardingNavHost(
         composable(OnboardingScreen.Permission.route) {
             PermissionScreen(
                 onContinue = {
+                    onBasicPermissionsGranted()
                     navController.navigate(OnboardingScreen.AdvancedPermission.route)
                 }
             )

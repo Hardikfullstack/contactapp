@@ -37,9 +37,9 @@ fun SettingsItem(
             tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(24.dp)
         )
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge.copy(

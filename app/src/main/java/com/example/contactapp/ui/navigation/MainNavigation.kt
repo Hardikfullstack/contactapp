@@ -1,6 +1,8 @@
 package com.example.contactapp.ui.navigation
 
+import android.app.Activity
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -40,6 +42,9 @@ import com.example.contactapp.ui.features.keypad.KeypadScreen
 import com.example.contactapp.ui.features.settings.SettingsScreen
 import com.example.contactapp.ui.features.settings.BlockedNumbersScreen
 import com.example.contactapp.ui.features.settings.RecycleBinScreen
+import com.example.contactapp.ui.features.settings.CallerIdSpamScreen
+import com.example.contactapp.ui.features.settings.AboutUsScreen
+import com.example.contactapp.ui.features.settings.LegalWebViewScreen
 import com.example.contactapp.ui.features.tools.ToolsScreen
 import com.example.contactapp.ui.features.analytics.AnalyticsScreen
 import com.example.contactapp.ui.features.announcer.CallAnnouncerScreen
@@ -52,7 +57,10 @@ import com.example.contactapp.ui.features.fakecall.FakeCallSetupScreen
 import com.example.contactapp.ui.features.callreminder.CallReminderScreen
 import com.example.contactapp.ui.features.callreminder.CallReminderSetupScreen
 import com.example.contactapp.ui.features.onboarding.LanguageSelectionScreen
-import com.example.contactapp.ads.BannerAdView
+import com.example.contactapp.ads.NativeOrBannerAdView
+import com.example.contactapp.ui.components.dialogs.ExitConfirmationDialog
+import com.example.contactapp.ui.components.dialogs.MaintenanceDialog
+import com.example.contactapp.ui.components.dialogs.OfflineDialog
 import com.example.contactapp.ui.components.CommonBottomBar
 import com.example.contactapp.ui.components.BottomBarActionItem
 import com.example.contactapp.util.AnalyticsManager
@@ -76,6 +84,12 @@ sealed class MainScreen(
         fun createRoute(name: String, number: String) = "history/$name/$number"
     }
     object BlockedNumbers : MainScreen("blocked_numbers")
+    object CallerIdSpam : MainScreen("caller_id_spam")
+    object AboutUs : MainScreen("about_us")
+    object LegalWebView : MainScreen("legal_webview/{type}") {
+        /** [type] is "privacy" or "terms" — resolves which remote-config URL to load. */
+        fun createRoute(type: String) = "legal_webview/$type"
+    }
     object RecycleBin : MainScreen("recycle_bin")
     object Language : MainScreen("language_settings")
     object Analytics : MainScreen("analytics")
@@ -150,11 +164,68 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    LaunchedEffect(isDefaultDialerState, currentDestination) {
+        if (!isDefaultDialerState && currentDestination != null && currentDestination?.route != MainScreen.Recents.route) {
+            navController.navigate(MainScreen.Recents.route) {
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
     val adConfig by appConfigViewModel.appResponse.collectAsState()
     val bannerAdUnitId = adConfig?.result?.let { result ->
         if (result.google_ads_on_off == "on" && result.banner_1_on_off == "on") {
             result.banner_1?.takeIf { it.isNotBlank() }
         } else null
+    }
+    // native_6 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_1 above only if it fails to load. Every other banner-only placement (History,
+    // Analytics, Flash Alert, etc.) now has its own dedicated native ID instead of sharing this one.
+    val bottomNativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_6_on_off == "on") {
+            result.native_6?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_3 is unused elsewhere (native_1 = Language, native_2 = Recents, native_4/5 = After Call).
+    val exitNativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_3_on_off == "on") {
+            result.native_3?.takeIf { it.isNotBlank() }
+        } else null
+    }
+
+    var showExitDialog by remember { mutableStateOf(false) }
+    val activity = context as? Activity
+    val isOnline by appConfigViewModel.isOnline.collectAsState()
+
+    BackHandler(enabled = showBottomBar) {
+        if (isOnline) {
+            showExitDialog = true
+        } else {
+            activity?.finish()
+        }
+    }
+
+    if (showExitDialog) {
+        ExitConfirmationDialog(
+            nativeAdUnitId = exitNativeAdUnitId,
+            onExitClick = { activity?.finish() },
+            onDismiss = { showExitDialog = false }
+        )
+    }
+
+    val isMaintenanceOn = adConfig?.result?.extra_data_1_on_off == "on"
+    if (isMaintenanceOn) {
+        MaintenanceDialog(message = adConfig?.result?.extra_data_1_message)
+    }
+
+    // Re-shown every time connectivity drops (not just once per app session) — resets the
+    // acknowledgement as soon as it's back online so a later drop isn't silently ignored.
+    var offlineDialogDismissed by remember { mutableStateOf(false) }
+    LaunchedEffect(isOnline) {
+        if (isOnline) offlineDialogDismissed = false
+    }
+    if (!isMaintenanceOn && !isOnline && !offlineDialogDismissed) {
+        OfflineDialog(onDismiss = { offlineDialogDismissed = true })
     }
 
     Scaffold(
@@ -185,8 +256,8 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
                 }
                 Column(modifier = Modifier.navigationBarsPadding()) {
                     CommonBottomBar(items = items, windowInsets = WindowInsets(0.dp), enabled = isDefaultDialerState)
-                    if (bannerAdUnitId != null) {
-                        BannerAdView(adUnitId = bannerAdUnitId)
+                    if (bottomNativeAdUnitId != null || bannerAdUnitId != null) {
+                        NativeOrBannerAdView(nativeAdUnitId = bottomNativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
                     }
                 }
             }
@@ -264,12 +335,32 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
                 SettingsScreen(
                     onBlockedNumbersClick = { navController.navigate(MainScreen.BlockedNumbers.route) },
                     onLanguageClick = { navController.navigate(MainScreen.Language.route) },
-                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) }
+                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) },
+                    onCallerIdSpamClick = { navController.navigate(MainScreen.CallerIdSpam.route) },
+                    onAboutUsClick = { navController.navigate(MainScreen.AboutUs.route) }
                 )
             }
             composable(MainScreen.BlockedNumbers.route) {
                 BlockedNumbersScreen(
                     onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.CallerIdSpam.route) {
+                CallerIdSpamScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.AboutUs.route) {
+                AboutUsScreen(
+                    onBack = { navController.popBackStack() },
+                    onPrivacyPolicyClick = { navController.navigate(MainScreen.LegalWebView.createRoute("privacy")) },
+                    onTermsClick = { navController.navigate(MainScreen.LegalWebView.createRoute("terms")) }
+                )
+            }
+            composable(MainScreen.LegalWebView.route) { backStackEntry ->
+                LegalWebViewScreen(
+                    onBack = { navController.popBackStack() },
+                    type = backStackEntry.arguments?.getString("type") ?: "privacy"
                 )
             }
             composable(MainScreen.RecycleBin.route) {

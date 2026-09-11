@@ -52,6 +52,16 @@ class AfterCallReceiver : BroadcastReceiver() {
         if (intent.action != TelephonyManager.ACTION_PHONE_STATE_CHANGED) return
 
         val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE) ?: return
+
+        // Starts loading After Call's native ad as early as the call's RINGING/OFFHOOK state —
+        // not at call-end — so it has the whole call's duration as a head start instead of just
+        // the ~2s settle delay between call-end and AfterCallActivity actually showing. Safe to
+        // call multiple times per call (RINGING, then OFFHOOK, then again at IDLE below):
+        // NativeAdCache.preload() self-guards against a duplicate in-flight/already-cached load.
+        if (state == TelephonyManager.EXTRA_STATE_RINGING || state == TelephonyManager.EXTRA_STATE_OFFHOOK) {
+            preloadAfterCallNativeAds(context)
+        }
+
         val wasActive = lastState == TelephonyManager.EXTRA_STATE_RINGING || lastState == TelephonyManager.EXTRA_STATE_OFFHOOK
         lastState = state
 
@@ -88,12 +98,7 @@ class AfterCallReceiver : BroadcastReceiver() {
 
         val appContext = context.applicationContext
 
-        val cachedResult = AppConfigViewModel.readCachedResult(appContext)
-        if (cachedResult?.google_ads_on_off == "on" && cachedResult.native_2_on_off == "on") {
-            cachedResult.native_2?.takeIf { it.isNotBlank() }?.let {
-                NativeAdCache.preload(appContext, it)
-            }
-        }
+        preloadAfterCallNativeAds(appContext)
 
         val pendingResult = goAsync()
 
@@ -160,6 +165,28 @@ class AfterCallReceiver : BroadcastReceiver() {
                 e.printStackTrace()
             } finally {
                 pendingResult.finish()
+            }
+        }
+    }
+
+    /** Preloads After Call's native ad (primary native_4 + fallback native_5, in parallel) —
+     * called both as early as the call's RINGING/OFFHOOK state and again at call-end, since
+     * NativeAdCache.preload() self-guards against a duplicate in-flight/already-cached load.
+     * Fallback (native_5) preloaded in parallel with the primary, not only after it fails —
+     * matches AfterCallScreen's own primary/fallback failover, which needs native_5 ready to
+     * switch to immediately rather than starting its load only once native_4 has already failed. */
+    private fun preloadAfterCallNativeAds(context: Context) {
+        val appContext = context.applicationContext
+        val cachedResult = AppConfigViewModel.readCachedResult(appContext) ?: return
+        if (cachedResult.google_ads_on_off != "on") return
+        if (cachedResult.native_4_on_off == "on") {
+            cachedResult.native_4?.takeIf { it.isNotBlank() }?.let {
+                NativeAdCache.preload(appContext, it)
+            }
+        }
+        if (cachedResult.native_5_on_off == "on") {
+            cachedResult.native_5?.takeIf { it.isNotBlank() }?.let {
+                NativeAdCache.preload(appContext, it)
             }
         }
     }

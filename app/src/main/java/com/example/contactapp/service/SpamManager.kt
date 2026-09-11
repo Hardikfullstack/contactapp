@@ -38,12 +38,15 @@ class SpamManager @Inject constructor(
             return@withContext SpamStatus.CONTACT
         }
 
-        // 3. Automatic Pattern Detection
-        // Note: For real-time check, we'd ideally have an index, but history scan is fine for now.
-        val logs = callLogRepository.fetchCallLogsForAnalytics()
-        val detectedSpam = SpamDetector.detectSpamNumbers(logs)
-        if (detectedSpam.contains(cleanNumber)) {
-            return@withContext SpamStatus.DETECTED_SPAM
+        // 3. Automatic Pattern Detection — only when Caller ID & Spam protection is on
+        // (Settings > Privacy & Data); manual reports above still apply regardless.
+        if (preferenceManager.isCallerIdSpamProtectionEnabled()) {
+            // Note: For real-time check, we'd ideally have an index, but history scan is fine for now.
+            val logs = callLogRepository.fetchCallLogsForAnalytics()
+            val detectedSpam = SpamDetector.detectSpamNumbers(logs)
+            if (detectedSpam.contains(cleanNumber)) {
+                return@withContext SpamStatus.DETECTED_SPAM
+            }
         }
 
         SpamStatus.NONE

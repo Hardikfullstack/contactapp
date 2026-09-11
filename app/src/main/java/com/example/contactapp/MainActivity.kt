@@ -3,6 +3,7 @@ package com.example.contactapp
 import android.Manifest
 import android.app.role.RoleManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
@@ -24,11 +25,15 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.ads.AppOpenBackgroundReturnTrigger
+import com.example.contactapp.ui.features.onboarding.AdvancedPermissionScreen
+import com.example.contactapp.ui.features.onboarding.LanguageSelectionScreen
 import com.example.contactapp.ui.features.splash.SplashScreen
 import com.example.contactapp.ui.navigation.MainNavigation
 import com.example.contactapp.ui.navigation.OnboardingNavHost
 import com.example.contactapp.ui.theme.ContactAppTheme
 import com.example.contactapp.util.AnalyticsManager
+import com.example.contactapp.util.CallReliabilityUtils
+import com.example.contactapp.util.InAppUpdateResult
 import com.example.contactapp.util.LocaleChangeState
 import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.viewmodel.AppConfigViewModel
@@ -45,6 +50,19 @@ class MainActivity : AppCompatActivity() {
         val config = Configuration(newBase.resources.configuration)
         config.fontScale = config.fontScale.coerceAtMost(1.2f)
         super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
+
+    // Play Core's IMMEDIATE in-app-update flow (RecentsScreen.kt) is launched the classic
+    // startActivityForResult way, not via the newer Activity Result API — a Composable can't
+    // override onActivityResult itself, so the outcome is forwarded through a small shared object
+    // for whichever screen wants to react to it (currently: just logging it, see
+    // InAppUpdateResult's doc comment for why nothing more than that is needed right now).
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == InAppUpdateResult.REQUEST_CODE) {
+            InAppUpdateResult.pendingResultCode = resultCode
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,7 +106,14 @@ class MainActivity : AppCompatActivity() {
             var isOnboardingCompleted by remember {
                 mutableStateOf(preferenceManager.isOnboardingCompleted() && hasRequiredPermissions())
             }
-            // Re-verify on every resume — the check above only runs at cold start, so a permission
+            // Live-checked, not a one-time flag — true whenever the basic onboarding step is done
+            // (so this isn't a brand-new user) but a MIUI-forced permission is currently missing,
+            // whether that's because onboarding got interrupted before granting it, or because it
+            // was silently revoked from system Settings well after onboarding finished.
+            var needsMiuiPermissions by remember {
+                mutableStateOf(preferenceManager.isBasicOnboardingCompleted() && !hasMiuiPermissionsGranted())
+            }
+            // Re-verify on every resume — the checks above only run at cold start, so a permission
             // revoked while backgrounded would otherwise go unnoticed and strand the user on MainNavigation.
             val lifecycleOwner = LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
@@ -96,6 +121,9 @@ class MainActivity : AppCompatActivity() {
                     if (event == Lifecycle.Event.ON_RESUME) {
                         if (isOnboardingCompleted && !hasRequiredPermissions()) {
                             isOnboardingCompleted = false
+                        }
+                        if (preferenceManager.isBasicOnboardingCompleted()) {
+                            needsMiuiPermissions = !hasMiuiPermissionsGranted()
                         }
                         // Can change while backgrounded (role granted/revoked from system Settings).
                         AnalyticsManager.setUserProperty("is_default_dialer", if (isDefaultDialer()) "yes" else "no")
@@ -128,8 +156,14 @@ class MainActivity : AppCompatActivity() {
 
             val insetsController = remember { WindowCompat.getInsetsController(window, window.decorView) }
             SideEffect {
-                insetsController.isAppearanceLightStatusBars = !isDarkTheme
-                insetsController.isAppearanceLightNavigationBars = !isDarkTheme
+                // SplashScreen owns this itself while it's showing (its branding-animation state
+                // forces a white background regardless of theme, so it needs dark icons there
+                // even in dark mode) — applying the plain theme-based rule here too would
+                // immediately fight that and flip icons back to (invisible) light ones.
+                if (!showSplash) {
+                    insetsController.isAppearanceLightStatusBars = !isDarkTheme
+                    insetsController.isAppearanceLightNavigationBars = !isDarkTheme
+                }
             }
 
             // Bottom (gesture/nav) bar stays hidden throughout the app, not just during splash —
@@ -146,14 +180,33 @@ class MainActivity : AppCompatActivity() {
                         isFullySetUp = isOnboardingCompleted,
                         onTimeout = { showSplash = false }
                     )
+                } else if (needsMiuiPermissions) {
+                    // Resumes directly on the MIUI-permission steps — covers both onboarding
+                    // having been interrupted before granting them, and them getting silently
+                    // revoked from system Settings well after onboarding finished.
+                    AdvancedPermissionScreen(
+                        onAllPermissionsGranted = { needsMiuiPermissions = false }
+                    )
                 } else if (isOnboardingCompleted) {
                     MainNavigation(preferenceManager = preferenceManager, startTab = startTab)
-                } else {
+                } else if (!preferenceManager.isBasicOnboardingCompleted()) {
                     OnboardingNavHost(
+                        onBasicPermissionsGranted = { preferenceManager.setBasicOnboardingCompleted(true) },
                         onOnboardingComplete = {
                             preferenceManager.setOnboardingCompleted(true)
                             isOnboardingCompleted = true
                         }
+                    )
+                } else {
+                    // Basic onboarding and MIUI permissions are both done — only Language is left
+                    // (e.g. onboarding got interrupted right after the MIUI steps, before Language).
+                    LanguageSelectionScreen(
+                        onDone = {
+                            AnalyticsManager.logEventWithAction("onboarding_completed", "MainActivity", "finished")
+                            preferenceManager.setOnboardingCompleted(true)
+                            isOnboardingCompleted = true
+                        },
+                        isFirstRun = true
                     )
                 }
             }
@@ -177,6 +230,14 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
         val roleManager = getSystemService(RoleManager::class.java)
         return roleManager?.isRoleHeld(RoleManager.ROLE_DIALER) == true
+    }
+
+    // Live-checked (not a one-time flag) — MIUI's overlay/autostart permissions can be silently
+    // revoked from system Settings well after onboarding finished, same as the Messages app's own
+    // SetupState.isFullySetUp() re-check. Non-MIUI devices never force these, so they always pass.
+    private fun hasMiuiPermissionsGranted(): Boolean {
+        return !CallReliabilityUtils.isMiui() ||
+            (android.provider.Settings.canDrawOverlays(this) && CallReliabilityUtils.isMiuiAutostartGranted(this))
     }
 }
 

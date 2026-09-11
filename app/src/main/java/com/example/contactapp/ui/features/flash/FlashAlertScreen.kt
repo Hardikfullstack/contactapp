@@ -28,7 +28,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
-import com.example.contactapp.ads.BannerAdView
+import com.example.contactapp.ads.NativeOrBannerAdView
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
@@ -52,6 +52,13 @@ fun FlashAlertScreen(
     val bannerAdUnitId = adConfig?.result?.let { result ->
         if (result.google_ads_on_off == "on" && result.banner_4_on_off == "on") {
             result.banner_4?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_9 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_4 above only if it fails to load.
+    val nativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_9_on_off == "on") {
+            result.native_9?.takeIf { it.isNotBlank() }
         } else null
     }
 
@@ -89,8 +96,8 @@ fun FlashAlertScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (bannerAdUnitId != null) {
-                BannerAdView(adUnitId = bannerAdUnitId)
+            if (nativeAdUnitId != null || bannerAdUnitId != null) {
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
             }
         }
     ) { innerPadding ->
