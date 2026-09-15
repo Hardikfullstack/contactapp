@@ -32,6 +32,7 @@ import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.util.WallpaperSelection
 import com.example.contactapp.util.isDarkOnCallScreen
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
 
@@ -134,10 +135,6 @@ class InCallActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // The incoming-call notification is a fallback for when the direct launch gets blocked
-        // (OEM restrictions) — reaching onCreate() means it worked, so cancel the now-redundant one.
-        callNotificationManager.cancelNotification()
-
         // Show over lock screen
         window.addFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
@@ -159,6 +156,15 @@ class InCallActivity : ComponentActivity() {
                 // ringing the user needs to see the Answer/Decline UI, and on speaker/Bluetooth/
                 // wired-headset the phone isn't held to the face, so the screen should stay lit.
                 val nearEar = callState == Call.STATE_ACTIVE && audioState?.route == CallAudioState.ROUTE_EARPIECE
+                if (nearEar) {
+                    // A short grace period before handing screen control to the proximity sensor —
+                    // answering (from the notification or the on-screen button) puts a finger right
+                    // near the earpiece/sensor at the exact moment the call goes ACTIVE, which would
+                    // otherwise read as a false "near ear" and blank the screen the instant the user
+                    // answers. Cancelled automatically (LaunchedEffect restarts) if the state changes
+                    // again before this delay elapses — e.g. switching to speaker right away.
+                    delay(800L)
+                }
                 applyProximityState(nearEar)
             }
 

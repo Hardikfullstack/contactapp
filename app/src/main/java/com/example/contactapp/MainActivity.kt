@@ -232,12 +232,15 @@ class MainActivity : AppCompatActivity() {
         return roleManager?.isRoleHeld(RoleManager.ROLE_DIALER) == true
     }
 
-    // Live-checked (not a one-time flag) — MIUI's overlay/autostart permissions can be silently
-    // revoked from system Settings well after onboarding finished, same as the Messages app's own
-    // SetupState.isFullySetUp() re-check. Non-MIUI devices never force these, so they always pass.
+    // Live-checked (not a one-time flag) — MIUI's overlay/background-popup/autostart permissions
+    // can be silently revoked from system Settings well after onboarding finished, same as the
+    // Messages app's own SetupState.isFullySetUp() re-check. Non-MIUI devices never force these,
+    // so they always pass.
     private fun hasMiuiPermissionsGranted(): Boolean {
         return !CallReliabilityUtils.isMiui() ||
-            (android.provider.Settings.canDrawOverlays(this) && CallReliabilityUtils.isMiuiAutostartGranted(this))
+            (android.provider.Settings.canDrawOverlays(this) &&
+                CallReliabilityUtils.isMiuiBackgroundPopupGranted(this) &&
+                CallReliabilityUtils.isMiuiAutostartGranted(this))
     }
 }
 

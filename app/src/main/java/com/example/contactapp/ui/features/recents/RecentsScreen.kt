@@ -125,6 +125,9 @@ fun RecentsScreen(
         ActivityResultContracts.StartActivityForResult()
     ) { _ ->
         refreshDefaultDialerState()
+        AnalyticsManager.logEventWithAction(
+            "default_dialer_prompt", "RecentsScreen", if (isDefaultDialerState) "granted" else "denied"
+        )
         if (!isDefaultDialerState) {
             fallbackPermissionLauncher.launch(fallbackPermissions.toTypedArray())
         } else {
@@ -138,6 +141,7 @@ fun RecentsScreen(
     fun launchDefaultDialerRequest() {
         val roleManager = context.getSystemService(RoleManager::class.java)
         if (roleManager != null) {
+            AnalyticsManager.logEventWithAction("default_dialer_prompt", "RecentsScreen", "shown")
             defaultDialerRoleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER))
         }
     }

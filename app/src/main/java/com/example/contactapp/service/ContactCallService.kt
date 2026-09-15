@@ -4,13 +4,13 @@ import android.content.Intent
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
+import com.example.contactapp.R
 import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.ui.features.call.InCallActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -47,6 +47,12 @@ class ContactCallService : InCallService() {
     override fun onCallAudioStateChanged(audioState: CallAudioState) {
         super.onCallAudioStateChanged(audioState)
         CallManager.onAudioStateChanged(audioState)
+        // Keeps the notification's Mute/Speaker icons in sync — covers both a toggle tapped from
+        // the notification itself (whose own immediate refresh can race ahead of Telecom actually
+        // applying the change) and external route changes (e.g. a headset connecting).
+        if (CallManager.callState.value == Call.STATE_ACTIVE) {
+            callNotificationManager.refreshActiveCallNotification()
+        }
     }
 
     override fun onCallAdded(call: Call) {
@@ -73,35 +79,47 @@ class ContactCallService : InCallService() {
         // since Telecom doesn't consult this app's Contacts data on its own; a real lookup here
         // is what actually surfaces the saved name instead of silently falling back to the number.
         var resolvedDisplayName = call.details.callerDisplayName ?: number
+        var resolvedPhotoUri: String? = null
 
         // Trigger Call Announcer and Flash Alert for incoming calls — only for the primary call.
         // A second (call-waiting) call ringing in while already on a call gets Telecom's own
         // native call-waiting tone; re-triggering flash/TTS-announce on top of an ongoing call
-        // would just be disruptive, and the fallback notification below is meaningless too since
-        // InCallActivity is already visible in that situation.
+        // would just be disruptive.
         if (call.state == Call.STATE_RINGING && isFirstCall) {
             flashAlertManager.startBlinking()
 
             scope.launch {
-                val contactName = contactRepository.findContactByNumber(number)?.name
-                if (contactName != null) resolvedDisplayName = contactName
+                val contact = contactRepository.findContactByNumber(number)
+                if (contact?.name != null) resolvedDisplayName = contact.name
+                resolvedPhotoUri = contact?.photoUri
                 callAnnouncerManager.announceCall(resolvedDisplayName)
 
                 val spamStatus = spamManager.checkSpamStatus(number)
                 CallManager.setSpam(spamStatus.isSpam())
 
-                // A real fallback, not a redundant duplicate — this app's InCallService declares
-                // IN_CALL_SERVICE_UI, so startActivity() below is expected to reliably show the
-                // call screen. Only post the Answer/Decline notification if, after giving it a
-                // moment, that screen genuinely never came up (rare OEM restriction).
-                delay(1000L)
-                if (!InCallActivity.isVisible) {
-                    callNotificationManager.showIncomingCallNotification(
-                        resolvedDisplayName,
-                        number,
-                        spamStatus.isSpam()
-                    )
-                }
+                // Shown for every incoming call, not just as a fallback — matches the reference
+                // dialer app, whose own incoming-call notification has no "is the call screen
+                // already visible" check either (see CallNotificationManager doc comment).
+                callNotificationManager.showIncomingCallNotification(
+                    resolvedDisplayName,
+                    number,
+                    spamStatus.isSpam(),
+                    resolvedPhotoUri
+                )
+            }
+        } else if (isFirstCall) {
+            // Outgoing call (dialing/connecting) — same "always show" treatment, reusing the
+            // active-call notification (Mute/Speaker/End-Call) since there's nothing to
+            // Answer/Decline on our own outgoing call.
+            scope.launch {
+                val contact = contactRepository.findContactByNumber(number)
+                if (contact?.name != null) resolvedDisplayName = contact.name
+                resolvedPhotoUri = contact?.photoUri
+                callNotificationManager.showActiveCallNotification(
+                    resolvedDisplayName,
+                    resolvedPhotoUri,
+                    getString(R.string.dialing)
+                )
             }
         }
 
@@ -114,7 +132,7 @@ class ContactCallService : InCallService() {
                 when (state) {
                     Call.STATE_ACTIVE -> {
                         flashAlertManager.stopBlinking()
-                        callNotificationManager.showActiveCallNotification(resolvedDisplayName)
+                        callNotificationManager.showActiveCallNotification(resolvedDisplayName, resolvedPhotoUri)
                     }
                     Call.STATE_DISCONNECTED -> {
                         callNotificationManager.cancelNotification()

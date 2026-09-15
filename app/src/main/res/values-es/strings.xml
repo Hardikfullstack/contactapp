@@ -57,6 +57,8 @@
     <string name="unblock">Desbloquear</string>
     <string name="answer">Responder</string>
     <string name="end_call">Finalizar</string>
+    <string name="toggle_mute">Alternar silencio</string>
+    <string name="toggle_speaker">Alternar altavoz</string>
     <string name="swap">Cambiar</string>
 
     <!-- Call Screen -->

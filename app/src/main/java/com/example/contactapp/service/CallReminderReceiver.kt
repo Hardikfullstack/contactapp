@@ -70,7 +70,7 @@ class CallReminderReceiver : BroadcastReceiver() {
         }
 
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentTitle(context.getString(R.string.call_reminder_notification_title, name))
             .setContentText(number)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

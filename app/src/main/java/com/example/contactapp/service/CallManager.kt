@@ -4,6 +4,7 @@ import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
 import android.telecom.VideoProfile
+import com.example.contactapp.util.AnalyticsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.lang.ref.WeakReference
@@ -93,12 +94,14 @@ object CallManager {
 
     fun answer() {
         _currentCall.value?.answer(VideoProfile.STATE_AUDIO_ONLY)
+        AnalyticsManager.logEventWithAction("incoming_call", "CallManager", "answer")
     }
 
     /** Declines a still-ringing call. Telecom requires reject(), not disconnect(), while ringing
      *  for the network to be reliably signaled that the call was declined. */
     fun reject() {
         _currentCall.value?.reject(false, null)
+        AnalyticsManager.logEventWithAction("incoming_call", "CallManager", "decline")
     }
 
     /** Ends a call that's already dialing/active. */
@@ -187,12 +190,14 @@ object CallManager {
         val secondary = _secondaryCall.value ?: return
         _currentCall.value?.takeIf { it.state == Call.STATE_ACTIVE }?.hold()
         secondary.answer(VideoProfile.STATE_AUDIO_ONLY)
+        AnalyticsManager.logEventWithAction("incoming_call", "CallManager", "answer_call_waiting")
     }
 
     /** Declines a still-ringing secondary (call-waiting) call — reject(), not disconnect(), same
      *  reason as the primary's reject(): Telecom needs this to signal "declined" to the network. */
     fun rejectSecondaryCall() {
         _secondaryCall.value?.reject(false, null)
+        AnalyticsManager.logEventWithAction("incoming_call", "CallManager", "decline_call_waiting")
     }
 
     /** Swaps which of the two simultaneous calls is active vs held. */

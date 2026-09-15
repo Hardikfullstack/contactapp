@@ -53,6 +53,8 @@
     <string name="unblock">अनब्लॉक करें</string>
     <string name="answer">जवाब दें</string>
     <string name="end_call">समाप्त करें</string>
+    <string name="toggle_mute">म्यूट टॉगल करें</string>
+    <string name="toggle_speaker">स्पीकर टॉगल करें</string>
     <string name="swap">बदलें</string>
 
     <!-- Call Screen -->

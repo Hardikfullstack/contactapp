@@ -125,7 +125,7 @@ class ShakeDetectionService : Service(), SensorEventListener {
         }
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.shake_service_notification_text))
             .setPriority(NotificationCompat.PRIORITY_MIN)

@@ -10,6 +10,7 @@ import com.example.contactapp.data.local.entity.DeletedContactEntity
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.domain.model.DetailedContact
 import com.example.contactapp.domain.repository.ContactRepository
+import com.example.contactapp.util.AnalyticsManager
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -150,6 +151,7 @@ class ContactRepositoryImpl @Inject constructor(
                         // 2. Delete from system
                         val contactUri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contactId)
                         contentResolver.delete(contactUri, null, null)
+                        AnalyticsManager.logEventWithAction("contact_deleted", "ContactRepository", "single")
                     }
                 }
             } catch (e: Exception) {
@@ -179,6 +181,9 @@ class ContactRepositoryImpl @Inject constructor(
                     val contactUri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, id)
                     contentResolver.delete(contactUri, null, null)
                 }
+                AnalyticsManager.logEventWithAction(
+                    "contact_deleted", "ContactRepository", "bulk", mapOf("count" to ids.size)
+                )
             } catch (e: Exception) {
                 // Log error
             }
@@ -273,6 +278,7 @@ class ContactRepositoryImpl @Inject constructor(
 
             try {
                 contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+                AnalyticsManager.logEventWithAction("contact_updated", "ContactRepository", "success")
             } catch (e: Exception) {
                 // Log error
             }
@@ -387,6 +393,7 @@ class ContactRepositoryImpl @Inject constructor(
 
             try {
                 contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+                AnalyticsManager.logEventWithAction("contact_created", "ContactRepository", "success")
             } catch (e: Exception) {
                 // Log error
             }

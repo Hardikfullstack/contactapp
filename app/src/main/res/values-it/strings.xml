@@ -330,6 +330,8 @@
     <string name="enable_shake_trigger">Attiva Attivazione con Scuotimento</string>
     <string name="enable_shake_trigger_desc">Scuoti il telefono con decisione 3 volte in 2 secondi per avviare una chiamata da qualsiasi luogo, anche se l\'app è chiusa o lo schermo è bloccato.</string>
     <string name="end_call">Termina</string>
+    <string name="toggle_mute">Attiva/disattiva muto</string>
+    <string name="toggle_speaker">Attiva/disattiva altoparlante</string>
     <string name="fake_call_active_notification_channel">Chiamata Finta Attiva</string>
     <string name="fake_call_active_notification_channel_desc">Mostra una notifica persistente mentre una chiamata finta è attiva</string>
     <string name="fake_call_notification_channel">Chiamate Finte</string>

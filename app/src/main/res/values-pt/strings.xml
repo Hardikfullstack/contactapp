@@ -330,6 +330,8 @@
     <string name="enable_shake_trigger">Ativar Gatilho por Agitação</string>
     <string name="enable_shake_trigger_desc">Agite o telefone com firmeza 3 vezes em 2 segundos para iniciar uma chamada de qualquer lugar, mesmo se o aplicativo estiver fechado ou a tela bloqueada.</string>
     <string name="end_call">Encerrar</string>
+    <string name="toggle_mute">Alternar mudo</string>
+    <string name="toggle_speaker">Alternar viva-voz</string>
     <string name="fake_call_active_notification_channel">Chamada Falsa Ativa</string>
     <string name="fake_call_active_notification_channel_desc">Exibe uma notificação persistente enquanto uma chamada falsa está ativa</string>
     <string name="fake_call_notification_channel">Chamadas Falsas</string>

@@ -58,6 +58,8 @@
     <string name="unblock">إلغاء الحظر</string>
     <string name="answer">رد</string>
     <string name="end_call">إنهاء</string>
+    <string name="toggle_mute">تبديل الكتم</string>
+    <string name="toggle_speaker">تبديل السماعة</string>
     <string name="swap">تبديل</string>
 
     <!-- Call Screen -->

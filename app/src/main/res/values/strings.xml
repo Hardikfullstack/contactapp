@@ -83,6 +83,8 @@
     <string name="unblock">Unblock</string>
     <string name="answer">Answer</string>
     <string name="end_call">End</string>
+    <string name="toggle_mute">Toggle mute</string>
+    <string name="toggle_speaker">Toggle speaker</string>
     <string name="swap">Swap</string>
     <string name="decline_call">Decline</string>
 

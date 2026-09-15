@@ -330,6 +330,8 @@
     <string name="enable_shake_trigger">Schüttel-Auslöser aktivieren</string>
     <string name="enable_shake_trigger_desc">Schütteln Sie das Telefon 3 Mal kräftig innerhalb von 2 Sekunden, um von überall einen Anruf auszulösen, selbst wenn die App geschlossen oder der Bildschirm gesperrt ist.</string>
     <string name="end_call">Beenden</string>
+    <string name="toggle_mute">Stummschaltung umschalten</string>
+    <string name="toggle_speaker">Lautsprecher umschalten</string>
     <string name="fake_call_active_notification_channel">Aktiver Fake-Anruf</string>
     <string name="fake_call_active_notification_channel_desc">Zeigt eine dauerhafte Benachrichtigung an, während ein Fake-Anruf aktiv ist</string>
     <string name="fake_call_notification_channel">Fake-Anrufe</string>

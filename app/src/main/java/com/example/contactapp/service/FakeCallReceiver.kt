@@ -55,6 +55,12 @@ class FakeCallReceiver : BroadcastReceiver() {
         val photoUri = intent.getStringExtra("caller_photo")
         Log.d(TAG, "onReceive: alarm fired for '$name' ($number)")
 
+        // A fake call popping FakeCallActivity from the background is the same kind of
+        // return-to-foreground AppOpenBackgroundReturnTrigger watches for as a real incoming call
+        // (see ContactCallService.onCallAdded) — without this, an App Open ad can race on top of
+        // the fake call screen right as it appears.
+        com.example.contactapp.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+
         try {
             deliverAsTelecomCall(context, name, number, photoUri)
             Log.d(TAG, "onReceive: addNewIncomingCall did not throw (this only means the REQUEST was " +
@@ -166,7 +172,7 @@ class FakeCallReceiver : BroadcastReceiver() {
         val text = if (isSpam) number else context.getString(R.string.incoming_call)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

@@ -58,7 +58,7 @@ fun postActiveCallNotification(context: Context, callerName: String) {
     )
 
     val notification = NotificationCompat.Builder(context, FAKE_CALL_ACTIVE_CHANNEL_ID)
-        .setSmallIcon(R.mipmap.ic_launcher)
+        .setSmallIcon(R.drawable.notification_icon)
         .setContentTitle(callerName)
         .setContentText(context.getString(R.string.ongoing_call))
         .setPriority(NotificationCompat.PRIORITY_LOW)

@@ -58,7 +58,7 @@ object AfterCallNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val builder = NotificationCompat.Builder(context, AFTER_CALL_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentTitle(label)
             .setContentText(context.getString(R.string.see_call_information))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -97,7 +97,7 @@ object AfterCallNotificationHelper {
         )
 
         val builder = NotificationCompat.Builder(context, AFTER_CALL_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentTitle(context.getString(R.string.after_call_permission_missing_title))
             .setContentText(context.getString(R.string.after_call_permission_missing_desc))
             .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.after_call_permission_missing_desc)))
@@ -128,7 +128,7 @@ object AfterCallNotificationHelper {
         )
 
         val builder = NotificationCompat.Builder(context, REMINDER_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentTitle(title)
             .apply { if (note.isNotBlank()) setContentText(note) }
             .setPriority(NotificationCompat.PRIORITY_MAX)

@@ -330,6 +330,8 @@
     <string name="enable_shake_trigger">Aktifkan Pemicu Guncangan</string>
     <string name="enable_shake_trigger_desc">Guncang ponsel dengan kuat 3 kali dalam 2 detik untuk memicu panggilan dari mana saja, meskipun aplikasi ditutup atau layar terkunci.</string>
     <string name="end_call">Akhiri</string>
+    <string name="toggle_mute">Alihkan bisu</string>
+    <string name="toggle_speaker">Alihkan speaker</string>
     <string name="fake_call_active_notification_channel">Panggilan Palsu Aktif</string>
     <string name="fake_call_active_notification_channel_desc">Menampilkan notifikasi persisten saat panggilan palsu aktif</string>
     <string name="fake_call_notification_channel">Panggilan Palsu</string>
