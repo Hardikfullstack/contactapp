@@ -27,6 +27,12 @@ object DatabaseModule {
             // No real migrations written yet — acceptable pre-release (no shipped user data to
             // preserve). Revisit with a proper Migration once this app has real users.
             .fallbackToDestructiveMigration(dropAllTables = false)
+            // ReminderReceiver (a manifest BroadcastReceiver, see its own comment for why) opens
+            // its own separate AppDatabase instance to delete a fired reminder — without this,
+            // that write never invalidates this instance's Flow queries (e.g. AfterCallViewModel.
+            // remindersFor), so a fired reminder stayed visible in the After Call list until the
+            // screen was reopened from scratch.
+            .enableMultiInstanceInvalidation()
             .build()
     }
 

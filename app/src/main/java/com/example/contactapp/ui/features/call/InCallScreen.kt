@@ -165,7 +165,10 @@ fun InCallScreen(
                     fontSize = 30.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 if (contactName != null && number.isNotBlank()) {
@@ -207,7 +210,9 @@ fun InCallScreen(
                                         text = secondaryCallNumber ?: "",
                                         color = Color.White,
                                         fontWeight = FontWeight.Medium,
-                                        fontSize = 14.sp
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
                                 if (!isSecondaryRinging) {

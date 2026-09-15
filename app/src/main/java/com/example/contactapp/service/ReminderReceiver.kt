@@ -28,6 +28,10 @@ class ReminderReceiver : BroadcastReceiver() {
         // so the DAO is built directly rather than via DI.
         val dao = androidx.room.Room.databaseBuilder(appContext, AppDatabase::class.java, AppDatabase.DATABASE_NAME)
             .fallbackToDestructiveMigration(dropAllTables = false)
+            // Matches DatabaseModule's instance — without this, deleting the fired reminder here
+            // never invalidates the app process's own Flow queries (e.g. the After Call reminder
+            // list), leaving it visible there until the screen is reopened from scratch.
+            .enableMultiInstanceInvalidation()
             .build()
             .reminderDao()
 

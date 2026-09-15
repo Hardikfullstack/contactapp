@@ -59,24 +59,11 @@ import com.example.contactapp.viewmodel.AppConfigViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Each letter of the app name slides in from the right, staggered one after another below the
- * logo — long enough to read comfortably, short enough that returning users (the common case)
- * aren't kept waiting. */
 private const val LetterStaggerMs = 90L
 private const val LetterStartDelayMs = 650L
 
-/** Minimum time the branding animation gets to play before this screen hands off to the next
- * one, regardless of how quickly config/ads resolve — otherwise on a fast/cached run the icon
- * and typing text would barely flash on screen before being replaced. */
 private const val SplashMinDurationMs = 2000L
 
-/**
- * Cold-start gate: plays a brief logo + letter-slide-in branding animation, and — once setup is
- * fully done ([isFullySetUp]) — gives the App Open/Interstitial ad a real chance to finish
- * loading before the user lands on Recents, since without a short bounded wait the ad is almost
- * never ready yet on a fresh process start. The ad wait never applies mid-onboarding — showing
- * an ad there would be jarring, and Language/etc. have their own placements.
- */
 @Composable
 fun SplashScreen(
     isFullySetUp: Boolean,
@@ -159,6 +146,15 @@ fun SplashScreen(
         // preload it too, otherwise the native-first attempt always starts from scratch on Home.
         if (result.native_6_on_off == "on") {
             result.native_6?.takeIf { it.isNotBlank() }?.let {
+                NativeAdCache.preload(context, it)
+            }
+        }
+        // Recents' inline in-list ad (position 2, right after the first call) — several slots on
+        // one screen can reuse this same unit id, but only the very first one composes right when
+        // Recents opens, so this preload just gives *that* one a head start via NativeAdCache;
+        // every other slot still does its own fresh load as usual.
+        if (result.native_16_on_off == "on") {
+            result.native_16?.takeIf { it.isNotBlank() }?.let {
                 NativeAdCache.preload(context, it)
             }
         }

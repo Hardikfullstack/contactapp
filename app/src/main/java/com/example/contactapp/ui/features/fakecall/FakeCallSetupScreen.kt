@@ -45,7 +45,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun FakeCallSetupScreen(
     onBack: () -> Unit,
@@ -101,6 +101,7 @@ fun FakeCallSetupScreen(
     }
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
@@ -382,7 +383,6 @@ fun FakeCallSetupScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .imePadding()
                     .padding(24.dp)
             ) {
                 Button(
@@ -407,7 +407,7 @@ fun FakeCallSetupScreen(
                 }
             }
 
-            if (nativeAdUnitId != null || bannerAdUnitId != null) {
+            if (!WindowInsets.isImeVisible && (nativeAdUnitId != null || bannerAdUnitId != null)) {
                 NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
             }
         }

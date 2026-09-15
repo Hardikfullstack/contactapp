@@ -180,6 +180,45 @@ fun NativeAdView(
     )
 }
 
+/** Renders an already-loaded [ad] directly — no loading or [NativeAdCache] lookup of its own.
+ * For a caller that hoists and owns the NativeAd's load/lifecycle itself (e.g. a LazyColumn row
+ * that would otherwise reload a fresh ad every time Compose disposes/recomposes it on scroll,
+ * since the self-loading [NativeAdView] overload above ties the load to its own composition). */
+@Composable
+fun NativeAdView(
+    ad: NativeAd,
+    template: NativeAdTemplate,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
+) {
+    val isDarkTheme = LocalIsDarkTheme.current
+    AndroidView(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                when (template) {
+                    NativeAdTemplate.SMALL -> Modifier.height(SmallNativeAdHeight)
+                    NativeAdTemplate.MEDIUM -> Modifier
+                    NativeAdTemplate.LARGE -> Modifier
+                    NativeAdTemplate.EXIT -> Modifier
+                }
+            ),
+        factory = { ctx ->
+            val layoutRes = when (template) {
+                NativeAdTemplate.SMALL -> R.layout.native_ad_small
+                NativeAdTemplate.MEDIUM -> R.layout.native_ad_medium
+                NativeAdTemplate.LARGE -> R.layout.native_ad_large
+                NativeAdTemplate.EXIT -> R.layout.native_ad_exit
+            }
+            LayoutInflater.from(ctx).inflate(layoutRes, null) as com.google.android.gms.ads.nativead.NativeAdView
+        },
+        update = { adView ->
+            applyCardColors(adView, template, isDarkTheme)
+            bindNativeAd(adView, ad, template, compact)
+        }
+    )
+}
+
 /** Re-applies card background + text colors from [isDarkTheme] every recomposition — needed
  * because these are plain Android widgets (not Compose), so a theme flip after inflate would
  * otherwise leave them showing whatever colors were resolved at inflate time. */
@@ -217,13 +256,13 @@ private fun applyCardColors(
 }
 
 @Composable
-private fun SmallNativeAdSkeleton(modifier: Modifier = Modifier, isDarkTheme: Boolean = false) {
+fun SmallNativeAdSkeleton(modifier: Modifier = Modifier, isDarkTheme: Boolean = false) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(SmallNativeAdHeight)
             .background(if (isDarkTheme) NativeAdCardBgDark else NativeAdCardBgLight)
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -288,7 +327,7 @@ private fun MediumNativeAdSkeleton(modifier: Modifier = Modifier, compact: Boole
 /** Skeleton for [NativeAdTemplate.LARGE] — a 50/50 media-left, text-right split matching
  * native_ad_large.xml, with the button sitting under the text column (50% width), not full-width. */
 @Composable
-private fun LargeNativeAdSkeleton(modifier: Modifier = Modifier, isDarkTheme: Boolean = false) {
+fun LargeNativeAdSkeleton(modifier: Modifier = Modifier, isDarkTheme: Boolean = false) {
     Row(
         modifier = modifier
             .fillMaxWidth()

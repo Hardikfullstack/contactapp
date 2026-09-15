@@ -38,11 +38,11 @@ fun AfterCallCard(
     isKnownContact: Boolean,
     callInfoLine1: String,
     callInfoLine2: String,
-    onMessageClick: () -> Unit,
+    onLogoClick: () -> Unit,
     onCallClick: () -> Unit
 ) {
     val strPrivateNumber = stringResource(R.string.after_call_private_number)
-    val strMessage = stringResource(R.string.message)
+    val strAppName = stringResource(R.string.app_name)
     val strCall = stringResource(R.string.call)
     val titleText = if (isKnownContact) displayName ?: strPrivateNumber else strPrivateNumber
     val isDark = isSystemInDarkTheme()
@@ -73,14 +73,14 @@ fun AfterCallCard(
 
                 Image(
                     painter = painterResource(R.drawable.logo_cotntacts),
-                    contentDescription = strMessage,
+                    contentDescription = strAppName,
                     modifier = Modifier
                         .size(38.dp)
                         .clip(RoundedCornerShape(9.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onMessageClick
+                            onClick = onLogoClick
                         )
                 )
             }

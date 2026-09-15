@@ -118,6 +118,10 @@ class CallNotificationManager @Inject constructor(
             .setOngoing(true)
             .setAutoCancel(false)
             .setFullScreenIntent(fullScreenPendingIntent, true)
+            // setFullScreenIntent only auto-launches when the screen is locked/off — without this,
+            // tapping the notification body (the avatar/name area, anything besides the two
+            // action buttons) while the screen is already on does nothing.
+            .setContentIntent(fullScreenPendingIntent)
             .setCustomContentView(views)
             .setCustomBigContentView(views)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
@@ -132,7 +136,9 @@ class CallNotificationManager @Inject constructor(
     fun showActiveCallNotification(
         callerName: String,
         photoUri: String? = null,
-        statusText: String = context.getString(R.string.ongoing_call)
+        statusText: String = context.getString(R.string.ongoing_call),
+        isMutedOverride: Boolean? = null,
+        isSpeakerOnOverride: Boolean? = null
     ) {
         activeCallerName = callerName
         activeCallerPhotoUri = photoUri
@@ -150,8 +156,12 @@ class CallNotificationManager @Inject constructor(
         val speakerPendingIntent = actionPendingIntent(ACTION_TOGGLE_SPEAKER, 5)
 
         val audioState = CallManager.audioState.value
-        val isMuted = audioState?.isMuted ?: false
-        val isSpeakerOn = audioState?.route == CallAudioState.ROUTE_SPEAKER
+        // Telecom's audioState only updates asynchronously once it confirms the route/mute
+        // change, so re-rendering right after a toggle (before that confirmation lands) would
+        // otherwise still read the pre-toggle value — the override lets the tap that triggered
+        // this render show the correct icon immediately instead of waiting on that callback.
+        val isMuted = isMutedOverride ?: (audioState?.isMuted ?: false)
+        val isSpeakerOn = isSpeakerOnOverride ?: (audioState?.route == CallAudioState.ROUTE_SPEAKER)
 
         val (nameColor, statusColor) = notificationTextColors()
         val views = RemoteViews(context.packageName, R.layout.notification_call_active).apply {
@@ -185,13 +195,17 @@ class CallNotificationManager @Inject constructor(
     }
 
     /** Re-renders the active-call notification with whatever Mute/Speaker state is current —
-     * a no-op if there's no active-call notification showing right now. */
-    fun refreshActiveCallNotification() {
+     * a no-op if there's no active-call notification showing right now. Pass an override when
+     * called right after the user tapped Mute/Speaker themselves, so the icon flips immediately
+     * instead of waiting on Telecom's async audioState confirmation (see showActiveCallNotification). */
+    fun refreshActiveCallNotification(isMutedOverride: Boolean? = null, isSpeakerOnOverride: Boolean? = null) {
         val callerName = activeCallerName ?: return
         showActiveCallNotification(
             callerName,
             activeCallerPhotoUri,
-            activeCallerStatusText ?: context.getString(R.string.ongoing_call)
+            activeCallerStatusText ?: context.getString(R.string.ongoing_call),
+            isMutedOverride,
+            isSpeakerOnOverride
         )
     }
 
@@ -262,14 +276,19 @@ class CallActionReceiver : BroadcastReceiver() {
             }
             CallNotificationManager.ACTION_HANGUP -> CallManager.disconnect()
             CallNotificationManager.ACTION_TOGGLE_MUTE -> {
+                // Computed before toggling — CallManager.audioState only updates once Telecom
+                // confirms the change, which can lag (or on some OEMs, arrive late enough that the
+                // icon looks stuck). Passing the intended new state renders it immediately;
+                // ContactCallService.onCallAudioStateChanged reconciles with the real state right
+                // after, a harmless no-op re-render when it agrees.
+                val newMuted = !(CallManager.audioState.value?.isMuted ?: false)
                 CallManager.toggleMute()
-                // Immediate best-effort refresh — ContactCallService.onCallAudioStateChanged
-                // corrects it shortly after once Telecom actually applies the change.
-                callNotificationManager.refreshActiveCallNotification()
+                callNotificationManager.refreshActiveCallNotification(isMutedOverride = newMuted)
             }
             CallNotificationManager.ACTION_TOGGLE_SPEAKER -> {
+                val newSpeakerOn = CallManager.audioState.value?.route != CallAudioState.ROUTE_SPEAKER
                 CallManager.toggleSpeaker()
-                callNotificationManager.refreshActiveCallNotification()
+                callNotificationManager.refreshActiveCallNotification(isSpeakerOnOverride = newSpeakerOn)
             }
         }
     }

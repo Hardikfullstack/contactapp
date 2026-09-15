@@ -7,12 +7,16 @@ import androidx.navigation.compose.rememberNavController
 import com.example.contactapp.ui.features.onboarding.AdvancedPermissionScreen
 import com.example.contactapp.ui.features.onboarding.LanguageSelectionScreen
 import com.example.contactapp.ui.features.onboarding.PermissionScreen
+import com.example.contactapp.ui.features.settings.LegalWebViewScreen
 import com.example.contactapp.util.AnalyticsManager
 
 sealed class OnboardingScreen(val route: String) {
     object Permission : OnboardingScreen("permission")
     object AdvancedPermission : OnboardingScreen("advanced_permission")
     object Language : OnboardingScreen("language")
+    object LegalWebView : OnboardingScreen("onboarding_legal_webview/{type}") {
+        fun createRoute(type: String) = "onboarding_legal_webview/$type"
+    }
 }
 
 @Composable
@@ -31,7 +35,16 @@ fun OnboardingNavHost(
                 onContinue = {
                     onBasicPermissionsGranted()
                     navController.navigate(OnboardingScreen.AdvancedPermission.route)
+                },
+                onPrivacyPolicyClick = {
+                    navController.navigate(OnboardingScreen.LegalWebView.createRoute("privacy"))
                 }
+            )
+        }
+        composable(OnboardingScreen.LegalWebView.route) { backStackEntry ->
+            LegalWebViewScreen(
+                onBack = { navController.popBackStack() },
+                type = backStackEntry.arguments?.getString("type") ?: "privacy"
             )
         }
         composable(OnboardingScreen.AdvancedPermission.route) {

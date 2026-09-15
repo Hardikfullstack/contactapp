@@ -136,6 +136,7 @@ class AppConfigViewModel(application: Application) : AndroidViewModel(applicatio
             native_13 = "ca-app-pub-3940256099942544/2247696110",
             native_14 = "ca-app-pub-3940256099942544/2247696110",
             native_15 = "ca-app-pub-3940256099942544/2247696110",
+            native_16 = "ca-app-pub-3940256099942544/2247696110",
             native_1_on_off = "on",
             native_2_on_off = "on",
             native_3_on_off = "on",
@@ -151,6 +152,7 @@ class AppConfigViewModel(application: Application) : AndroidViewModel(applicatio
             native_13_on_off = "on",
             native_14_on_off = "on",
             native_15_on_off = "on",
+            native_16_on_off = "on",
             extra_data_2_message = "1.0.0",
 
             banner_1 = "ca-app-pub-3940256099942544/6300978111",

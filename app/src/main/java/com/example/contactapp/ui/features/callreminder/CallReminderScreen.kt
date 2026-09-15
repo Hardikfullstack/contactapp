@@ -142,7 +142,9 @@ private fun ReminderRow(reminder: CallReminder, onCancel: () -> Unit) {
                     text = reminder.contactName,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Text(
                     text = "$dateText • $timeText",

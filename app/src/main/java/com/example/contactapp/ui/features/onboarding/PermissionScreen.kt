@@ -16,6 +16,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,7 +54,8 @@ import androidx.activity.result.ActivityResultLauncher
 
 @Composable
 fun PermissionScreen(
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    onPrivacyPolicyClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -240,11 +242,13 @@ fun PermissionScreen(
 
             val privacyPolicyPrefix = stringResource(R.string.privacy_policy_prefix)
             val privacyPolicyLink = stringResource(R.string.privacy_policy)
+            val privacyTextColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202)
             val privacyText = buildAnnotatedString {
                 // Trailing space in the XML string resource gets trimmed by the resource compiler
                 // at build time (unquoted strings lose leading/trailing whitespace), so the space
                 // before "Privacy Policy" is added explicitly here instead.
                 append(privacyPolicyPrefix.trimEnd() + " ")
+                pushStringAnnotation(tag = "privacy_policy", annotation = "privacy_policy")
                 withStyle(
                     style = SpanStyle(
                         color = PrimaryGreen,
@@ -253,16 +257,23 @@ fun PermissionScreen(
                 ) {
                     append(privacyPolicyLink)
                 }
+                pop()
                 append(".")
             }
 
-            Text(
+            ClickableText(
                 text = privacyText,
                 modifier = Modifier.fillMaxWidth(),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurface else Color(0xFF020202),
-                textAlign = TextAlign.Center
+                style = androidx.compose.ui.text.TextStyle(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = privacyTextColor,
+                    textAlign = TextAlign.Center
+                ),
+                onClick = { offset ->
+                    privacyText.getStringAnnotations("privacy_policy", offset, offset)
+                        .firstOrNull()?.let { onPrivacyPolicyClick() }
+                }
             )
 
             Spacer(modifier = Modifier.height(6.dp))

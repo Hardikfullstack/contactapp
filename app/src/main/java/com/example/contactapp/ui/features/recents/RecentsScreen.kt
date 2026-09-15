@@ -3,7 +3,7 @@ package com.example.contactapp.ui.features.recents
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,8 +42,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
 import com.example.contactapp.ads.AppOpenBackgroundReturnTrigger
 import com.example.contactapp.ads.AppOpenCounter
+import com.example.contactapp.ads.LargeNativeAdSkeleton
+import com.example.contactapp.ads.NativeAdCache
 import com.example.contactapp.ads.NativeAdTemplate
 import com.example.contactapp.ads.NativeAdView
+import com.example.contactapp.ads.SmallNativeAdSkeleton
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.AdLoader
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.nativead.NativeAd
 import com.example.contactapp.ui.components.*
 import com.example.contactapp.ui.components.dialogs.RateUsDialog
 import com.example.contactapp.ui.components.dialogs.UpdateAppDialog
@@ -52,6 +60,7 @@ import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.ui.theme.TextSecondary
 import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.AppUpdateHelper
+import com.example.contactapp.domain.model.CallLogItem
 import com.example.contactapp.util.CallUtils
 import com.example.contactapp.util.DefaultDialerState
 import com.example.contactapp.util.InAppUpdateResult
@@ -60,6 +69,19 @@ import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.util.RateUsHelper
 import com.example.contactapp.util.isRemoteVersionNewer
 import com.example.contactapp.viewmodel.AppConfigViewModel
+
+/** One row of the flattened Recents list — a section header, a real call, or a native ad slot.
+ * The first ad sits right after the very first call (position 2 overall), then repeats every 6
+ * calls after that (position 2, 8, 14, ...), counted globally across section boundaries. Each ad
+ * is rendered flush (no rounded corners/gap of its own, same background as a call row) and sits
+ * *inside* the same rounded-corner section group as the calls — [Call.isFirstInSection]/
+ * [isLastInSection] only track the section boundary, same as before ads existed, so an ad reads
+ * as just another row in one continuous card instead of a separate floating box. */
+private sealed class RecentsListRow {
+    data class Header(val sectionKey: String, val titleRes: Int) : RecentsListRow()
+    data class Call(val call: CallLogItem, val isFirstInSection: Boolean, val isLastInSection: Boolean) : RecentsListRow()
+    data class Ad(val id: String) : RecentsListRow()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -199,6 +221,14 @@ fun RecentsScreen(
     val homeNativeAdUnitId = adConfig?.result?.let { result ->
         if (result.google_ads_on_off == "on" && result.native_2_on_off == "on") {
             result.native_2?.takeIf { it.isNotBlank() }
+        } else null
+    }
+
+    // Separate ad unit from the top-of-screen native ad (native_2) above — its own inline slot(s)
+    // interleaved into the call list further down.
+    val inlineListNativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_16_on_off == "on") {
+            result.native_16?.takeIf { it.isNotBlank() }
         } else null
     }
 
@@ -436,11 +466,48 @@ fun RecentsScreen(
             )
 
             if (homeNativeAdUnitId != null) {
-                NativeAdView(
-                    adUnitId = homeNativeAdUnitId,
-                    template = NativeAdTemplate.LARGE,
-                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)
-                )
+                var topNativeAd by remember { mutableStateOf<NativeAd?>(null) }
+
+                LaunchedEffect(homeNativeAdUnitId) {
+                    if (topNativeAd == null) {
+                        val cached = NativeAdCache.take(homeNativeAdUnitId)
+                        if (cached != null) {
+                            topNativeAd = cached
+                        } else {
+                            val adLoader = AdLoader.Builder(context, homeNativeAdUnitId)
+                                .forNativeAd { ad ->
+                                    topNativeAd = ad
+                                    AnalyticsManager.logAdEvent("native", homeNativeAdUnitId, "loaded")
+                                }
+                                .withAdListener(object : AdListener() {
+                                    override fun onAdFailedToLoad(error: LoadAdError) {
+                                        AnalyticsManager.logAdEvent("native", homeNativeAdUnitId, "failed_to_load")
+                                    }
+                                })
+                                .build()
+                            AnalyticsManager.logAdEvent("native", homeNativeAdUnitId, "request")
+                            adLoader.loadAd(AdRequest.Builder().build())
+                        }
+                    }
+                }
+
+                DisposableEffect(Unit) {
+                    onDispose {
+                        topNativeAd?.let { NativeAdCache.put(homeNativeAdUnitId, it) }
+                    }
+                }
+
+                val loadedTopAd = topNativeAd
+                val topAdModifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)
+                if (loadedTopAd != null) {
+                    NativeAdView(
+                        ad = loadedTopAd,
+                        template = NativeAdTemplate.LARGE,
+                        modifier = topAdModifier
+                    )
+                } else {
+                    LargeNativeAdSkeleton(modifier = topAdModifier, isDarkTheme = LocalIsDarkTheme.current)
+                }
             }
 
             if (isDefaultDialerState && uiState.spamNumbers.isNotEmpty()) {
@@ -486,17 +553,59 @@ fun RecentsScreen(
                     listState.scrollToItem(0)
                 }
 
+                // Flattened once per data/filter change — same section-boundary rounding as
+                // before ads existed. The first Ad row sits right after the very first call
+                // (global call #1, i.e. position 2 overall); after that, one every 6 calls
+                // (#7, #13, #19, ...), counted globally across section boundaries.
+                val rows = remember(uiState.groupedCalls, uiState.selectedFilter) {
+                    buildList {
+                        var callCount = 0
+                        sections.forEach { (key, titleRes) ->
+                            val calls = uiState.groupedCalls[key]
+                            if (!calls.isNullOrEmpty()) {
+                                add(RecentsListRow.Header(key, titleRes))
+                                calls.forEachIndexed { index, call ->
+                                    add(RecentsListRow.Call(call, index == 0, index == calls.size - 1))
+                                    callCount++
+                                    if ((callCount - 1) % 6 == 0) {
+                                        add(RecentsListRow.Ad("recents_inline_ad_$callCount"))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                val inlineNativeAds = remember { mutableStateMapOf<String, NativeAd?>() }
+
+                // Cleanup only — runs once when this composable instance leaves composition for
+                // good (e.g. navigating away from Recents), not on every rows/filter change.
+                DisposableEffect(Unit) {
+                    onDispose {
+                        inlineNativeAds.values.forEach { it?.destroy() }
+                        inlineNativeAds.clear()
+                    }
+                }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     state = listState,
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    sections.forEach { (key, titleRes) ->
-                        val calls = uiState.groupedCalls[key]
-                        if (!calls.isNullOrEmpty()) {
-                            item(key = "header_$key") {
+                    items(
+                        items = rows,
+                        key = { row ->
+                            when (row) {
+                                is RecentsListRow.Header -> "header_${row.sectionKey}"
+                                is RecentsListRow.Call -> row.call.id
+                                is RecentsListRow.Ad -> row.id
+                            }
+                        }
+                    ) { row ->
+                        when (row) {
+                            is RecentsListRow.Header -> {
                                 Text(
-                                    text = stringResource(titleRes),
+                                    text = stringResource(row.titleRes),
                                     modifier = Modifier.padding(horizontal = 15.dp, vertical = 16.dp),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else TextSecondary,
@@ -505,15 +614,88 @@ fun RecentsScreen(
                                 )
                             }
 
-                            itemsIndexed(
-                                items = calls,
-                                key = { _, call -> call.id }
-                            ) { index, call ->
+                            is RecentsListRow.Ad -> {
+                                if (inlineListNativeAdUnitId != null) {
+                                    // Flush, no rounded corners/gap of its own — sits inside the
+                                    // same card as the surrounding calls instead of floating as a
+                                    // visually separate box. The divider above it already comes
+                                    // from the preceding call's own row; this one adds the divider
+                                    // below, matching how every other row separates from the next.
+                                    Surface(
+                                        modifier = Modifier
+                                            .padding(horizontal = 16.dp)
+                                            .fillMaxWidth(),
+                                        shape = RoundedCornerShape(0.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        tonalElevation = 0.dp
+                                    ) {
+                                        Column {
+                                            // Fires once when this specific slot's row is first
+                                            // composed (naturally lazy — LazyColumn only composes
+                                            // a row once it's about to be shown, not the whole list
+                                            // upfront) and is a no-op on any later recomposition of
+                                            // the same row (e.g. scrolled away and back), since the
+                                            // hoisted map above already has this slot's id by then.
+                                            LaunchedEffect(row.id, inlineListNativeAdUnitId) {
+                                                if (!inlineNativeAds.containsKey(row.id)) {
+                                                    // The very first slot to reach this point (in
+                                                    // practice, the one right after call #1, since
+                                                    // it composes as soon as Recents opens) grabs
+                                                    // whatever SplashScreen already preloaded for
+                                                    // this ad unit — a real network load only for
+                                                    // every slot after that one.
+                                                    val cachedAd = NativeAdCache.take(inlineListNativeAdUnitId)
+                                                    if (cachedAd != null) {
+                                                        inlineNativeAds[row.id] = cachedAd
+                                                    } else {
+                                                        val adLoader = AdLoader.Builder(context, inlineListNativeAdUnitId)
+                                                            .forNativeAd { ad ->
+                                                                inlineNativeAds[row.id] = ad
+                                                                AnalyticsManager.logAdEvent("native", inlineListNativeAdUnitId, "loaded")
+                                                            }
+                                                            .withAdListener(object : AdListener() {
+                                                                override fun onAdFailedToLoad(error: LoadAdError) {
+                                                                    inlineNativeAds[row.id] = null
+                                                                    AnalyticsManager.logAdEvent("native", inlineListNativeAdUnitId, "failed_to_load")
+                                                                }
+                                                            })
+                                                            .build()
+                                                        AnalyticsManager.logAdEvent("native", inlineListNativeAdUnitId, "request")
+                                                        adLoader.loadAd(AdRequest.Builder().build())
+                                                    }
+                                                }
+                                            }
+
+                                            val loadedAd = inlineNativeAds[row.id]
+                                            if (loadedAd != null) {
+                                                NativeAdView(
+                                                    ad = loadedAd,
+                                                    template = NativeAdTemplate.SMALL,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                            } else {
+                                                SmallNativeAdSkeleton(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    isDarkTheme = LocalIsDarkTheme.current
+                                                )
+                                            }
+                                            HorizontalDivider(
+                                                modifier = Modifier.padding(start = 78.dp),
+                                                thickness = 0.5.dp,
+                                                color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCDCDCD)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            is RecentsListRow.Call -> {
+                                val call = row.call
                                 val isExpanded = expandedCallId == call.id
                                 val shape = when {
-                                    calls.size == 1 -> RoundedCornerShape(16.dp)
-                                    index == 0 -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-                                    index == calls.size - 1 -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+                                    row.isFirstInSection && row.isLastInSection -> RoundedCornerShape(16.dp)
+                                    row.isFirstInSection -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                                    row.isLastInSection -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
                                     else -> RoundedCornerShape(0.dp)
                                 }
 
@@ -535,8 +717,8 @@ fun RecentsScreen(
                                             onMessageClick = { MessageUtils.sendMessage(context, call.number) },
                                             onHistoryClick = { onHistoryClick(call.name ?: "", call.number) }
                                         )
-                                        
-                                        if (index < calls.size - 1) {
+
+                                        if (!row.isLastInSection) {
                                             // Starts under the name/desc text (16dp row padding +
                                             // 46dp avatar + 16dp spacer from CallItem), not under
                                             // the avatar — and runs flush to the card's right edge.

@@ -93,7 +93,7 @@ fun AfterCallScreen(
                     isKnownContact = isKnownContact,
                     callInfoLine1 = callInfoLine1,
                     callInfoLine2 = callInfoLine2,
-                    onMessageClick = { MessageUtils.sendMessage(context, number) },
+                    onLogoClick = { onOpenMainApp("recents") },
                     onCallClick = { CallUtils.makeCall(context, number) }
                 )
                 AfterCallTabBar(
