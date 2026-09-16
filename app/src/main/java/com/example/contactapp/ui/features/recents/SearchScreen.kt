@@ -23,8 +23,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +45,19 @@ fun SearchScreen(
     val query by viewModel.query.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // The plain-String BasicTextField overload seeds its own internal TextFieldValue with the
+    // cursor at position 0 whenever this composable is freshly composed (e.g. returning from a
+    // result's screen disposes and recomposes this one) — tracking TextFieldValue ourselves and
+    // always placing the cursor at the end fixes that, instead of losing it back to the start.
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
+    }
+    LaunchedEffect(query) {
+        if (query != textFieldValue.text) {
+            textFieldValue = textFieldValue.copy(text = query, selection = TextRange(query.length))
+        }
+    }
 
     val listState = rememberLazyListState()
     // Every new query re-ranks the results (best match first) — always show that from the top
@@ -102,8 +117,11 @@ fun SearchScreen(
                             )
                         }
                         BasicTextField(
-                            value = query,
-                            onValueChange = { viewModel.onQueryChanged(it) },
+                            value = textFieldValue,
+                            onValueChange = {
+                                textFieldValue = it
+                                viewModel.onQueryChanged(it.text)
+                            },
                             textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontFamily = DmSans),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
                             modifier = Modifier
