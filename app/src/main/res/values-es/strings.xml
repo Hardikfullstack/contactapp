@@ -406,6 +406,9 @@
     <string name="pick_date_time">FECHA Y HORA</string>
     <string name="pick_time">Elegir Hora</string>
     <string name="premium">Premium</string>
+    <string name="premium_color_dialog_title">Color Premium</string>
+    <string name="premium_color_dialog_message">Este es un tono de color premium. Desbloquéalo para usar este color.</string>
+    <string name="action_unlock">DESBLOQUEAR</string>
     <string name="quick_reply_1">No puedo hablar ahora, te llamaré más tarde.</string>
     <string name="quick_reply_2">Te devolveré la llamada.</string>
     <string name="quick_reply_3">Lo siento, estoy ocupado ahora mismo.</string>

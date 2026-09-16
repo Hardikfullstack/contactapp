@@ -398,6 +398,9 @@
     <string name="pick_date_first">يرجى اختيار تاريخ</string>
     <string name="pick_date_time">التاريخ والوقت</string>
     <string name="premium">مميز</string>
+    <string name="premium_color_dialog_title">لون مميز</string>
+    <string name="premium_color_dialog_message">هذه درجة لون مميزة. افتحها لاستخدام هذا اللون.</string>
+    <string name="action_unlock">فتح</string>
     <string name="premium_tones">نغمات مميزة</string>
     <string name="quick_reply_1">لا أستطيع التحدث الآن، سأتصل بك لاحقًا.</string>
     <string name="quick_reply_2">سأعاود الاتصال بك.</string>

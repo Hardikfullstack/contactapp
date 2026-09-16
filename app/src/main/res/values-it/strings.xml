@@ -381,6 +381,9 @@
     <string name="pick_date_time">DATA E ORA</string>
     <string name="pick_time">Scegli Orario</string>
     <string name="premium">Premium</string>
+    <string name="premium_color_dialog_title">Colore Premium</string>
+    <string name="premium_color_dialog_message">Questo è un tono di colore premium. Sbloccalo per usare questo colore.</string>
+    <string name="action_unlock">SBLOCCA</string>
     <string name="premium_tones">SUONERIE PREMIUM</string>
     <string name="quick_reply_1">Non posso parlare ora, ti richiamo più tardi.</string>
     <string name="quick_reply_2">Ti richiamo.</string>

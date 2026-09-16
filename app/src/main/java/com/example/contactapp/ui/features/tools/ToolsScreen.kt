@@ -145,7 +145,7 @@ fun ToolsScreen(
             CommonHeader(
                 title = stringResource(R.string.tools),
                 actions = {
-                    ProBadge()
+                    // ProBadge()
                 }
             )
 

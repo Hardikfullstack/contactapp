@@ -8,15 +8,18 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.telecom.TelecomManager
 import android.util.Log
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.contactapp.R
 import com.example.contactapp.ui.features.fakecall.FakeCallActivity
+import com.example.contactapp.util.NotificationAvatarUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -169,7 +172,20 @@ class FakeCallReceiver : BroadcastReceiver() {
         }
 
         val title = if (isSpam) context.getString(R.string.spam_warning) else name
-        val text = if (isSpam) number else context.getString(R.string.incoming_call)
+        // Shows the number under the name (matching the real incoming-call notification's own
+        // layout) instead of a generic "Incoming call" label.
+        val text = number
+
+        val (nameColor, statusColor) = notificationTextColors(context)
+        val views = RemoteViews(context.packageName, R.layout.notification_call_incoming).apply {
+            setTextViewText(R.id.tvContactName, title)
+            setTextViewText(R.id.tvCallStatus, text)
+            setTextColor(R.id.tvContactName, nameColor)
+            setTextColor(R.id.tvCallStatus, statusColor)
+            setImageViewBitmap(R.id.ivAvatar, NotificationAvatarUtils.createAvatarBitmap(context, photoUri, title))
+            setOnClickPendingIntent(R.id.btnAnswer, answerPendingIntent)
+            setOnClickPendingIntent(R.id.btnDecline, declinePendingIntent)
+        }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.notification_icon)
@@ -181,8 +197,9 @@ class FakeCallReceiver : BroadcastReceiver() {
             .setAutoCancel(false)
             .setContentIntent(fullScreenPendingIntent)
             .setFullScreenIntent(fullScreenPendingIntent, true)
-            .addAction(android.R.drawable.ic_menu_call, context.getString(R.string.answer_call), answerPendingIntent)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.decline_call_short), declinePendingIntent)
+            .setCustomContentView(views)
+            .setCustomBigContentView(views)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .build()
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -200,6 +217,20 @@ class FakeCallReceiver : BroadcastReceiver() {
             context.startActivity(activityIntent)
         } catch (e: Exception) {
             // The full-screen-intent notification above still covers this case.
+        }
+    }
+
+    /** RemoteViews resolves `?android:attr/textColorPrimary`/`Secondary` against the notification
+     * shade's OWN theme context, which on some OEM skins doesn't reliably follow the system's
+     * actual light/dark setting — same fix as the real incoming-call notification
+     * (CallNotificationManager.notificationTextColors). */
+    private fun notificationTextColors(context: Context): Pair<Int, Int> {
+        val isNightMode = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+        return if (isNightMode) {
+            0xFFFFFFFF.toInt() to 0xFFBDBDBD.toInt()
+        } else {
+            0xFF212121.toInt() to 0xFF757575.toInt()
         }
     }
 

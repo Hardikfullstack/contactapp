@@ -398,6 +398,9 @@
     <string name="pick_date_first">कृपया एक तारीख चुनें</string>
     <string name="pick_date_time">तारीख और समय</string>
     <string name="premium">प्रीमियम</string>
+    <string name="premium_color_dialog_title">प्रीमियम रंग</string>
+    <string name="premium_color_dialog_message">यह एक प्रीमियम रंग टोन है। इस रंग का उपयोग करने के लिए इसे अनलॉक करें।</string>
+    <string name="action_unlock">अनलॉक करें</string>
     <string name="premium_tones">प्रीमियम टोन</string>
     <string name="quick_reply_1">अभी बात नहीं कर सकता, बाद में कॉल करूंगा।</string>
     <string name="quick_reply_2">मैं आपको वापस कॉल करूंगा।</string>

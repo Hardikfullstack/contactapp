@@ -169,14 +169,17 @@ class HistoryViewModel @Inject constructor(
     fun blockNumber() {
         viewModelScope.launch {
             val willBeBlocked = !_uiState.value.isBlocked
-            // Optimistic update: instantly change the UI state
-            _uiState.value = _uiState.value.copy(isBlocked = willBeBlocked)
+            // Optimistic update: instantly change the UI state. Flipping isBlocked and closing
+            // the dialog in the SAME copy() call (not two separate assignments) matters here —
+            // the dialog's title/text/button all read isBlocked reactively, so a recomposition
+            // where isBlocked had already flipped but the dialog was still open flashed the
+            // opposite ("Unblock") label for a frame right before it closed.
+            _uiState.value = _uiState.value.copy(isBlocked = willBeBlocked, showBlockDialog = false)
 
             callLogRepository.blockNumber(number, willBeBlocked)
             AnalyticsManager.logEventWithAction(
                 "number_blocked", "History", if (willBeBlocked) "block" else "unblock"
             )
-            showBlockConfirmation(false)
         }
     }
 

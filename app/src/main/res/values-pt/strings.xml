@@ -381,6 +381,9 @@
     <string name="pick_date_time">DATA E HORA</string>
     <string name="pick_time">Escolher Horário</string>
     <string name="premium">Premium</string>
+    <string name="premium_color_dialog_title">Cor Premium</string>
+    <string name="premium_color_dialog_message">Este é um tom de cor premium. Desbloqueie-o para usar esta cor.</string>
+    <string name="action_unlock">DESBLOQUEAR</string>
     <string name="premium_tones">TONS PREMIUM</string>
     <string name="quick_reply_1">Não posso falar agora, ligo mais tarde.</string>
     <string name="quick_reply_2">Eu ligo de volta.</string>

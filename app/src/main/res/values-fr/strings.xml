@@ -381,6 +381,9 @@
     <string name="pick_date_time">DATE &amp; HEURE</string>
     <string name="pick_time">Choisir l\'heure</string>
     <string name="premium">Premium</string>
+    <string name="premium_color_dialog_title">Couleur Premium</string>
+    <string name="premium_color_dialog_message">Ceci est une teinte de couleur premium. Débloquez-la pour utiliser cette couleur.</string>
+    <string name="action_unlock">DÉBLOQUER</string>
     <string name="premium_tones">SONNERIES PREMIUM</string>
     <string name="quick_reply_1">Je ne peux pas parler maintenant, je te rappelle plus tard.</string>
     <string name="quick_reply_2">Je te rappelle.</string>

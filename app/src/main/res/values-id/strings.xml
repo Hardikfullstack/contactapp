@@ -381,6 +381,9 @@
     <string name="pick_date_time">TANGGAL &amp; WAKTU</string>
     <string name="pick_time">Pilih Waktu</string>
     <string name="premium">Premium</string>
+    <string name="premium_color_dialog_title">Warna Premium</string>
+    <string name="premium_color_dialog_message">Ini adalah warna premium. Buka kuncinya untuk menggunakan warna ini.</string>
+    <string name="action_unlock">BUKA KUNCI</string>
     <string name="premium_tones">NADA PREMIUM</string>
     <string name="quick_reply_1">Tidak bisa bicara sekarang, akan kutelepon nanti.</string>
     <string name="quick_reply_2">Akan kutelepon balik.</string>

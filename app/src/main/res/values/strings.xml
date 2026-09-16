@@ -265,6 +265,9 @@
     <string name="color_terracotta">Terracotta</string>
 
     <string name="premium">Premium</string>
+    <string name="premium_color_dialog_title">Premium Color</string>
+    <string name="premium_color_dialog_message">This is a premium color tone. Unlock it to use this color.</string>
+    <string name="action_unlock">UNLOCK</string>
     <string name="tool_set_ringtone">Set Ringtone</string>
     <string name="tool_set_ringtone_desc">Customize your ringtone sounds</string>
     <string name="silent">Silent</string>

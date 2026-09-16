@@ -1,5 +1,7 @@
 package com.example.contactapp.ui.features.callthemes
 
+import android.app.Activity
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,8 +22,12 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,12 +35,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
+import com.example.contactapp.ads.InterstitialAdManager
 import com.example.contactapp.ui.components.CallWallpaperBackground
 import com.example.contactapp.ui.components.CommonHeader
 import com.example.contactapp.ui.components.lightened
@@ -43,6 +55,7 @@ import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.CallAccentColor
 import com.example.contactapp.util.CallButtonShape
 import com.example.contactapp.util.WallpaperSelection
+import com.example.contactapp.viewmodel.AppConfigViewModel
 
 @Composable
 fun CallThemeScreen(
@@ -54,6 +67,121 @@ fun CallThemeScreen(
     val wallpaperSelection by viewModel.wallpaperSelectionFlow.collectAsState(
         initial = viewModel.getCurrentWallpaperSelection()
     )
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    // Dedicated slot for the premium-color unlock interstitial — interstitial_3 was previously
+    // unused by any screen.
+    val premiumColorInterstitialAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.interstitial_3_on_off == "on") {
+            result.interstitial_3?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    LaunchedEffect(premiumColorInterstitialAdUnitId) {
+        premiumColorInterstitialAdUnitId?.let { InterstitialAdManager.preload(context, it) }
+    }
+
+    // Color tapped while a premium unlock is pending (dialog shown) — null when no dialog is up.
+    var pendingPremiumColor by remember { mutableStateOf<CallAccentColor?>(null) }
+
+    pendingPremiumColor?.let { colorPendingUnlock ->
+        val premiumGold = Color(0xFFFFC107)
+        val iconSize = 72.dp
+        Dialog(
+            onDismissRequest = { pendingPremiumColor = null },
+            properties = DialogProperties(dismissOnClickOutside = false)
+        ) {
+            Box(contentAlignment = Alignment.TopCenter) {
+                Column(
+                    modifier = Modifier
+                        .padding(top = iconSize / 2)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 24.dp)
+                        .padding(top = iconSize / 2 + 16.dp, bottom = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.premium_color_dialog_title),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Brush.verticalGradient(listOf(colorPendingUnlock.color.lightened(), colorPendingUnlock.color)))
+                            .border(2.dp, premiumGold, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.premium_color_dialog_message),
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 19.sp
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = {
+                            pendingPremiumColor = null
+                            val proceed = { viewModel.selectColor(colorPendingUnlock.id) }
+                            if (activity != null && premiumColorInterstitialAdUnitId != null &&
+                                InterstitialAdManager.isReady(premiumColorInterstitialAdUnitId)
+                            ) {
+                                InterstitialAdManager.show(activity, premiumColorInterstitialAdUnitId) { proceed() }
+                            } else {
+                                // Not ready (still loading, failed to load, or no activity) — never
+                                // block the user on the ad, grant access right away either way.
+                                proceed()
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = premiumGold, contentColor = Color(0xFF3D2E00)),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.action_unlock),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    TextButton(
+                        onClick = { pendingPremiumColor = null },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cancel),
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(iconSize)
+                        .clip(CircleShape)
+                        .background(Brush.verticalGradient(listOf(premiumGold.lightened(), premiumGold))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = Color(0xFF3D2E00),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+        }
+    }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         Column(
@@ -120,11 +248,18 @@ fun CallThemeScreen(
                     }
 
                     items(colorsInCategory) { accentColor ->
+                        val isSelected = uiState.selectedColorId == accentColor.id
                         ColorSwatch(
                             accentColor = accentColor,
                             shape = uiState.selectedShape.toComposeShape(),
-                            isSelected = uiState.selectedColorId == accentColor.id,
-                            onClick = { viewModel.selectColor(accentColor.id) }
+                            isSelected = isSelected,
+                            onClick = {
+                                if (accentColor.isPremium && !isSelected) {
+                                    pendingPremiumColor = accentColor
+                                } else if (!accentColor.isPremium) {
+                                    viewModel.selectColor(accentColor.id)
+                                }
+                            }
                         )
                     }
                 }
