@@ -2,6 +2,7 @@ package com.example.contactapp.service
 
 import android.content.Context
 import com.example.contactapp.domain.repository.CallLogRepository
+import com.example.contactapp.util.PhoneNumberMatcher
 import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.util.SpamDetector
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,7 +25,7 @@ class SpamManager @Inject constructor(
      * 3. Contact lookup (known contacts are never spam).
      */
     suspend fun checkSpamStatus(number: String): SpamStatus = withContext(Dispatchers.IO) {
-        val cleanNumber = number.replace(Regex("[^0-9]"), "").takeLast(10)
+        val cleanNumber = PhoneNumberMatcher.normalize(number)
         if (cleanNumber.isEmpty()) return@withContext SpamStatus.NONE
 
         // 1. Manual Blacklist (Unified with Recents/Settings)
@@ -53,7 +54,7 @@ class SpamManager @Inject constructor(
     }
 
     fun reportSpam(number: String, isSpam: Boolean) {
-        val cleanNumber = number.replace(Regex("[^0-9]"), "").takeLast(10)
+        val cleanNumber = PhoneNumberMatcher.normalize(number)
         if (cleanNumber.isNotEmpty()) {
             val current = preferenceManager.getSpamNumbers().toMutableSet()
             if (isSpam) current.add(cleanNumber) else current.remove(cleanNumber)

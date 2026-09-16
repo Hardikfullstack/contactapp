@@ -17,7 +17,7 @@ object SpamDetector {
     private const val SHORT_CALL_THRESHOLD_SECONDS = 3L
     private const val SHORT_CALL_RATIO_THRESHOLD = 0.7
 
-    fun normalizeNumber(number: String): String = number.replace(Regex("[^0-9]"), "").takeLast(10)
+    fun normalizeNumber(number: String): String = PhoneNumberMatcher.normalize(number)
 
     /** Returns the normalized numbers of unknown callers matching the spam pattern. */
     fun detectSpamNumbers(logs: List<CallLogItem>): Set<String> {

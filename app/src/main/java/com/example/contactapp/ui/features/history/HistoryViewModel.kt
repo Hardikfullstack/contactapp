@@ -9,6 +9,7 @@ import com.example.contactapp.R
 import com.example.contactapp.domain.model.CallLogItem
 import com.example.contactapp.domain.repository.CallLogRepository
 import com.example.contactapp.util.AnalyticsManager
+import com.example.contactapp.util.PhoneNumberMatcher
 import com.example.contactapp.util.QrUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,12 +128,11 @@ class HistoryViewModel @Inject constructor(
 
     private fun observeBlockedStatus() {
         if (number.isNotBlank()) {
-            val last10Target = number.replace(Regex("[^0-9]"), "").takeLast(10)
+            val target = PhoneNumberMatcher.normalize(number)
             viewModelScope.launch {
                 callLogRepository.getBlockedNumbers().collect { blockedList ->
-                    val isBlocked = blockedList.any { 
-                        val cleanItem = it.replace(Regex("[^0-9]"), "").takeLast(10)
-                        cleanItem == last10Target && last10Target.isNotEmpty()
+                    val isBlocked = blockedList.any {
+                        PhoneNumberMatcher.normalize(it) == target && target.isNotEmpty()
                     }
                     _uiState.value = _uiState.value.copy(isBlocked = isBlocked)
                 }

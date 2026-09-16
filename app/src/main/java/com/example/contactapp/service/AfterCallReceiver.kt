@@ -69,7 +69,6 @@ class AfterCallReceiver : BroadcastReceiver() {
         if (state != TelephonyManager.EXTRA_STATE_IDLE || !wasActive) return
 
         if (!AfterCallState.readEnabled(context)) {
-            Log.d(TAG, "onReceive: skipped — After Call is disabled in Settings")
             return
         }
         // MIUI has its own separate "background pop-up" AppOp, distinct from — and not satisfied
@@ -94,8 +93,6 @@ class AfterCallReceiver : BroadcastReceiver() {
             return
         }
 
-        Log.d(TAG, "onReceive: call just ended, all gates passed — looking up the CallLog row")
-
         val appContext = context.applicationContext
 
         preloadAfterCallNativeAds(appContext)
@@ -113,7 +110,6 @@ class AfterCallReceiver : BroadcastReceiver() {
 
                 val number = match.number
                 if (number.isNullOrBlank() || number in UNACTIONABLE_NUMBERS) {
-                    Log.d(TAG, "onReceive: skipped — number is unactionable ($number)")
                     return@launch
                 }
                 val duration = match.duration

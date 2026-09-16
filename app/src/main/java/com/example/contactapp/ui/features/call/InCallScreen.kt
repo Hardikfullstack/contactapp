@@ -26,6 +26,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -51,6 +52,7 @@ import com.example.contactapp.ui.features.keypad.components.NumberDisplay
 import com.example.contactapp.util.CallAccentColors
 import com.example.contactapp.util.CallButtonShape
 import com.example.contactapp.util.CallTheme
+import com.example.contactapp.util.PhoneNumberFormatter
 import com.example.contactapp.util.WallpaperSelection
 import com.example.contactapp.util.getAvatarColor
 import kotlinx.coroutines.delay
@@ -88,7 +90,11 @@ fun InCallScreen(
 ) {
     val callState by CallManager.callState.collectAsState()
 
-    val displayName = contactName ?: number.ifBlank { stringResource(R.string.unknown) }
+    // Telecom hands over a bare local number with no country code at all — format it with one
+    // (e.g. "+91 98765 43210") wherever it's actually shown, same as the call notifications.
+    val context = LocalContext.current
+    val displayNumber = remember(number) { PhoneNumberFormatter.withCountryCode(context, number) }
+    val displayName = contactName ?: displayNumber.ifBlank { stringResource(R.string.unknown) }
     val isRinging = callState == Call.STATE_RINGING
     val isActive = callState == Call.STATE_ACTIVE
     val isOnHold = callState == Call.STATE_HOLDING
@@ -101,6 +107,9 @@ fun InCallScreen(
     var showKeypad by remember { mutableStateOf(false) }
     var showAddCallSheet by remember { mutableStateOf(false) }
     val hasSecondaryCall = secondaryCallNumber != null
+    val displaySecondaryCallNumber = remember(secondaryCallNumber) {
+        secondaryCallNumber?.let { PhoneNumberFormatter.withCountryCode(context, it) }
+    }
 
     // Counts total call duration since it first connected — pauses while on hold (isActive is
     // false then) but must NOT reset back to 0, since a real call's duration keeps counting from
@@ -174,7 +183,7 @@ fun InCallScreen(
                 if (contactName != null && number.isNotBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = number,
+                        text = displayNumber,
                         fontSize = 16.sp,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -207,7 +216,7 @@ fun InCallScreen(
                                         )
                                     }
                                     Text(
-                                        text = secondaryCallNumber ?: "",
+                                        text = displaySecondaryCallNumber ?: "",
                                         color = Color.White,
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 14.sp,

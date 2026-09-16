@@ -65,6 +65,7 @@ import com.example.contactapp.util.CallAccentColors
 import com.example.contactapp.util.CallButtonShape
 import com.example.contactapp.util.CallTheme
 import com.example.contactapp.util.ContactCallBackgroundManager
+import com.example.contactapp.util.PhoneNumberFormatter
 import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.util.WallpaperSelection
 import com.example.contactapp.util.getAvatarColor
@@ -290,6 +291,7 @@ fun FakeCallContent(
     // No real Telecom audio session exists for a fake call (see FakeCallManager) — toggle the
     // device's actual mic/speakerphone directly instead, fitting for just sounding authentic.
     val context = LocalContext.current
+    val displayNumber = remember(number) { PhoneNumberFormatter.withCountryCode(context, number) }
     val audioManager = remember { context.getSystemService(AudioManager::class.java) }
     var isMuted by remember { mutableStateOf(false) }
     var isSpeakerOn by remember { mutableStateOf(false) }
@@ -374,7 +376,7 @@ fun FakeCallContent(
                 )
 
                 Text(
-                    text = if (isAccepted) { if (isFakeOnHold) stringResource(R.string.on_hold) else formatTimer(timer) } else number,
+                    text = if (isAccepted) { if (isFakeOnHold) stringResource(R.string.on_hold) else formatTimer(timer) } else displayNumber,
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.8f),
                     modifier = Modifier.padding(top = 8.dp)

@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import com.example.contactapp.R
 import com.example.contactapp.ui.features.call.InCallActivity
 import com.example.contactapp.util.NotificationAvatarUtils
+import com.example.contactapp.util.PhoneNumberFormatter
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -96,7 +97,8 @@ class CallNotificationManager @Inject constructor(
         // Shows the number under the name (matching the reference/system dialer's own heads-up
         // layout) instead of a generic "Incoming call" label — the caller's number is more useful
         // at a glance than a label that's already implied by the notification showing up at all.
-        val statusText = number
+        // Formatted with its country code — Telecom can hand this over as a bare local number.
+        val statusText = PhoneNumberFormatter.withCountryCode(context, number)
 
         val (nameColor, statusColor) = notificationTextColors()
         val views = RemoteViews(context.packageName, R.layout.notification_call_incoming).apply {

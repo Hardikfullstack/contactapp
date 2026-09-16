@@ -63,40 +63,34 @@ class LocalBlockManager @Inject constructor(
         .conflate()
 
     fun isBlocked(number: String): Flow<Boolean> {
-        val cleanTarget = number.replace(Regex("[^0-9]"), "")
-        val last10Target = cleanTarget.takeLast(10)
-        
+        val target = PhoneNumberMatcher.normalize(number)
+
         return blockedNumbersFlow.map { list ->
-            list.any { 
-                val cleanItem = it.replace(Regex("[^0-9]"), "")
-                val last10Item = cleanItem.takeLast(10)
-                last10Item == last10Target && last10Target.isNotEmpty()
-            }
+            list.any { PhoneNumberMatcher.normalize(it) == target && target.isNotEmpty() }
         }
     }
 
     fun setLocalBlocked(number: String, blocked: Boolean) {
-        val cleanNumber = number.replace(Regex("[^0-9]"), "")
-        val last10 = cleanNumber.takeLast(10)
+        val normalized = PhoneNumberMatcher.normalize(number)
 
         val editor = prefs.edit()
         if (blocked) {
             editor.putBoolean(number, true)
-            if (last10.isNotEmpty()) {
-                editor.putBoolean(last10, true)
+            if (normalized.isNotEmpty()) {
+                editor.putBoolean(normalized, true)
             }
         } else {
             editor.remove(number)
-            if (last10.isNotEmpty()) {
-                editor.remove(last10)
+            if (normalized.isNotEmpty()) {
+                editor.remove(normalized)
                 // The number may have been blocked via a differently-formatted string than the one
                 // passed in here (e.g. blocked from a raw call-log number, unblocked via a contact's
                 // stored number) — exact-string removal alone leaves that original key behind, and
-                // it still normalizes to the same last-10 digits, so the number keeps showing as
-                // blocked no matter how many times it's "unblocked". Purge every stored key that
-                // matches by digits, not just the one exact string given here.
+                // it still normalizes to the same digits, so the number keeps showing as blocked no
+                // matter how many times it's "unblocked". Purge every stored key that matches by
+                // digits, not just the one exact string given here.
                 prefs.all.keys
-                    .filter { it.replace(Regex("[^0-9]"), "").takeLast(10) == last10 }
+                    .filter { PhoneNumberMatcher.normalize(it) == normalized }
                     .forEach { editor.remove(it) }
             }
         }

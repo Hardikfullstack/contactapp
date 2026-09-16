@@ -34,7 +34,6 @@ class FakeCallConnectionService : ConnectionService() {
         connectionManagerPhoneAccount: PhoneAccountHandle?,
         request: ConnectionRequest
     ): Connection {
-        Log.d(TAG, "onCreateIncomingConnection: Telecom accepted the call request")
         val callInfo = request.extras?.getBundle(TelecomManager.EXTRA_INCOMING_CALL_EXTRAS)
         val name = callInfo?.getString(EXTRA_CALLER_NAME) ?: "Unknown"
         val number = callInfo?.getString(EXTRA_CALLER_NUMBER) ?: "0000000000"
@@ -79,7 +78,6 @@ class FakeCallConnectionService : ConnectionService() {
                     .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
                     .build()
                 telecomManager.registerPhoneAccount(account)
-                Log.d(TAG, "registerPhoneAccount: registered OK")
             } catch (e: Exception) {
                 // Some OEM Telecom stacks reject self-managed registration outright — the
                 // notification fallback in FakeCallReceiver still covers call delivery.
@@ -99,8 +97,7 @@ class FakeCallConnectionService : ConnectionService() {
                 val componentName = ComponentName(context, FakeCallConnectionService::class.java).flattenToString()
                 val selection = "${CallLog.Calls.PHONE_ACCOUNT_ID} = ? AND ${CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME} = ?"
                 val args = arrayOf(ACCOUNT_ID, componentName)
-                val deleted = context.contentResolver.delete(CallLog.Calls.CONTENT_URI, selection, args)
-                Log.d(TAG, "purgeCallLogEntries: removed $deleted row(s)")
+                context.contentResolver.delete(CallLog.Calls.CONTENT_URI, selection, args)
             } catch (e: Exception) {
                 // Missing call-log access — nothing more we can do beyond this best-effort cleanup.
                 Log.e(TAG, "purgeCallLogEntries: FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
@@ -118,9 +115,6 @@ class FakeCallConnection(
 ) : Connection() {
 
     override fun onShowIncomingCallUi() {
-        // Diagnostic: missing from logcat means Telecom never invoked this (OS decision, not ours);
-        // present but no UI means startActivity was blocked by an OEM background-start restriction.
-        Log.d(TAG, "onShowIncomingCallUi: launching FakeCallActivity")
         val intent = Intent(context, FakeCallActivity::class.java).apply {
             putExtra("caller_name", name)
             putExtra("caller_number", number)
@@ -129,27 +123,23 @@ class FakeCallConnection(
         }
         try {
             context.startActivity(intent)
-            Log.d(TAG, "onShowIncomingCallUi: startActivity did not throw")
         } catch (e: Exception) {
             Log.e(TAG, "onShowIncomingCallUi: startActivity FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
         }
     }
 
     override fun onAnswer() {
-        Log.d(TAG, "onAnswer (Telecom-driven)")
         setActive()
         FakeCallManager.notifyAnsweredByTelecom()
     }
 
     override fun onReject() {
-        Log.d(TAG, "onReject (Telecom-driven)")
         setDisconnected(DisconnectCause(DisconnectCause.REJECTED))
         destroy()
         FakeCallManager.notifyEndedByTelecom()
     }
 
     override fun onDisconnect() {
-        Log.d(TAG, "onDisconnect (Telecom-driven)")
         setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
         destroy()
         FakeCallManager.notifyEndedByTelecom()
@@ -157,7 +147,6 @@ class FakeCallConnection(
 
     override fun onStateChanged(state: Int) {
         super.onStateChanged(state)
-        Log.d(TAG, "onStateChanged: $state")
         if (state == Connection.STATE_DISCONNECTED) {
             // Telecom writes its own Call Log entry asynchronously around this same point —
             // two spaced-out purge attempts avoid racing that write on slower devices.

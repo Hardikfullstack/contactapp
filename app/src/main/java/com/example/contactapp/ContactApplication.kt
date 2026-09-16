@@ -1,7 +1,6 @@
 package com.example.contactapp
 
 import android.app.Application
-import android.util.Log
 import com.example.contactapp.ads.AdConnectivityRetry
 import com.example.contactapp.service.FakeCallConnectionService
 import com.example.contactapp.util.AfterCallState
@@ -20,7 +19,6 @@ class ContactApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("FakeCallDebug", "ContactApplication.onCreate: process started")
         AnalyticsManager.init()
         CrashlyticsManager.init()
         AfterCallState.applyPersistedMode(this)

@@ -11,6 +11,7 @@ import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.domain.model.DetailedContact
 import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.util.AnalyticsManager
+import com.example.contactapp.util.PhoneNumberMatcher
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -256,32 +257,110 @@ class ContactRepositoryImpl @Inject constructor(
         }
     }
 
+    /** Updating by CONTACT_ID (a joined/computed column) silently matched zero rows for some
+     * accounts on some devices, even though the row is visible to a plain SELECT — delete-then-
+     * insert against RAW_CONTACT_ID (a real, always-present column on Data) instead, the same
+     * technique the reference dialer app uses for its own phone-number edit. Applied to every raw
+     * contact under this aggregate (a merged contact can have more than one), and only for a
+     * field a given raw contact already has — skipping one that never had a name/phone avoids
+     * inventing a stray duplicate entry on it. */
     override suspend fun updateContact(contactId: String, newName: String, newNumber: String) {
         withContext(Dispatchers.IO) {
             val ops = ArrayList<ContentProviderOperation>()
 
-            // Update Name
-            val nameSelection = "${ContactsContract.Data.CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?"
-            val nameArgs = arrayOf(contactId, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
-            ops.add(ContentProviderOperation.newUpdate(ContactsContract.Data.CONTENT_URI)
-                .withSelection(nameSelection, nameArgs)
-                .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, newName)
-                .build())
+            for (rawContactId in findRawContactIds(contactId)) {
+                if (hasDataRow(rawContactId, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)) {
+                    ops.add(ContentProviderOperation.newDelete(ContactsContract.Data.CONTENT_URI)
+                        .withSelection(
+                            "${ContactsContract.Data.RAW_CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?",
+                            arrayOf(rawContactId, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
+                        )
+                        .build())
+                    ops.add(ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                        .withValue(ContactsContract.Data.RAW_CONTACT_ID, rawContactId)
+                        .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
+                        .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, newName)
+                        .build())
+                }
 
-            // Update Phone
-            val phoneSelection = "${ContactsContract.Data.CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?"
-            val phoneArgs = arrayOf(contactId, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
-            ops.add(ContentProviderOperation.newUpdate(ContactsContract.Data.CONTENT_URI)
-                .withSelection(phoneSelection, phoneArgs)
-                .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, newNumber)
-                .build())
+                val existingPhone = getPhoneTypeAndLabel(rawContactId)
+                if (existingPhone != null) {
+                    ops.add(ContentProviderOperation.newDelete(ContactsContract.Data.CONTENT_URI)
+                        .withSelection(
+                            "${ContactsContract.Data.RAW_CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?",
+                            arrayOf(rawContactId, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                        )
+                        .build())
+                    ops.add(ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                        .withValue(ContactsContract.Data.RAW_CONTACT_ID, rawContactId)
+                        .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                        .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, newNumber)
+                        .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, existingPhone.first)
+                        .withValue(ContactsContract.CommonDataKinds.Phone.LABEL, existingPhone.second)
+                        .build())
+                }
+            }
+
+            if (ops.isEmpty()) return@withContext
 
             try {
                 contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
                 AnalyticsManager.logEventWithAction("contact_updated", "ContactRepository", "success")
             } catch (e: Exception) {
-                // Log error
+                // Log or handle
             }
+        }
+    }
+
+    private fun findRawContactIds(contactId: String): List<String> {
+        return try {
+            contentResolver.query(
+                ContactsContract.RawContacts.CONTENT_URI,
+                arrayOf(ContactsContract.RawContacts._ID),
+                "${ContactsContract.RawContacts.CONTACT_ID} = ?",
+                arrayOf(contactId),
+                null
+            )?.use { cursor ->
+                val ids = mutableListOf<String>()
+                while (cursor.moveToNext()) ids.add(cursor.getString(0))
+                ids
+            } ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun hasDataRow(rawContactId: String, mimeType: String): Boolean {
+        return try {
+            contentResolver.query(
+                ContactsContract.Data.CONTENT_URI,
+                arrayOf(ContactsContract.Data._ID),
+                "${ContactsContract.Data.RAW_CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?",
+                arrayOf(rawContactId, mimeType),
+                null
+            )?.use { it.moveToFirst() } ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Existing (type, label) for this raw contact's phone row, or null if it has none — preserved
+     * on the replacement row so editing the number doesn't silently reset e.g. "Home" to "Mobile". */
+    private fun getPhoneTypeAndLabel(rawContactId: String): Pair<Int, String?>? {
+        return try {
+            contentResolver.query(
+                ContactsContract.Data.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.LABEL),
+                "${ContactsContract.Data.RAW_CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?",
+                arrayOf(rawContactId, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE),
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    Pair(cursor.getInt(0).takeIf { it != 0 } ?: ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE, cursor.getString(1))
+                } else null
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -511,12 +590,11 @@ class ContactRepositoryImpl @Inject constructor(
                     
                     when (mimeType) {
                         ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE -> {
-                            val normalized = data.replace(Regex("[^0-9]"), "")
+                            val normalized = PhoneNumberMatcher.normalize(data)
                             if (normalized.isNotEmpty()) {
-                                val last10 = normalized.takeLast(10)
-                                if (!builder.phoneCheckSet.contains(last10)) {
+                                if (!builder.phoneCheckSet.contains(normalized)) {
                                     builder.phones.add(data)
-                                    builder.phoneCheckSet.add(last10)
+                                    builder.phoneCheckSet.add(normalized)
                                 }
                             }
                         }

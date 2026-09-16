@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.contactapp.domain.model.Contact
 import com.example.contactapp.domain.repository.CallLogRepository
 import com.example.contactapp.domain.repository.ContactRepository
+import com.example.contactapp.util.PhoneNumberMatcher
 import com.example.contactapp.util.PreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -38,10 +39,10 @@ class FavoritesViewModel @Inject constructor(
                 callLogRepository.getBlockedNumbers(),
                 preferenceManager.preferencesFlow
             ) { contacts, blockedNumbers, _ ->
-                val normalizedBlocked = blockedNumbers.map { it.replace(Regex("[^0-9]"), "").takeLast(10) }
-                
+                val normalizedBlocked = blockedNumbers.map { PhoneNumberMatcher.normalize(it) }
+
                 val processed = contacts.map { contact ->
-                    val cleanNum = contact.number.replace(Regex("[^0-9]"), "").takeLast(10)
+                    val cleanNum = PhoneNumberMatcher.normalize(contact.number)
                     contact.copy(isBlocked = cleanNum.isNotEmpty() && normalizedBlocked.contains(cleanNum))
                 }
                 val sortOrder = preferenceManager.getContactSortOrder()

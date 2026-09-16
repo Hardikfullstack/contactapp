@@ -29,7 +29,7 @@ class ContactCallBackgroundManager @Inject constructor(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private fun keyFor(number: String): String = number.replace(Regex("[^0-9]"), "").takeLast(10)
+    private fun keyFor(number: String): String = PhoneNumberMatcher.normalize(number)
 
     fun getBackground(number: String): WallpaperSelection {
         val key = keyFor(number)

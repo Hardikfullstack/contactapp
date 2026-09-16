@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import com.example.contactapp.R
 import com.example.contactapp.ui.features.fakecall.FakeCallActivity
 import com.example.contactapp.util.NotificationAvatarUtils
+import com.example.contactapp.util.PhoneNumberFormatter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +57,6 @@ class FakeCallReceiver : BroadcastReceiver() {
         val name = intent.getStringExtra("caller_name") ?: "Unknown"
         val number = intent.getStringExtra("caller_number") ?: "0000000000"
         val photoUri = intent.getStringExtra("caller_photo")
-        Log.d(TAG, "onReceive: alarm fired for '$name' ($number)")
 
         // A fake call popping FakeCallActivity from the background is the same kind of
         // return-to-foreground AppOpenBackgroundReturnTrigger watches for as a real incoming call
@@ -66,9 +66,6 @@ class FakeCallReceiver : BroadcastReceiver() {
 
         try {
             deliverAsTelecomCall(context, name, number, photoUri)
-            Log.d(TAG, "onReceive: addNewIncomingCall did not throw (this only means the REQUEST was " +
-                "accepted, not that the connection was actually created — check for " +
-                "onCreateIncomingConnection / onCreateIncomingConnectionFailed next)")
         } catch (e: Exception) {
             Log.e(TAG, "onReceive: deliverAsTelecomCall FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
         }
@@ -97,20 +94,6 @@ class FakeCallReceiver : BroadcastReceiver() {
     private fun deliverAsTelecomCall(context: Context, name: String, number: String, photoUri: String?) {
         val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
         FakeCallConnectionService.registerPhoneAccount(context)
-
-        val handle = FakeCallConnectionService.phoneAccountHandle(context)
-        // Purely diagnostic — getPhoneAccount() can throw SecurityException (READ_PHONE_NUMBERS,
-        // not requested) on some versions; must never block the real addNewIncomingCall() below.
-        try {
-            val registeredAccount = telecomManager.getPhoneAccount(handle)
-            val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-            Log.d(TAG, "deliverAsTelecomCall: account registered=${registeredAccount != null}, " +
-                "enabled=${registeredAccount?.isEnabled}, " +
-                "ignoringBatteryOptimizations=${powerManager.isIgnoringBatteryOptimizations(context.packageName)}, " +
-                "manufacturer=${Build.MANUFACTURER}, sdk=${Build.VERSION.SDK_INT}")
-        } catch (e: Exception) {
-            Log.w(TAG, "deliverAsTelecomCall: diagnostic getPhoneAccount() check failed (non-fatal) — ${e.javaClass.simpleName}: ${e.message}")
-        }
 
         val callInfo = Bundle().apply {
             putString(FakeCallConnectionService.EXTRA_CALLER_NAME, name)
@@ -173,8 +156,8 @@ class FakeCallReceiver : BroadcastReceiver() {
 
         val title = if (isSpam) context.getString(R.string.spam_warning) else name
         // Shows the number under the name (matching the real incoming-call notification's own
-        // layout) instead of a generic "Incoming call" label.
-        val text = number
+        // layout) instead of a generic "Incoming call" label — formatted with its country code.
+        val text = PhoneNumberFormatter.withCountryCode(context, number)
 
         val (nameColor, statusColor) = notificationTextColors(context)
         val views = RemoteViews(context.packageName, R.layout.notification_call_incoming).apply {
@@ -206,7 +189,6 @@ class FakeCallReceiver : BroadcastReceiver() {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         ) {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
-            Log.d(TAG, "deliverAsNotification: notification posted")
         } else {
             Log.e(TAG, "deliverAsNotification: POST_NOTIFICATIONS not granted — notification NOT posted")
         }

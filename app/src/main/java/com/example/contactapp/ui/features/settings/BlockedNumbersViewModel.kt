@@ -7,6 +7,7 @@ import com.example.contactapp.domain.repository.ContactRepository
 import com.example.contactapp.domain.repository.CallLogRepository
 import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.LocalBlockManager
+import com.example.contactapp.util.PhoneNumberMatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -30,12 +31,12 @@ class BlockedNumbersViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             blockManager.getBlockedNumbers().collect { numbers ->
-                // A single blocked number is stored under two keys internally (raw string + last-10
-                // digits, see LocalBlockManager) — both come back here as separate entries. Once
-                // resolved to the same saved contact they'd produce duplicate rows (and duplicate
-                // LazyColumn keys, which crashes the list entirely), so dedupe by the underlying
-                // phone number before mapping to contacts.
-                val distinctNumbers = numbers.distinctBy { it.replace(Regex("[^0-9]"), "").takeLast(10) }
+                // A single blocked number is stored under two keys internally (raw string +
+                // normalized digits, see LocalBlockManager) — both come back here as separate
+                // entries. Once resolved to the same saved contact they'd produce duplicate rows
+                // (and duplicate LazyColumn keys, which crashes the list entirely), so dedupe by
+                // the underlying phone number before mapping to contacts.
+                val distinctNumbers = numbers.distinctBy { PhoneNumberMatcher.normalize(it) }
                 val enrichedList = distinctNumbers.map { number ->
                     contactRepository.findContactByNumber(number) ?: Contact(
                         id = number, // Use number as ID for temporary items

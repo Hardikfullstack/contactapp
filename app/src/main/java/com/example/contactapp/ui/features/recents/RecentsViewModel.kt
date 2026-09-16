@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.contactapp.domain.model.CallLogItem
 import com.example.contactapp.domain.model.CallType
 import com.example.contactapp.domain.repository.CallLogRepository
+import com.example.contactapp.util.PhoneNumberMatcher
 import com.example.contactapp.util.PreferenceManager
 import com.example.contactapp.util.SpamDetector
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -81,7 +82,7 @@ class RecentsViewModel @Inject constructor(
                 // unrelated call-log/filter change.
                 preferenceManager.preferencesFlow
             ) { logs, blockedNumbers, filter, _ ->
-                val normalizedBlocked = blockedNumbers.map { it.replace(Regex("[^0-9]"), "").takeLast(10) }
+                val normalizedBlocked = blockedNumbers.map { PhoneNumberMatcher.normalize(it) }
                 val spamNumbers = if (preferenceManager.isCallerIdSpamProtectionEnabled()) {
                     SpamDetector.detectSpamNumbers(logs)
                 } else {
@@ -89,7 +90,7 @@ class RecentsViewModel @Inject constructor(
                 }
 
                 val mapped = logs.map { log ->
-                    val cleanNum = log.number.replace(Regex("[^0-9]"), "").takeLast(10)
+                    val cleanNum = PhoneNumberMatcher.normalize(log.number)
                     val isSpam = cleanNum.isNotEmpty() && spamNumbers.contains(cleanNum)
                     log.copy(
                         isBlocked = cleanNum.isNotEmpty() && normalizedBlocked.contains(cleanNum),

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import com.example.contactapp.util.LocalBlockManager
+import com.example.contactapp.util.PhoneNumberMatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -29,13 +30,13 @@ class CallLogRepositoryImpl @Inject constructor(
 
     override fun fetchCallHistory(phoneNumber: String): Flow<List<CallLogItem>> = callLogFlow {
         // Exact NUMBER match would miss history when formats differ (spacing/country code) —
-        // normalize both sides to the last 10 digits, matching blocked-number/spam checks elsewhere.
-        val target = phoneNumber.replace(Regex("[^0-9]"), "").takeLast(10)
+        // normalize both sides, matching blocked-number/spam checks elsewhere.
+        val target = PhoneNumberMatcher.normalize(phoneNumber)
         if (target.isEmpty()) {
             emptyList()
         } else {
             queryCallLogs(null, null).filter { log ->
-                log.number.replace(Regex("[^0-9]"), "").takeLast(10) == target
+                PhoneNumberMatcher.normalize(log.number) == target
             }
         }
     }
@@ -210,14 +211,17 @@ class CallLogRepositoryImpl @Inject constructor(
                     val durationSec = try { duration.toLong() } catch (e: Exception) { 0L }
                     var photoUri: String? = cursor.getString(photoUriIndex)
 
-                    // Call log caches name/photo at call time — fall back to the contact index
-                    // only when either is missing (e.g. saved/updated after the call was logged).
-                    if (shouldResolveContactInfo && (name.isNullOrBlank() || photoUri.isNullOrBlank())) {
-                        val normalized = number?.replace(Regex("[^0-9]"), "")?.takeLast(10)
+                    // Call log caches name/photo at call time and Android does NOT keep that
+                    // cache in sync when the contact is later renamed/re-photographed — so for a
+                    // still-saved contact, always prefer the live index over the (possibly stale)
+                    // cache. Only fall back to the call log's own cache for a number that ISN'T a
+                    // saved contact (e.g. a name/photo some other CallerID source already cached).
+                    if (shouldResolveContactInfo) {
+                        val normalized = PhoneNumberMatcher.normalize(number)
                         val contactInfo = contactIndex[normalized]
                         if (contactInfo != null) {
-                            if (name.isNullOrBlank()) name = contactInfo.first
-                            if (photoUri.isNullOrBlank()) photoUri = contactInfo.second
+                            if (!contactInfo.first.isNullOrBlank()) name = contactInfo.first
+                            if (!contactInfo.second.isNullOrBlank()) photoUri = contactInfo.second
                         }
                     }
 
@@ -288,7 +292,7 @@ class CallLogRepositoryImpl @Inject constructor(
 
                 while (cursor.moveToNext()) {
                     val number = cursor.getString(numberIndex) ?: continue
-                    val normalized = number.replace(Regex("[^0-9]"), "").takeLast(10)
+                    val normalized = PhoneNumberMatcher.normalize(number)
                     if (normalized.isEmpty() || index.containsKey(normalized)) continue
                     index[normalized] = Pair(cursor.getString(nameIndex), cursor.getString(photoIndex))
                 }
