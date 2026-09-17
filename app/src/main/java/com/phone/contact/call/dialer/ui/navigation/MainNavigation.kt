@@ -1,0 +1,436 @@
+package com.phone.contact.call.dialer.ui.navigation
+
+import android.app.Activity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.phone.contact.call.dialer.util.DefaultDialerState
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.phone.contact.call.dialer.R
+import com.phone.contact.call.dialer.ui.features.recents.RecentsScreen
+import com.phone.contact.call.dialer.ui.features.recents.SearchScreen
+import com.phone.contact.call.dialer.ui.features.history.HistoryScreen
+import com.phone.contact.call.dialer.ui.features.favorites.FavoritesScreen
+import com.phone.contact.call.dialer.ui.features.contacts.ContactsScreen
+import com.phone.contact.call.dialer.ui.features.keypad.KeypadScreen
+import com.phone.contact.call.dialer.ui.features.settings.SettingsScreen
+import com.phone.contact.call.dialer.ui.features.settings.BlockedNumbersScreen
+import com.phone.contact.call.dialer.ui.features.settings.RecycleBinScreen
+import com.phone.contact.call.dialer.ui.features.settings.CallerIdSpamScreen
+import com.phone.contact.call.dialer.ui.features.settings.AboutUsScreen
+import com.phone.contact.call.dialer.ui.features.settings.LegalWebViewScreen
+import com.phone.contact.call.dialer.ui.features.tools.ToolsScreen
+import com.phone.contact.call.dialer.ui.features.analytics.AnalyticsScreen
+import com.phone.contact.call.dialer.ui.features.announcer.CallAnnouncerScreen
+import com.phone.contact.call.dialer.ui.features.flash.FlashAlertScreen
+import com.phone.contact.call.dialer.ui.features.wallpaper.CallWallpaperScreen
+import com.phone.contact.call.dialer.ui.features.callthemes.CallThemeScreen
+import com.phone.contact.call.dialer.ui.features.ringtone.RingtoneScreen
+import com.phone.contact.call.dialer.ui.features.autoreply.AutoReplyScreen
+import com.phone.contact.call.dialer.ui.features.fakecall.FakeCallSetupScreen
+import com.phone.contact.call.dialer.ui.features.callreminder.CallReminderScreen
+import com.phone.contact.call.dialer.ui.features.callreminder.CallReminderSetupScreen
+import com.phone.contact.call.dialer.ui.features.onboarding.LanguageSelectionScreen
+import com.phone.contact.call.dialer.ads.NativeOrBannerAdView
+import com.phone.contact.call.dialer.ui.components.dialogs.ExitConfirmationDialog
+import com.phone.contact.call.dialer.ui.components.dialogs.MaintenanceDialog
+import com.phone.contact.call.dialer.ui.components.dialogs.OfflineDialog
+import com.phone.contact.call.dialer.ui.components.CommonBottomBar
+import com.phone.contact.call.dialer.ui.components.BottomBarActionItem
+import com.phone.contact.call.dialer.util.AnalyticsManager
+import com.phone.contact.call.dialer.util.PreferenceManager
+import com.phone.contact.call.dialer.viewmodel.AppConfigViewModel
+
+sealed class MainScreen(
+    val route: String,
+    val labelRes: Int? = null,
+    val icon: ImageVector? = null,
+    val selectedIcon: ImageVector? = null
+) {
+    object Recents : MainScreen("recents", R.string.recents, Icons.Outlined.AccessTime, Icons.Filled.AccessTimeFilled)
+    object Contacts : MainScreen("contacts", R.string.contacts, Icons.Outlined.PersonOutline, Icons.Filled.Person)
+    object Tools : MainScreen("tools", R.string.tools, Icons.Outlined.Window, Icons.Filled.Window)
+    object Favorites : MainScreen("favorites", R.string.favorites, Icons.Outlined.StarOutline, Icons.Filled.Star)
+    object Settings : MainScreen("settings", R.string.settings, Icons.Outlined.Settings, Icons.Filled.Settings)
+    object Keypad : MainScreen("keypad")
+    object Search : MainScreen("search")
+    object History : MainScreen("history/{name}/{number}") {
+        fun createRoute(name: String, number: String) = "history/$name/$number"
+    }
+    object BlockedNumbers : MainScreen("blocked_numbers")
+    object CallerIdSpam : MainScreen("caller_id_spam")
+    object AboutUs : MainScreen("about_us")
+    object LegalWebView : MainScreen("legal_webview/{type}") {
+        /** [type] is "privacy" or "terms" — resolves which remote-config URL to load. */
+        fun createRoute(type: String) = "legal_webview/$type"
+    }
+    object RecycleBin : MainScreen("recycle_bin")
+    object Language : MainScreen("language_settings")
+    object Analytics : MainScreen("analytics")
+    object CallAnnouncer : MainScreen("call_announcer")
+    object FlashAlert : MainScreen("flash_alert")
+    object CallWallpaper : MainScreen("call_wallpaper")
+    object CallThemes : MainScreen("call_themes")
+    object Ringtone : MainScreen("ringtone")
+    object ContactRingtone : MainScreen("contact_ringtone/{name}/{number}") {
+        fun createRoute(name: String, number: String) = "contact_ringtone/$name/$number"
+    }
+    object AutoReply : MainScreen("auto_reply")
+    object FakeCallSetup : MainScreen("fake_call_setup")
+    object CallReminder : MainScreen("call_reminder")
+    object CallReminderSetup : MainScreen("call_reminder_setup")
+}
+
+@Composable
+fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = null) {
+    val navController = rememberNavController()
+    // "contacts"/"recents" as passed via MainActivity's open_tab intent extra (e.g. from the
+    // After Call screen) — any other/missing value falls back to the normal default tab.
+    val startDestination = when (startTab) {
+        "contacts" -> MainScreen.Contacts.route
+        "recents" -> MainScreen.Recents.route
+        else -> MainScreen.Recents.route
+    }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    // Matches the Messages app's pattern: a plain OnDestinationChangedListener, with the route
+    // trimmed to its base segment (drops "/{name}/{number}"-style args) for a stable screen name.
+    DisposableEffect(navController) {
+        val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
+            val screenName = destination.route?.substringBefore("/")?.substringBefore("?") ?: "unknown"
+            AnalyticsManager.logScreenView(screenName)
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+
+    // Memoize navigation items to prevent redundant re-calculations
+    val navItems = remember {
+        listOf(
+            MainScreen.Recents,
+            MainScreen.Contacts,
+            MainScreen.Tools,
+            MainScreen.Favorites,
+            MainScreen.Settings
+        )
+    }
+
+    val showBottomBar = remember(currentDestination) {
+        navItems.any { it.route == currentDestination?.route }
+    }
+
+    // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped),
+    // so the remote ad config isn't refetched per screen.
+    val context = LocalContext.current
+    val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
+
+    // Bottom nav is locked (matching RecentsScreen's own content lockdown) until this app is the
+    // default dialer — refreshed here too, not just from RecentsScreen, so it's correct even if
+    // Recents was never the active tab yet.
+    val isDefaultDialerState by DefaultDialerState.isDefault
+    LaunchedEffect(Unit) { DefaultDialerState.refresh(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) DefaultDialerState.refresh(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(isDefaultDialerState, currentDestination) {
+        if (!isDefaultDialerState && currentDestination != null && currentDestination?.route != MainScreen.Recents.route) {
+            navController.navigate(MainScreen.Recents.route) {
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+    val adConfig by appConfigViewModel.appResponse.collectAsState()
+    val bannerAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.banner_1_on_off == "on") {
+            result.banner_1?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_6 is unused elsewhere — tried first here (see NativeOrBannerAdView), falling back to
+    // banner_1 above only if it fails to load. Every other banner-only placement (History,
+    // Analytics, Flash Alert, etc.) now has its own dedicated native ID instead of sharing this one.
+    val bottomNativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_6_on_off == "on") {
+            result.native_6?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_3 is unused elsewhere (native_1 = Language, native_2 = Recents, native_4/5 = After Call).
+    val exitNativeAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_3_on_off == "on") {
+            result.native_3?.takeIf { it.isNotBlank() }
+        } else null
+    }
+
+    var showExitDialog by remember { mutableStateOf(false) }
+    val activity = context as? Activity
+    val isOnline by appConfigViewModel.isOnline.collectAsState()
+
+    BackHandler(enabled = showBottomBar) {
+        if (isOnline) {
+            showExitDialog = true
+        } else {
+            activity?.finish()
+        }
+    }
+
+    if (showExitDialog) {
+        ExitConfirmationDialog(
+            nativeAdUnitId = exitNativeAdUnitId,
+            onExitClick = { activity?.finish() },
+            onDismiss = { showExitDialog = false }
+        )
+    }
+
+    val isMaintenanceOn = adConfig?.result?.extra_data_1_on_off == "on"
+    if (isMaintenanceOn) {
+        MaintenanceDialog(message = adConfig?.result?.extra_data_1_message)
+    }
+
+    // Re-shown every time connectivity drops (not just once per app session) — resets the
+    // acknowledgement as soon as it's back online so a later drop isn't silently ignored.
+    var offlineDialogDismissed by remember { mutableStateOf(false) }
+    LaunchedEffect(isOnline) {
+        if (isOnline) offlineDialogDismissed = false
+    }
+    if (!isMaintenanceOn && !isOnline && !offlineDialogDismissed) {
+        OfflineDialog(onDismiss = { offlineDialogDismissed = true })
+    }
+
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                val currentRoute = currentDestination?.route
+                val items = navItems.map { screen ->
+                    val label = stringResource(screen.labelRes!!)
+                    remember(currentRoute, label) {
+                        BottomBarActionItem(
+                            icon = screen.icon!!,
+                            selectedIcon = screen.selectedIcon,
+                            label = label,
+                            selected = currentRoute == screen.route,
+                            onClick = {
+                                if (currentRoute != screen.route) {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+                Column(modifier = Modifier.navigationBarsPadding()) {
+                    CommonBottomBar(items = items, windowInsets = WindowInsets(0.dp), enabled = isDefaultDialerState)
+                    if (bottomNativeAdUnitId != null || bannerAdUnitId != null) {
+                        NativeOrBannerAdView(nativeAdUnitId = bottomNativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+                    }
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = Modifier.padding(bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp)
+        ) {
+            composable(MainScreen.Recents.route) {
+                RecentsScreen(
+                    onSearchClick = { navController.navigate(MainScreen.Search.route) },
+                    onHistoryClick = { name, number ->
+                        navController.navigate(MainScreen.History.createRoute(name, number))
+                    },
+                    onKeypadClick = { navController.navigate(MainScreen.Keypad.route) }
+                )
+            }
+            composable(MainScreen.Search.route) {
+                SearchScreen(
+                    onBack = { navController.popBackStack() },
+                    onContactClick = { name, number ->
+                        navController.navigate(MainScreen.History.createRoute(name, number))
+                    }
+                )
+            }
+            composable(MainScreen.History.route) {
+                HistoryScreen(
+                    onBack = { navController.popBackStack() },
+                    onRingtoneClick = { name, number ->
+                        navController.navigate(MainScreen.ContactRingtone.createRoute(name, number))
+                    }
+                )
+            }
+            composable(MainScreen.Favorites.route) {
+                FavoritesScreen(
+                    onContactClick = { name, number ->
+                        navController.navigate(MainScreen.History.createRoute(name, number))
+                    }
+                )
+            }
+            composable(MainScreen.Tools.route) {
+                ToolsScreen(
+                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) },
+                    onAnalyticsClick = { navController.navigate(MainScreen.Analytics.route) },
+                    onFakeCallClick = { navController.navigate(MainScreen.FakeCallSetup.route) },
+                    onAnnouncerClick = { navController.navigate(MainScreen.CallAnnouncer.route) },
+                    onFlashAlertClick = { navController.navigate(MainScreen.FlashAlert.route) },
+                    onWallpaperClick = { navController.navigate(MainScreen.CallWallpaper.route) },
+                    onCallThemesClick = { navController.navigate(MainScreen.CallThemes.route) },
+                    onSetRingtoneClick = { navController.navigate(MainScreen.Ringtone.route) },
+                    onAutoReplyClick = { navController.navigate(MainScreen.AutoReply.route) },
+                    onKeypadClick = { navController.navigate(MainScreen.Keypad.route) },
+                    onCallReminderClick = { navController.navigate(MainScreen.CallReminder.route) }
+                )
+            }
+            composable(MainScreen.Keypad.route) { 
+                KeypadScreen(
+                    onSearchClick = { navController.navigate(MainScreen.Search.route) },
+                    onBackClick = { navController.popBackStack() },
+                    preferenceManager = preferenceManager
+                )
+            }
+            composable(MainScreen.Contacts.route) { 
+                ContactsScreen(
+                    onContactClick = { name, number ->
+                        navController.navigate(MainScreen.History.createRoute(name, number))
+                    },
+                    onSearchClick = { navController.navigate(MainScreen.Search.route) }
+                )
+            }
+            composable(MainScreen.Settings.route) {
+                SettingsScreen(
+                    onBlockedNumbersClick = { navController.navigate(MainScreen.BlockedNumbers.route) },
+                    onLanguageClick = { navController.navigate(MainScreen.Language.route) },
+                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) },
+                    onCallerIdSpamClick = { navController.navigate(MainScreen.CallerIdSpam.route) },
+                    onAboutUsClick = { navController.navigate(MainScreen.AboutUs.route) }
+                )
+            }
+            composable(MainScreen.BlockedNumbers.route) {
+                BlockedNumbersScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.CallerIdSpam.route) {
+                CallerIdSpamScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.AboutUs.route) {
+                AboutUsScreen(
+                    onBack = { navController.popBackStack() },
+                    onPrivacyPolicyClick = { navController.navigate(MainScreen.LegalWebView.createRoute("privacy")) },
+                    onTermsClick = { navController.navigate(MainScreen.LegalWebView.createRoute("terms")) }
+                )
+            }
+            composable(MainScreen.LegalWebView.route) { backStackEntry ->
+                LegalWebViewScreen(
+                    onBack = { navController.popBackStack() },
+                    type = backStackEntry.arguments?.getString("type") ?: "privacy"
+                )
+            }
+            composable(MainScreen.RecycleBin.route) {
+                RecycleBinScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.Analytics.route) {
+                AnalyticsScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.CallAnnouncer.route) {
+                CallAnnouncerScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.FlashAlert.route) {
+                FlashAlertScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.CallWallpaper.route) {
+                CallWallpaperScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.CallThemes.route) {
+                CallThemeScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.Ringtone.route) {
+                RingtoneScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.ContactRingtone.route) {
+                RingtoneScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.AutoReply.route) {
+                AutoReplyScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.FakeCallSetup.route) {
+                FakeCallSetupScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.CallReminder.route) {
+                CallReminderScreen(
+                    onBack = { navController.popBackStack() },
+                    onAddReminder = { navController.navigate(MainScreen.CallReminderSetup.route) }
+                )
+            }
+            composable(MainScreen.CallReminderSetup.route) {
+                CallReminderSetupScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.Language.route) {
+                LanguageSelectionScreen(
+                    onDone = { navController.popBackStack() },
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+        }
+    }
+}
+

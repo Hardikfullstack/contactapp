@@ -10,11 +10,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.contactapp"
+    namespace = "com.phone.contact.call.dialer"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.contactapp"
+        applicationId = "com.phone.contact.call.dialer"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

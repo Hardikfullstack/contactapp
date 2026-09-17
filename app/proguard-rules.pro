@@ -15,21 +15,21 @@
 # kotlinx-serialization converter from the remote ad-config API. Without these, obfuscation
 # renames their fields and the API response silently deserializes to all-null.
 -keepattributes *Annotation*, InnerClasses, Signature
--keep,includedescriptorclasses class com.example.contactapp.data.model.**$$serializer { *; }
--keepclassmembers class com.example.contactapp.data.model.** {
+-keep,includedescriptorclasses class com.phone.contact.call.dialer.data.model.**$$serializer { *; }
+-keepclassmembers class com.phone.contact.call.dialer.data.model.** {
     *** Companion;
 }
--keepclasseswithmembers class com.example.contactapp.data.model.** {
+-keepclasseswithmembers class com.phone.contact.call.dialer.data.model.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep class com.example.contactapp.data.model.** { *; }
+-keep class com.phone.contact.call.dialer.data.model.** { *; }
 
 # --- Gson ---
 # Gson reads/writes these model classes by reflection (ContactRepositoryImpl, CallReminder,
 # WallpaperSelection) — obfuscating their field names breaks decoding of already-saved data.
--keep class com.example.contactapp.domain.model.DetailedContact { *; }
--keep class com.example.contactapp.util.CallReminder { *; }
--keep class com.example.contactapp.util.WallpaperDto { *; }
+-keep class com.phone.contact.call.dialer.domain.model.DetailedContact { *; }
+-keep class com.phone.contact.call.dialer.util.CallReminder { *; }
+-keep class com.phone.contact.call.dialer.util.WallpaperDto { *; }
 -keepclassmembers,allowobfuscation class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }

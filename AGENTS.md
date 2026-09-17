@@ -1,6 +1,6 @@
 # ContactApp - Master Index
 
-`com.example.contactapp` — a dialer/contacts Android app (default-dialer-capable: InCallService,
+`com.phone.contact.call.dialer` — a dialer/contacts Android app (default-dialer-capable: InCallService,
 CallScreeningService, spam/block list, fake calls, call themes, flash alerts, call reminders,
 after-call screen, auto-reply). Single Gradle module (`app`), MVVM-ish layering with Hilt DI, but
 **not** a strict clean-architecture split — ViewModels live next to their screens, not in a

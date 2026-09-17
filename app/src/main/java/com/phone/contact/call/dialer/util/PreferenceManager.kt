@@ -1,0 +1,323 @@
+package com.phone.contact.call.dialer.util
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.appcompat.app.AppCompatDelegate
+import kotlinx.coroutines.flow.*
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class PreferenceManager @Inject constructor(
+    @ApplicationContext context: Context
+) {
+    private val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+
+    // Timestamp StateFlow to ensure every setting change is broadcast instantly
+    private val _preferenceUpdateEvent = MutableStateFlow<Long>(System.currentTimeMillis())
+    val preferencesFlow: Flow<Long> = _preferenceUpdateEvent.asStateFlow()
+
+    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    // Granular flows for specific preferences to prevent redundant updates
+    val themeFlow: Flow<String> = _preferenceUpdateEvent
+        .map { getAppTheme() }
+        .distinctUntilChanged()
+        .onStart { emit(getAppTheme()) }
+
+    val sortOrderFlow: Flow<String> = _preferenceUpdateEvent
+        .map { getContactSortOrder() }
+        .distinctUntilChanged()
+        .onStart { emit(getContactSortOrder()) }
+
+    fun isOnboardingCompleted(): Boolean {
+        return sharedPreferences.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    /** Set right after the basic runtime-permissions step (Contacts/Call/SMS/default-dialer) —
+     * well before [isOnboardingCompleted], which only flips once the whole flow (including the
+     * MIUI-specific steps and Language) finishes. Lets MainActivity tell "never started onboarding"
+     * apart from "started it, but got interrupted before finishing the MIUI-permission steps" —
+     * the latter should resume directly on those steps instead of restarting from scratch, and
+     * should also be re-checked (see CallReliabilityUtils) if a MIUI permission gets silently
+     * revoked from system Settings well after onboarding, same as the Messages app does. */
+    fun isBasicOnboardingCompleted(): Boolean {
+        return sharedPreferences.getBoolean(KEY_BASIC_ONBOARDING_COMPLETED, false)
+    }
+
+    fun setBasicOnboardingCompleted(completed: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_BASIC_ONBOARDING_COMPLETED, completed).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun getContactSortOrder(): String {
+        return sharedPreferences.getString(KEY_CONTACT_SORT_ORDER, "First Name") ?: "First Name"
+    }
+
+    fun setContactSortOrder(order: String) {
+        sharedPreferences.edit().putString(KEY_CONTACT_SORT_ORDER, order).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun getAppTheme(): String {
+        return sharedPreferences.getString(KEY_APP_THEME, "System") ?: "System"
+    }
+
+    fun setAppTheme(theme: String) {
+        sharedPreferences.edit().putString(KEY_APP_THEME, theme).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+        applyNightMode(theme)
+    }
+
+    /** Syncs the OS-level night-mode resolution (AppCompatDelegate) with this app's own in-app
+     * Light/Dark/System theme choice — without this, values-night/ resources (e.g. themes.xml's
+     * native windowBackground, used for the brief pre-Compose frame during an Activity recreate)
+     * only ever follow the raw system setting, so forcing "Light" while the system is in dark
+     * mode (or "Dark" while the system is light) would still flash the WRONG native background —
+     * the opposite-direction version of the white-in-dark-mode bug this was added to fix. Call
+     * once at app startup (see ContactApplication.onCreate) and again from [setAppTheme] whenever
+     * it changes.
+     */
+    fun applyNightMode(theme: String = getAppTheme()) {
+        val mode = when (theme) {
+            "Dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            "Light" -> AppCompatDelegate.MODE_NIGHT_NO
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        if (AppCompatDelegate.getDefaultNightMode() != mode) {
+            AppCompatDelegate.setDefaultNightMode(mode)
+        }
+    }
+
+    fun isCallAnnouncerEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_CALL_ANNOUNCER_ENABLED, false)
+    }
+
+    fun setCallAnnouncerEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_CALL_ANNOUNCER_ENABLED, enabled).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun getAnnouncerRepeatCount(): Int {
+        return sharedPreferences.getInt(KEY_ANNOUNCER_REPEAT_COUNT, 1)
+    }
+
+    fun setAnnouncerRepeatCount(count: Int) {
+        sharedPreferences.edit().putInt(KEY_ANNOUNCER_REPEAT_COUNT, count).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun isFlashAlertEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_FLASH_ALERT_ENABLED, false)
+    }
+
+    fun setFlashAlertEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_FLASH_ALERT_ENABLED, enabled).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun getFlashBlinkSpeed(): Long {
+        // Must match one of the three selectable speeds in FlashAlertScreen (800/400/150) —
+        // Medium is the sensible default. A value that isn't one of those three leaves none of
+        // the radio options selected until the user explicitly picks one.
+        return sharedPreferences.getLong(KEY_FLASH_BLINK_SPEED, 400L)
+    }
+
+    fun setFlashBlinkSpeed(speed: Long) {
+        sharedPreferences.edit().putLong(KEY_FLASH_BLINK_SPEED, speed).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    val wallpaperSelectionFlow: Flow<WallpaperSelection> = _preferenceUpdateEvent
+        .map { getCallWallpaperSelection() }
+        .distinctUntilChanged()
+        .onStart { emit(getCallWallpaperSelection()) }
+
+    fun getCallWallpaperSelection(): WallpaperSelection {
+        val raw = sharedPreferences.getString(KEY_CALL_WALLPAPER_URI, null)
+        val (selection, wasLegacy) = WallpaperCodec.decode(raw)
+        if (wasLegacy) {
+            sharedPreferences.edit().putString(KEY_CALL_WALLPAPER_URI, WallpaperCodec.encode(selection)).apply()
+        }
+        return selection
+    }
+
+    fun setCallWallpaperSelection(selection: WallpaperSelection) {
+        sharedPreferences.edit().putString(KEY_CALL_WALLPAPER_URI, WallpaperCodec.encode(selection)).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    val callAccentColorFlow: Flow<String> = _preferenceUpdateEvent
+        .map { getCallAccentColorId() }
+        .distinctUntilChanged()
+        .onStart { emit(getCallAccentColorId()) }
+
+    fun getCallAccentColorId(): String {
+        return sharedPreferences.getString(KEY_CALL_ACCENT_COLOR, "green") ?: "green"
+    }
+
+    fun setCallAccentColorId(id: String) {
+        sharedPreferences.edit().putString(KEY_CALL_ACCENT_COLOR, id).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    val callButtonShapeFlow: Flow<String> = _preferenceUpdateEvent
+        .map { getCallButtonShapeName() }
+        .distinctUntilChanged()
+        .onStart { emit(getCallButtonShapeName()) }
+
+    fun getCallButtonShapeName(): String {
+        return sharedPreferences.getString(KEY_CALL_BUTTON_SHAPE, CallButtonShape.CIRCLE.name) ?: CallButtonShape.CIRCLE.name
+    }
+
+    fun setCallButtonShape(shape: CallButtonShape) {
+        sharedPreferences.edit().putString(KEY_CALL_BUTTON_SHAPE, shape.name).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun isAutoReplyEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_AUTO_REPLY_ENABLED, false)
+    }
+
+    fun setAutoReplyEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_AUTO_REPLY_ENABLED, enabled).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun getAutoReplyMessage(): String {
+        return sharedPreferences.getString(KEY_AUTO_REPLY_MESSAGE, DEFAULT_AUTO_REPLY_MESSAGE) ?: DEFAULT_AUTO_REPLY_MESSAGE
+    }
+
+    fun setAutoReplyMessage(message: String) {
+        sharedPreferences.edit().putString(KEY_AUTO_REPLY_MESSAGE, message).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    /** Gates only the automatic pattern-detection half of spam flagging (SpamManager/SpamDetector)
+     * — manually reported numbers (see [getSpamNumbers]) still count as spam regardless, since
+     * that's a direct user action rather than automatic protection. Defaults to true, matching
+     * the always-on behavior this toggle is being added in front of. */
+    fun isCallerIdSpamProtectionEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_CALLER_ID_SPAM_PROTECTION_ENABLED, true)
+    }
+
+    fun setCallerIdSpamProtectionEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_CALLER_ID_SPAM_PROTECTION_ENABLED, enabled).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    val spamNumbersFlow: Flow<Set<String>> = _preferenceUpdateEvent
+        .map { getSpamNumbers() }
+        .distinctUntilChanged()
+        .onStart { emit(getSpamNumbers()) }
+
+    /** Normalized (last-10-digit) numbers flagged by SpamDetector — persisted here so a ringing
+     *  call can be classified with a cheap synchronous read instead of re-querying the call log. */
+    fun getSpamNumbers(): Set<String> {
+        return sharedPreferences.getStringSet(KEY_SPAM_NUMBERS, emptySet()) ?: emptySet()
+    }
+
+    fun setSpamNumbers(numbers: Set<String>) {
+        // This is written from a live call-log flow that can re-fire on every content-observer
+        // tick — skip the write (and the shared _preferenceUpdateEvent bump every other
+        // preference flow in this file keys off) when the set hasn't actually changed.
+        if (numbers == getSpamNumbers()) return
+        sharedPreferences.edit().putStringSet(KEY_SPAM_NUMBERS, numbers).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    val callRemindersFlow: Flow<List<CallReminder>> = _preferenceUpdateEvent
+        .map { getCallReminders() }
+        .distinctUntilChanged()
+        .onStart { emit(getCallReminders()) }
+
+    fun getCallReminders(): List<CallReminder> {
+        return CallReminderCodec.decode(sharedPreferences.getString(KEY_CALL_REMINDERS, null))
+    }
+
+    fun setCallReminders(reminders: List<CallReminder>) {
+        sharedPreferences.edit().putString(KEY_CALL_REMINDERS, CallReminderCodec.encode(reminders)).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun isShakeTriggerEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_SHAKE_TRIGGER_ENABLED, false)
+    }
+
+    fun setShakeTriggerEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_SHAKE_TRIGGER_ENABLED, enabled).apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    fun getShakeCallerName(): String = sharedPreferences.getString(KEY_SHAKE_CALLER_NAME, "") ?: ""
+
+    fun getShakeCallerNumber(): String = sharedPreferences.getString(KEY_SHAKE_CALLER_NUMBER, "") ?: ""
+
+    /** The "Default Caller" saved once from the Quick Trigger Profile section — name+number are always set together. */
+    fun setShakeCallerProfile(name: String, number: String) {
+        sharedPreferences.edit()
+            .putString(KEY_SHAKE_CALLER_NAME, name)
+            .putString(KEY_SHAKE_CALLER_NUMBER, number)
+            .apply()
+        _preferenceUpdateEvent.value = System.currentTimeMillis()
+    }
+
+    // One-time-ask flags for the OEM background-reliability permissions requested during
+    // onboarding (see PermissionScreen.kt) — each is asked at most once per install, even if the
+    // user backs out without actually granting it, so onboarding doesn't nag on every app open.
+    fun isOverlayPermissionAutoPrompted(): Boolean = sharedPreferences.getBoolean(KEY_OVERLAY_AUTO_PROMPTED, false)
+    fun setOverlayPermissionAutoPrompted() { sharedPreferences.edit().putBoolean(KEY_OVERLAY_AUTO_PROMPTED, true).apply() }
+
+    // The "set as default dialer" role request now happens once on the Home screen right after
+    // onboarding (see RecentsScreen.kt), not during onboarding itself — this flag keeps it from
+    // asking again on every app open once the user has seen it (whether or not they granted it).
+    fun isDefaultDialerPrompted(): Boolean = sharedPreferences.getBoolean(KEY_DEFAULT_DIALER_PROMPTED, false)
+    fun setDefaultDialerPrompted() { sharedPreferences.edit().putBoolean(KEY_DEFAULT_DIALER_PROMPTED, true).apply() }
+
+    fun isMiuiPermissionsCompleted(): Boolean = sharedPreferences.getBoolean(KEY_MIUI_PERMISSIONS_DONE, false)
+    fun setMiuiPermissionsCompleted() { sharedPreferences.edit().putBoolean(KEY_MIUI_PERMISSIONS_DONE, true).apply() }
+
+    fun isMiuiAutostartCompleted(): Boolean = sharedPreferences.getBoolean(KEY_MIUI_AUTOSTART_DONE, false)
+    fun setMiuiAutostartCompleted() { sharedPreferences.edit().putBoolean(KEY_MIUI_AUTOSTART_DONE, true).apply() }
+
+    fun isOemAutostartCompleted(): Boolean = sharedPreferences.getBoolean(KEY_OEM_AUTOSTART_DONE, false)
+    fun setOemAutostartCompleted() { sharedPreferences.edit().putBoolean(KEY_OEM_AUTOSTART_DONE, true).apply() }
+
+    companion object {
+        private const val PREF_NAME = "contact_app_prefs"
+        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        private const val KEY_BASIC_ONBOARDING_COMPLETED = "basic_onboarding_completed"
+        private const val KEY_CONTACT_SORT_ORDER = "contact_sort_order"
+        private const val KEY_APP_THEME = "app_theme"
+        private const val KEY_CALL_ANNOUNCER_ENABLED = "call_announcer_enabled"
+        private const val KEY_ANNOUNCER_REPEAT_COUNT = "announcer_repeat_count"
+        private const val KEY_FLASH_ALERT_ENABLED = "flash_alert_enabled"
+        private const val KEY_FLASH_BLINK_SPEED = "flash_blink_speed"
+        private const val KEY_CALL_WALLPAPER_URI = "call_wallpaper_uri"
+        private const val KEY_CALL_ACCENT_COLOR = "call_accent_color_id"
+        private const val KEY_CALL_BUTTON_SHAPE = "call_button_shape"
+        private const val KEY_AUTO_REPLY_ENABLED = "auto_reply_enabled"
+        private const val KEY_AUTO_REPLY_MESSAGE = "auto_reply_message"
+        private const val KEY_CALLER_ID_SPAM_PROTECTION_ENABLED = "caller_id_spam_protection_enabled"
+        private const val DEFAULT_AUTO_REPLY_MESSAGE = "Can't talk right now, I'll call you back."
+        private const val KEY_SPAM_NUMBERS = "spam_numbers"
+        private const val KEY_CALL_REMINDERS = "call_reminders"
+        private const val KEY_SHAKE_TRIGGER_ENABLED = "shake_trigger_enabled"
+        private const val KEY_SHAKE_CALLER_NAME = "shake_caller_name"
+        private const val KEY_SHAKE_CALLER_NUMBER = "shake_caller_number"
+        private const val KEY_OVERLAY_AUTO_PROMPTED = "overlay_permission_auto_prompted"
+        private const val KEY_DEFAULT_DIALER_PROMPTED = "default_dialer_prompted"
+        private const val KEY_MIUI_PERMISSIONS_DONE = "miui_permissions_completed"
+        private const val KEY_MIUI_AUTOSTART_DONE = "miui_autostart_completed"
+        private const val KEY_OEM_AUTOSTART_DONE = "oem_autostart_completed"
+    }
+}

@@ -1,0 +1,52 @@
+package com.phone.contact.call.dialer.ui.features.callreminder
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.phone.contact.call.dialer.domain.model.Contact
+import com.phone.contact.call.dialer.domain.repository.ContactRepository
+import com.phone.contact.call.dialer.service.CallReminderScheduler
+import com.phone.contact.call.dialer.util.AnalyticsManager
+import com.phone.contact.call.dialer.util.CallReminder
+import com.phone.contact.call.dialer.util.PreferenceManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import javax.inject.Inject
+
+@HiltViewModel
+class CallReminderViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val preferenceManager: PreferenceManager,
+    contactRepository: ContactRepository
+) : ViewModel() {
+
+    val reminders: StateFlow<List<CallReminder>> = preferenceManager.callRemindersFlow
+        .map { list -> list.sortedBy { it.timeMillis } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val contacts: StateFlow<List<Contact>> = contactRepository.fetchContacts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun addReminder(contact: Contact, timeMillis: Long, note: String? = null) {
+        val reminder = CallReminder(
+            id = System.currentTimeMillis(),
+            contactName = contact.name,
+            contactNumber = contact.number,
+            photoUri = contact.photoUri,
+            timeMillis = timeMillis,
+            note = note?.trim()?.ifBlank { null }
+        )
+        preferenceManager.setCallReminders(preferenceManager.getCallReminders() + reminder)
+        CallReminderScheduler.schedule(context, reminder)
+        AnalyticsManager.logEventWithAction("call_reminder_set", "CallReminderScreen", "created")
+    }
+
+    fun cancelReminder(reminder: CallReminder) {
+        preferenceManager.setCallReminders(preferenceManager.getCallReminders().filterNot { it.id == reminder.id })
+        CallReminderScheduler.cancel(context, reminder)
+    }
+}
