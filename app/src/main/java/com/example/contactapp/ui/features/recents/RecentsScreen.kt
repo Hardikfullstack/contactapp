@@ -42,7 +42,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.contactapp.R
 import com.example.contactapp.ads.AppOpenBackgroundReturnTrigger
 import com.example.contactapp.ads.AppOpenCounter
-import com.example.contactapp.ads.LargeNativeAdSkeleton
 import com.example.contactapp.ads.NativeAdCache
 import com.example.contactapp.ads.NativeAdTemplate
 import com.example.contactapp.ads.NativeAdView
@@ -218,17 +217,16 @@ fun RecentsScreen(
     // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
     val adConfig by appConfigViewModel.appResponse.collectAsState()
-    val homeNativeAdUnitId = adConfig?.result?.let { result ->
-        if (result.google_ads_on_off == "on" && result.native_2_on_off == "on") {
-            result.native_2?.takeIf { it.isNotBlank() }
-        } else null
-    }
-
-    // Separate ad unit from the top-of-screen native ad (native_2) above — its own inline slot(s)
-    // interleaved into the call list further down.
     val inlineListNativeAdUnitId = adConfig?.result?.let { result ->
         if (result.google_ads_on_off == "on" && result.native_16_on_off == "on") {
             result.native_16?.takeIf { it.isNotBlank() }
+        } else null
+    }
+    // native_2 is unused elsewhere now (this screen's own top-of-list large ad was removed) —
+    // reused here as a fallback for the inline ad, tried only if native_16 fails to load.
+    val inlineListFallbackAdUnitId = adConfig?.result?.let { result ->
+        if (result.google_ads_on_off == "on" && result.native_2_on_off == "on") {
+            result.native_2?.takeIf { it.isNotBlank() }
         } else null
     }
 
@@ -465,51 +463,6 @@ fun RecentsScreen(
                 }
             )
 
-            if (homeNativeAdUnitId != null) {
-                var topNativeAd by remember { mutableStateOf<NativeAd?>(null) }
-
-                LaunchedEffect(homeNativeAdUnitId) {
-                    if (topNativeAd == null) {
-                        val cached = NativeAdCache.take(homeNativeAdUnitId)
-                        if (cached != null) {
-                            topNativeAd = cached
-                        } else {
-                            val adLoader = AdLoader.Builder(context, homeNativeAdUnitId)
-                                .forNativeAd { ad ->
-                                    topNativeAd = ad
-                                    AnalyticsManager.logAdEvent("native", homeNativeAdUnitId, "loaded")
-                                }
-                                .withAdListener(object : AdListener() {
-                                    override fun onAdFailedToLoad(error: LoadAdError) {
-                                        AnalyticsManager.logAdEvent("native", homeNativeAdUnitId, "failed_to_load")
-                                    }
-                                })
-                                .build()
-                            AnalyticsManager.logAdEvent("native", homeNativeAdUnitId, "request")
-                            adLoader.loadAd(AdRequest.Builder().build())
-                        }
-                    }
-                }
-
-                DisposableEffect(Unit) {
-                    onDispose {
-                        topNativeAd?.let { NativeAdCache.put(homeNativeAdUnitId, it) }
-                    }
-                }
-
-                val loadedTopAd = topNativeAd
-                val topAdModifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)
-                if (loadedTopAd != null) {
-                    NativeAdView(
-                        ad = loadedTopAd,
-                        template = NativeAdTemplate.LARGE,
-                        modifier = topAdModifier
-                    )
-                } else {
-                    LargeNativeAdSkeleton(modifier = topAdModifier, isDarkTheme = LocalIsDarkTheme.current)
-                }
-            }
-
             if (isDefaultDialerState && uiState.spamNumbers.isNotEmpty()) {
                 SpamBanner(
                     count = uiState.spamNumbers.size,
@@ -527,9 +480,27 @@ fun RecentsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     SetDefaultDialerBanner(onSetDefaultClick = { launchDefaultDialerRequest() })
                 }
-            } else if (!uiState.hasPermission || uiState.groupedCalls.isEmpty()) {
-                // Empty State — reached only once this app IS the default dialer, so a missing
-                // permission here means Call Log specifically still needs to be granted.
+            } else if (!uiState.hasPermission) {
+                // Reached only once this app IS the default dialer, so a missing permission here
+                // means Call Log specifically still needs to be (re-)granted — e.g. revoked later
+                // from system Settings — not just an empty list, so say so and offer a fix instead
+                // of the generic "no results" text.
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.call_log_permission_needed),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { fallbackPermissionLauncher.launch(fallbackPermissions.toTypedArray()) }) {
+                            Text(stringResource(R.string.action_grant_permission))
+                        }
+                    }
+                }
+            } else if (uiState.groupedCalls.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = stringResource(R.string.no_result_found),
@@ -636,7 +607,7 @@ fun RecentsScreen(
                                             // upfront) and is a no-op on any later recomposition of
                                             // the same row (e.g. scrolled away and back), since the
                                             // hoisted map above already has this slot's id by then.
-                                            LaunchedEffect(row.id, inlineListNativeAdUnitId) {
+                                            LaunchedEffect(row.id, inlineListNativeAdUnitId, inlineListFallbackAdUnitId) {
                                                 if (!inlineNativeAds.containsKey(row.id)) {
                                                     // The very first slot to reach this point (in
                                                     // practice, the one right after call #1, since
@@ -648,20 +619,27 @@ fun RecentsScreen(
                                                     if (cachedAd != null) {
                                                         inlineNativeAds[row.id] = cachedAd
                                                     } else {
-                                                        val adLoader = AdLoader.Builder(context, inlineListNativeAdUnitId)
-                                                            .forNativeAd { ad ->
-                                                                inlineNativeAds[row.id] = ad
-                                                                AnalyticsManager.logAdEvent("native", inlineListNativeAdUnitId, "loaded")
-                                                            }
-                                                            .withAdListener(object : AdListener() {
-                                                                override fun onAdFailedToLoad(error: LoadAdError) {
-                                                                    inlineNativeAds[row.id] = null
-                                                                    AnalyticsManager.logAdEvent("native", inlineListNativeAdUnitId, "failed_to_load")
+                                                        fun loadAd(adUnitId: String, isFallback: Boolean) {
+                                                            val adLoader = AdLoader.Builder(context, adUnitId)
+                                                                .forNativeAd { ad ->
+                                                                    inlineNativeAds[row.id] = ad
+                                                                    AnalyticsManager.logAdEvent("native", adUnitId, "loaded")
                                                                 }
-                                                            })
-                                                            .build()
-                                                        AnalyticsManager.logAdEvent("native", inlineListNativeAdUnitId, "request")
-                                                        adLoader.loadAd(AdRequest.Builder().build())
+                                                                .withAdListener(object : AdListener() {
+                                                                    override fun onAdFailedToLoad(error: LoadAdError) {
+                                                                        AnalyticsManager.logAdEvent("native", adUnitId, "failed_to_load")
+                                                                        if (!isFallback && inlineListFallbackAdUnitId != null) {
+                                                                            loadAd(inlineListFallbackAdUnitId, isFallback = true)
+                                                                        } else {
+                                                                            inlineNativeAds[row.id] = null
+                                                                        }
+                                                                    }
+                                                                })
+                                                                .build()
+                                                            AnalyticsManager.logAdEvent("native", adUnitId, "request")
+                                                            adLoader.loadAd(AdRequest.Builder().build())
+                                                        }
+                                                        loadAd(inlineListNativeAdUnitId, isFallback = false)
                                                     }
                                                 }
                                             }

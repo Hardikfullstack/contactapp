@@ -70,6 +70,19 @@ class MainActivity : AppCompatActivity() {
         // SplashScreen.kt composable as soon as the first frame draws (see themes.xml).
         installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // A call ringing/active takes priority over anything else this Activity would normally
+        // show — e.g. tapping the launcher icon (not the call notification) while on a call would
+        // otherwise land on Recents/Splash with the call silently continuing in the background,
+        // instead of jumping straight back into it like every real dialer does.
+        if (com.example.contactapp.service.CallManager.currentCall.value != null) {
+            startActivity(Intent(this, com.example.contactapp.ui.features.call.InCallActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            })
+            finish()
+            return
+        }
+
         // Keeps the screen from auto-sleeping for as long as the app is in the foreground,
         // on any screen — not just calls (InCallActivity already sets this separately).
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

@@ -19,6 +19,7 @@
     <string name="permission_miui_desc">Your device requires extra permissions for reliable background operation. Please follow the steps below.</string>
     <string name="action_go_to_settings">Go to Settings</string>
     <string name="action_grant_permission">Grant Permission</string>
+    <string name="call_log_permission_needed">Call Log permission is needed to show your recent calls</string>
     <string name="action_grant_autostart_permission">Grant Auto-Start Permission</string>
     <string name="after_call_permission_missing_title">⚠️ Caller ID Disabled</string>
     <string name="see_call_information">See call information</string>

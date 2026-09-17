@@ -132,11 +132,6 @@ fun SplashScreen(
         // for a first-time user, or immediately for a returning one — so its ads are preloaded
         // unconditionally too. Without this, a fresh install's very first Home screen had to load
         // its banner from scratch with no head start, unlike every app open after the first.
-        if (result.native_2_on_off == "on") {
-            result.native_2?.takeIf { it.isNotBlank() }?.let {
-                NativeAdCache.preload(context, it)
-            }
-        }
         if (result.banner_1_on_off == "on") {
             result.banner_1?.takeIf { it.isNotBlank() }?.let {
                 BannerAdCache.preload(context, it)
@@ -266,7 +261,6 @@ private fun BrandingAnimation() {
     }
 
     Column(
-        modifier = Modifier.padding(top = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         SplashLogo()
@@ -311,21 +305,21 @@ private fun SplashLogo() {
     }
 
     Box(
-        modifier = Modifier.size(104.dp),
+        modifier = Modifier.size(120.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(22.dp)
-                .offset(x = (-41).dp * dotOffset.value)
+                .size(25.dp)
+                .offset(x = (-47).dp * dotOffset.value)
                 .alpha(dotsAlpha.value)
                 .clip(CircleShape)
                 .background(PrimaryGreen.copy(alpha = 0.5f))
         )
         Box(
             modifier = Modifier
-                .size(22.dp)
-                .offset(x = 41.dp * dotOffset.value)
+                .size(25.dp)
+                .offset(x = 47.dp * dotOffset.value)
                 .alpha(dotsAlpha.value)
                 .clip(CircleShape)
                 .background(PrimaryGreen.copy(alpha = 0.5f))
@@ -335,7 +329,7 @@ private fun SplashLogo() {
             painter = painterResource(R.drawable.logo_cotntacts),
             contentDescription = null,
             modifier = Modifier
-                .size(104.dp)
+                .size(120.dp)
                 .scale(circleScale.value)
                 .alpha(circleAlpha.value)
         )

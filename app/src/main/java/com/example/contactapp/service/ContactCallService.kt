@@ -1,6 +1,8 @@
 package com.example.contactapp.service
 
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
@@ -34,6 +36,19 @@ class ContactCallService : InCallService() {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
+    /** Promotes this service to foreground using whatever notification CallNotificationManager
+     * just built — without this, the OS/OEM battery manager can kill this process mid-call (e.g.
+     * swiping the app away from Recents), since being bound by Telecom alone isn't as strong a
+     * "don't kill me" signal as an actual foreground service with a persistent notification. */
+    private fun promoteToForeground() {
+        val notification = callNotificationManager.currentNotificationOrNull() ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(CallNotificationManager.NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL)
+        } else {
+            startForeground(CallNotificationManager.NOTIFICATION_ID, notification)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         CallManager.attachService(this)
@@ -42,6 +57,19 @@ class ContactCallService : InCallService() {
     override fun onDestroy() {
         CallManager.detachService(this)
         super.onDestroy()
+    }
+
+    /** Fires when the user swipes this app away from Recents — the call itself keeps going via
+     * Telecom regardless, but some OEMs (MIUI especially) treat a Recents-swipe as a strong
+     * "kill everything" signal that can clear even an ongoing/foreground notification along with
+     * the task, leaving the user with no way to control an otherwise still-active call. Re-post it
+     * immediately so there's something to tap back into — this runs before the process is
+     * actually torn down, the same technique real dialer/media apps use to survive a task swipe. */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        if (CallManager.currentCall.value != null) {
+            promoteToForeground()
+        }
     }
 
     override fun onCallAudioStateChanged(audioState: CallAudioState) {
@@ -80,6 +108,14 @@ class ContactCallService : InCallService() {
         // is what actually surfaces the saved name instead of silently falling back to the number.
         var resolvedDisplayName = call.details.callerDisplayName ?: number
         var resolvedPhotoUri: String? = null
+        // Captured once, the first time this call reaches STATE_ACTIVE — reused on every
+        // subsequent re-render (Mute/Speaker toggle, resuming from hold) so the notification's
+        // Chronometer keeps counting from the true connect time instead of restarting. Shifted
+        // forward by however long each hold lasts (see STATE_HOLDING/STATE_ACTIVE below) so the
+        // displayed elapsed time pauses during a hold instead of counting through it, matching
+        // InCallScreen's own elapsed-time counter.
+        var callConnectedAtMillis: Long? = null
+        var holdStartedAtElapsedRealtime: Long? = null
 
         // Trigger Call Announcer and Flash Alert for incoming calls — only for the primary call.
         // A second (call-waiting) call ringing in while already on a call gets Telecom's own
@@ -106,6 +142,7 @@ class ContactCallService : InCallService() {
                     spamStatus.isSpam(),
                     resolvedPhotoUri
                 )
+                promoteToForeground()
             }
         } else if (isFirstCall) {
             // Outgoing call (dialing/connecting) — same "always show" treatment, reusing the
@@ -118,8 +155,10 @@ class ContactCallService : InCallService() {
                 callNotificationManager.showActiveCallNotification(
                     resolvedDisplayName,
                     resolvedPhotoUri,
-                    getString(R.string.dialing)
+                    getString(R.string.dialing),
+                    callConnectedAtMillis = null
                 )
+                promoteToForeground()
             }
         }
 
@@ -132,7 +171,37 @@ class ContactCallService : InCallService() {
                 when (state) {
                     Call.STATE_ACTIVE -> {
                         flashAlertManager.stopBlinking()
-                        callNotificationManager.showActiveCallNotification(resolvedDisplayName, resolvedPhotoUri)
+                        // Chronometer's base is measured against SystemClock.elapsedRealtime()
+                        // (time since boot), NOT System.currentTimeMillis() (wall-clock epoch) —
+                        // passing the wrong clock here is exactly what showed a huge/negative,
+                        // backwards-looking number instead of a normal ticking 00:00 upward.
+                        if (callConnectedAtMillis == null) {
+                            callConnectedAtMillis = android.os.SystemClock.elapsedRealtime()
+                        }
+                        // Resuming from a hold — push the base forward by however long the hold
+                        // lasted, so the displayed elapsed time continues from where it paused
+                        // instead of jumping ahead to include the hold gap.
+                        holdStartedAtElapsedRealtime?.let { holdStart ->
+                            callConnectedAtMillis = callConnectedAtMillis!! + (android.os.SystemClock.elapsedRealtime() - holdStart)
+                            holdStartedAtElapsedRealtime = null
+                        }
+                        callNotificationManager.showActiveCallNotification(
+                            resolvedDisplayName,
+                            resolvedPhotoUri,
+                            callConnectedAtMillis = callConnectedAtMillis
+                        )
+                        promoteToForeground()
+                    }
+                    Call.STATE_HOLDING -> {
+                        if (holdStartedAtElapsedRealtime == null) {
+                            holdStartedAtElapsedRealtime = android.os.SystemClock.elapsedRealtime()
+                        }
+                        callNotificationManager.showActiveCallNotification(
+                            resolvedDisplayName,
+                            resolvedPhotoUri,
+                            getString(R.string.on_hold),
+                            callConnectedAtMillis = null
+                        )
                     }
                     Call.STATE_DISCONNECTED -> {
                         callNotificationManager.cancelNotification()
@@ -161,6 +230,7 @@ class ContactCallService : InCallService() {
         callAnnouncerManager.stopAnnouncing()
         flashAlertManager.stopBlinking()
         callNotificationManager.cancelNotification()
+        stopForeground(STOP_FOREGROUND_REMOVE)
 
         if (CallManager.secondaryCall.value != null) {
             // The primary ended but a second call is still up — promote it instead of

@@ -30,12 +30,30 @@ class CallNotificationManager @Inject constructor(
 ) {
     private val notificationManager = NotificationManagerCompat.from(context)
 
+    // Exposed so ContactCallService can promote itself to a foreground service using this exact
+    // notification — without that, the OS/OEM can kill this app's process mid-call (e.g. swiping
+    // it away from Recents), since a Telecom binding alone isn't as strong a "don't kill me"
+    // signal as an actual foreground service.
+    private var lastNotification: android.app.Notification? = null
+    fun currentNotificationOrNull(): android.app.Notification? = lastNotification
+
     // Remembered so a Mute/Speaker tap (CallActionReceiver) or a Telecom-driven audio-state change
     // (ContactCallService.onCallAudioStateChanged) can re-render this notification with fresh
     // toggle state without the caller info being threaded back through every call site.
     private var activeCallerName: String? = null
     private var activeCallerPhotoUri: String? = null
     private var activeCallerStatusText: String? = null
+
+    // Remembered the same way, so a dismissed incoming-call notification (see ACTION_NOTIFICATION_
+    // DISMISSED below) can be rebuilt without needing the original caller info threaded back in.
+    private var incomingCallerName: String? = null
+    private var incomingNumber: String? = null
+    private var incomingIsSpam: Boolean = false
+    private var incomingPhotoUri: String? = null
+
+    // Also remembered — so refreshActiveCallNotification() (Mute/Speaker toggles) keeps the same
+    // running Chronometer instead of losing/resetting it on every re-render.
+    private var activeCallStartTimeMillis: Long? = null
 
     companion object {
         const val INCOMING_CALL_CHANNEL_ID = "incoming_call_channel"
@@ -47,6 +65,11 @@ class CallNotificationManager @Inject constructor(
         const val ACTION_HANGUP = "com.example.contactapp.ACTION_HANGUP"
         const val ACTION_TOGGLE_MUTE = "com.example.contactapp.ACTION_TOGGLE_MUTE"
         const val ACTION_TOGGLE_SPEAKER = "com.example.contactapp.ACTION_TOGGLE_SPEAKER"
+        // Fired via setDeleteIntent() the moment this notification is dismissed by any means
+        // (swipe, the shade's "Clear all") — including on some OEMs that clear even an "ongoing"
+        // notification when its owning process gets killed. Delivered as a plain broadcast, so it
+        // reaches this receiver (and can relaunch/re-notify) even if the app process is dead.
+        const val ACTION_NOTIFICATION_DISMISSED = "com.example.contactapp.ACTION_NOTIFICATION_DISMISSED"
     }
 
     init {
@@ -83,6 +106,11 @@ class CallNotificationManager @Inject constructor(
      * shown for every incoming call, not just as a fallback, matching the reference dialer app's
      * own incoming-call notification (which has no "is the call screen already visible" check). */
     fun showIncomingCallNotification(callerName: String, number: String, isSpam: Boolean, photoUri: String? = null) {
+        incomingCallerName = callerName
+        incomingNumber = number
+        incomingIsSpam = isSpam
+        incomingPhotoUri = photoUri
+
         val fullScreenIntent = Intent(context, InCallActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
         }
@@ -124,12 +152,15 @@ class CallNotificationManager @Inject constructor(
             // tapping the notification body (the avatar/name area, anything besides the two
             // action buttons) while the screen is already on does nothing.
             .setContentIntent(fullScreenPendingIntent)
+            .setDeleteIntent(actionPendingIntent(ACTION_NOTIFICATION_DISMISSED, 7))
             .setCustomContentView(views)
             .setCustomBigContentView(views)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
 
+        val notification = builder.build()
+        lastNotification = notification
         if (checkNotificationPermission()) {
-            notificationManager.notify(NOTIFICATION_ID, builder.build())
+            notificationManager.notify(NOTIFICATION_ID, notification)
         }
     }
 
@@ -140,11 +171,20 @@ class CallNotificationManager @Inject constructor(
         photoUri: String? = null,
         statusText: String = context.getString(R.string.ongoing_call),
         isMutedOverride: Boolean? = null,
-        isSpeakerOnOverride: Boolean? = null
+        isSpeakerOnOverride: Boolean? = null,
+        // Non-null only once the call is genuinely connected (not dialing/ringing) — shows a
+        // live-ticking Chronometer in place of statusText. MUST be SystemClock.elapsedRealtime()
+        // at connect time, NOT System.currentTimeMillis() — Chronometer's base is measured
+        // against the former; passing the latter shows a huge/backwards-counting number instead
+        // of a normal ticking 00:00 upward. Passing the SAME value across subsequent re-renders
+        // (refreshActiveCallNotification) keeps the Chronometer running instead of resetting;
+        // omit (null) while still dialing/connecting.
+        callConnectedAtMillis: Long? = activeCallStartTimeMillis
     ) {
         activeCallerName = callerName
         activeCallerPhotoUri = photoUri
         activeCallerStatusText = statusText
+        activeCallStartTimeMillis = callConnectedAtMillis
 
         val contentIntent = Intent(context, InCallActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
@@ -168,9 +208,18 @@ class CallNotificationManager @Inject constructor(
         val (nameColor, statusColor) = notificationTextColors()
         val views = RemoteViews(context.packageName, R.layout.notification_call_active).apply {
             setTextViewText(R.id.tvContactName, callerName)
-            setTextViewText(R.id.tvCallStatus, statusText)
             setTextColor(R.id.tvContactName, nameColor)
             setTextColor(R.id.tvCallStatus, statusColor)
+            setTextColor(R.id.chronoCallTimer, statusColor)
+            if (callConnectedAtMillis != null) {
+                setViewVisibility(R.id.tvCallStatus, android.view.View.GONE)
+                setViewVisibility(R.id.chronoCallTimer, android.view.View.VISIBLE)
+                setChronometer(R.id.chronoCallTimer, callConnectedAtMillis, null, true)
+            } else {
+                setTextViewText(R.id.tvCallStatus, statusText)
+                setViewVisibility(R.id.tvCallStatus, android.view.View.VISIBLE)
+                setViewVisibility(R.id.chronoCallTimer, android.view.View.GONE)
+            }
             setImageViewBitmap(R.id.ivAvatar, NotificationAvatarUtils.createAvatarBitmap(context, photoUri, callerName))
             setImageViewResource(R.id.btnMute, if (isMuted) R.drawable.ic_notif_mic_off else R.drawable.ic_notif_mic)
             setImageViewResource(R.id.btnSpeaker, if (isSpeakerOn) R.drawable.ic_notif_volume_up else R.drawable.ic_notif_volume_off)
@@ -187,12 +236,15 @@ class CallNotificationManager @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
             .setContentIntent(contentPendingIntent)
+            .setDeleteIntent(actionPendingIntent(ACTION_NOTIFICATION_DISMISSED, 7))
             .setCustomContentView(views)
             .setCustomBigContentView(views)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
 
+        val notification = builder.build()
+        lastNotification = notification
         if (checkNotificationPermission()) {
-            notificationManager.notify(NOTIFICATION_ID, builder.build())
+            notificationManager.notify(NOTIFICATION_ID, notification)
         }
     }
 
@@ -216,6 +268,30 @@ class CallNotificationManager @Inject constructor(
         activeCallerName = null
         activeCallerPhotoUri = null
         activeCallerStatusText = null
+        activeCallStartTimeMillis = null
+        incomingCallerName = null
+        incomingNumber = null
+        incomingPhotoUri = null
+        lastNotification = null
+    }
+
+    /** Called when ACTION_NOTIFICATION_DISMISSED fires (the notification was swiped/cleared) — a
+     * no-op if there's genuinely no call running right now (a normal dismissal after the call
+     * already ended), otherwise immediately re-posts whichever notification matches the call's
+     * current state so the user always has a way back into it. */
+    fun repostIfCallStillOngoing() {
+        when (CallManager.callState.value) {
+            android.telecom.Call.STATE_RINGING -> {
+                val name = incomingCallerName ?: return
+                val number = incomingNumber ?: return
+                showIncomingCallNotification(name, number, incomingIsSpam, incomingPhotoUri)
+            }
+            android.telecom.Call.STATE_ACTIVE, android.telecom.Call.STATE_DIALING,
+            android.telecom.Call.STATE_CONNECTING, android.telecom.Call.STATE_HOLDING -> {
+                refreshActiveCallNotification()
+            }
+            else -> {}
+        }
     }
 
     /** RemoteViews resolves `?android:attr/textColorPrimary`/`Secondary` against the notification
@@ -291,6 +367,9 @@ class CallActionReceiver : BroadcastReceiver() {
                 val newSpeakerOn = CallManager.audioState.value?.route != CallAudioState.ROUTE_SPEAKER
                 CallManager.toggleSpeaker()
                 callNotificationManager.refreshActiveCallNotification(isSpeakerOnOverride = newSpeakerOn)
+            }
+            CallNotificationManager.ACTION_NOTIFICATION_DISMISSED -> {
+                callNotificationManager.repostIfCallStillOngoing()
             }
         }
     }

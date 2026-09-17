@@ -227,7 +227,7 @@ fun LanguageSelectionScreen(
             )
         )
 
-        HorizontalDivider(thickness = 1.dp, color = Color(0xFFCDCDCD))
+        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
         LazyColumn(
             modifier = Modifier

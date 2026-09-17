@@ -158,7 +158,7 @@ fun PermissionScreen(
             // Illustration — full width, breaking out of the horizontal padding every other
             // element on this screen uses (see the padded Column right below).
             Image(
-                painter = painterResource(id = R.drawable.permission),
+                painter = painterResource(id = R.drawable.permission_main),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
