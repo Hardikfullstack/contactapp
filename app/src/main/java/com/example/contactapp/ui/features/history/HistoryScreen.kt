@@ -284,6 +284,7 @@ fun HistoryScreen(
                 item {
                     ContactDetailHeader(
                         name = uiState.name.ifBlank { uiState.number },
+                        hasContactName = uiState.name.isNotBlank(),
                         number = uiState.number,
                         photoUri = uiState.photoUri
                     )
@@ -396,6 +397,7 @@ fun HistoryScreen(
 @Composable
 fun ContactDetailHeader(
     name: String,
+    hasContactName: Boolean = true,
     number: String,
     photoUri: String?
 ) {
@@ -409,7 +411,7 @@ fun ContactDetailHeader(
             modifier = Modifier
                 .size(96.dp)
                 .clip(CircleShape)
-                .background(getAvatarColor(name)),
+                .background(if (hasContactName) getAvatarColor(name) else Color(0xFF9E9E9E)),
             contentAlignment = Alignment.Center
         ) {
             if (photoUri != null) {
@@ -419,12 +421,19 @@ fun ContactDetailHeader(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-            } else {
+            } else if (hasContactName) {
                 Text(
                     text = name.take(1).uppercase(),
                     color = Color.White,
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(56.dp)
                 )
             }
         }

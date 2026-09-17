@@ -33,6 +33,7 @@ fun ContactItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onCallClick: () -> Unit = {},
+    showCallButton: Boolean = true,
     horizontalPadding: androidx.compose.ui.unit.Dp = 10.dp
 ) {
     Surface(
@@ -124,7 +125,7 @@ fun ContactItem(
             }
 
             // Trailing Content (Call Button)
-            if (!isSelectionMode) {
+            if (!isSelectionMode && showCallButton) {
                 IconButton(
                     onClick = onCallClick,
                     modifier = Modifier.size(48.dp)

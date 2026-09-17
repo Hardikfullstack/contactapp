@@ -159,6 +159,7 @@
     <string name="call_scheduled_at">Fake call scheduled for %1$s</string>
     <string name="custom_time">Custom Time</string>
     <string name="pick_time">Pick Time</string>
+    <string name="pick_contact">Pick from contacts</string>
 
     <!-- Call Announcer Feature -->
     <string name="call_announcer">Call Announcer</string>

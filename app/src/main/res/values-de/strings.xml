@@ -267,6 +267,7 @@
     <string name="action_go_to_settings">Zu den Einstellungen</string>
     <string name="action_grant_autostart_permission">Autostart-Berechtigung erteilen</string>
     <string name="action_grant_permission">Berechtigung erteilen</string>
+    <string name="call_log_permission_needed">Die Anrufliste-Berechtigung wird benötigt, um deine letzten Anrufe anzuzeigen</string>
     <string name="action_set_default">Als Standard festlegen</string>
     <string name="add_call">Anruf hinzufügen</string>
     <string name="add_reminder">Erinnerung hinzufügen</string>
@@ -380,6 +381,7 @@
     <string name="pick_date_first">Bitte wählen Sie ein Datum</string>
     <string name="pick_date_time">DATUM &amp; UHRZEIT</string>
     <string name="pick_time">Uhrzeit auswählen</string>
+    <string name="pick_contact">Aus Kontakten auswählen</string>
     <string name="premium">Premium</string>
     <string name="premium_color_dialog_title">Premium-Farbe</string>
     <string name="premium_color_dialog_message">Dies ist ein Premium-Farbton. Schalte ihn frei, um diese Farbe zu verwenden.</string>

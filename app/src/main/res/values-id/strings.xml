@@ -267,6 +267,7 @@
     <string name="action_go_to_settings">Buka Pengaturan</string>
     <string name="action_grant_autostart_permission">Berikan Izin Mulai Otomatis</string>
     <string name="action_grant_permission">Berikan Izin</string>
+    <string name="call_log_permission_needed">Izin Log Panggilan diperlukan untuk menampilkan panggilan terbaru Anda</string>
     <string name="action_set_default">Jadikan Default</string>
     <string name="add_call">Tambah panggilan</string>
     <string name="add_reminder">Tambah Pengingat</string>
@@ -380,6 +381,7 @@
     <string name="pick_date_first">Silakan pilih tanggal</string>
     <string name="pick_date_time">TANGGAL &amp; WAKTU</string>
     <string name="pick_time">Pilih Waktu</string>
+    <string name="pick_contact">Pilih dari kontak</string>
     <string name="premium">Premium</string>
     <string name="premium_color_dialog_title">Warna Premium</string>
     <string name="premium_color_dialog_message">Ini adalah warna premium. Buka kuncinya untuk menggunakan warna ini.</string>

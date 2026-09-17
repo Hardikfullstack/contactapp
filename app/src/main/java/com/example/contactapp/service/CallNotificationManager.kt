@@ -43,6 +43,7 @@ class CallNotificationManager @Inject constructor(
     private var activeCallerName: String? = null
     private var activeCallerPhotoUri: String? = null
     private var activeCallerStatusText: String? = null
+    private var activeCallerHasContactName: Boolean = true
 
     // Remembered the same way, so a dismissed incoming-call notification (see ACTION_NOTIFICATION_
     // DISMISSED below) can be rebuilt without needing the original caller info threaded back in.
@@ -50,6 +51,7 @@ class CallNotificationManager @Inject constructor(
     private var incomingNumber: String? = null
     private var incomingIsSpam: Boolean = false
     private var incomingPhotoUri: String? = null
+    private var incomingHasContactName: Boolean = true
 
     // Also remembered — so refreshActiveCallNotification() (Mute/Speaker toggles) keeps the same
     // running Chronometer instead of losing/resetting it on every re-render.
@@ -105,11 +107,18 @@ class CallNotificationManager @Inject constructor(
     /** Custom RemoteViews layout (contact photo/avatar, name, status, big Answer/Decline circles) —
      * shown for every incoming call, not just as a fallback, matching the reference dialer app's
      * own incoming-call notification (which has no "is the call screen already visible" check). */
-    fun showIncomingCallNotification(callerName: String, number: String, isSpam: Boolean, photoUri: String? = null) {
+    fun showIncomingCallNotification(
+        callerName: String,
+        number: String,
+        isSpam: Boolean,
+        photoUri: String? = null,
+        hasContactName: Boolean = true
+    ) {
         incomingCallerName = callerName
         incomingNumber = number
         incomingIsSpam = isSpam
         incomingPhotoUri = photoUri
+        incomingHasContactName = hasContactName
 
         val fullScreenIntent = Intent(context, InCallActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
@@ -134,7 +143,7 @@ class CallNotificationManager @Inject constructor(
             setTextViewText(R.id.tvCallStatus, statusText)
             setTextColor(R.id.tvContactName, nameColor)
             setTextColor(R.id.tvCallStatus, statusColor)
-            setImageViewBitmap(R.id.ivAvatar, NotificationAvatarUtils.createAvatarBitmap(context, photoUri, title))
+            setImageViewBitmap(R.id.ivAvatar, NotificationAvatarUtils.createAvatarBitmap(context, photoUri, title, hasContactName))
             setOnClickPendingIntent(R.id.btnAnswer, answerPendingIntent)
             setOnClickPendingIntent(R.id.btnDecline, declinePendingIntent)
         }
@@ -179,12 +188,14 @@ class CallNotificationManager @Inject constructor(
         // of a normal ticking 00:00 upward. Passing the SAME value across subsequent re-renders
         // (refreshActiveCallNotification) keeps the Chronometer running instead of resetting;
         // omit (null) while still dialing/connecting.
-        callConnectedAtMillis: Long? = activeCallStartTimeMillis
+        callConnectedAtMillis: Long? = activeCallStartTimeMillis,
+        hasContactName: Boolean = activeCallerHasContactName
     ) {
         activeCallerName = callerName
         activeCallerPhotoUri = photoUri
         activeCallerStatusText = statusText
         activeCallStartTimeMillis = callConnectedAtMillis
+        activeCallerHasContactName = hasContactName
 
         val contentIntent = Intent(context, InCallActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
@@ -220,7 +231,7 @@ class CallNotificationManager @Inject constructor(
                 setViewVisibility(R.id.tvCallStatus, android.view.View.VISIBLE)
                 setViewVisibility(R.id.chronoCallTimer, android.view.View.GONE)
             }
-            setImageViewBitmap(R.id.ivAvatar, NotificationAvatarUtils.createAvatarBitmap(context, photoUri, callerName))
+            setImageViewBitmap(R.id.ivAvatar, NotificationAvatarUtils.createAvatarBitmap(context, photoUri, callerName, hasContactName))
             setImageViewResource(R.id.btnMute, if (isMuted) R.drawable.ic_notif_mic_off else R.drawable.ic_notif_mic)
             setImageViewResource(R.id.btnSpeaker, if (isSpeakerOn) R.drawable.ic_notif_volume_up else R.drawable.ic_notif_volume_off)
             setOnClickPendingIntent(R.id.btnMute, mutePendingIntent)
@@ -269,9 +280,11 @@ class CallNotificationManager @Inject constructor(
         activeCallerPhotoUri = null
         activeCallerStatusText = null
         activeCallStartTimeMillis = null
+        activeCallerHasContactName = true
         incomingCallerName = null
         incomingNumber = null
         incomingPhotoUri = null
+        incomingHasContactName = true
         lastNotification = null
     }
 
@@ -284,7 +297,7 @@ class CallNotificationManager @Inject constructor(
             android.telecom.Call.STATE_RINGING -> {
                 val name = incomingCallerName ?: return
                 val number = incomingNumber ?: return
-                showIncomingCallNotification(name, number, incomingIsSpam, incomingPhotoUri)
+                showIncomingCallNotification(name, number, incomingIsSpam, incomingPhotoUri, incomingHasContactName)
             }
             android.telecom.Call.STATE_ACTIVE, android.telecom.Call.STATE_DIALING,
             android.telecom.Call.STATE_CONNECTING, android.telecom.Call.STATE_HOLDING -> {

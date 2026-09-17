@@ -317,6 +317,7 @@
     <string name="action_go_to_settings">Ir a Ajustes</string>
     <string name="action_grant_autostart_permission">Conceder Permiso de Inicio Automático</string>
     <string name="action_grant_permission">Conceder Permiso</string>
+    <string name="call_log_permission_needed">Se necesita el permiso de Registro de Llamadas para mostrar tus llamadas recientes</string>
     <string name="action_set_default">Establecer como Predeterminado</string>
     <string name="add_call">Añadir llamada</string>
     <string name="add_reminder">Añadir Recordatorio</string>
@@ -405,6 +406,7 @@
     <string name="pick_date_first">Por favor, elige una fecha</string>
     <string name="pick_date_time">FECHA Y HORA</string>
     <string name="pick_time">Elegir Hora</string>
+    <string name="pick_contact">Elegir de contactos</string>
     <string name="premium">Premium</string>
     <string name="premium_color_dialog_title">Color Premium</string>
     <string name="premium_color_dialog_message">Este es un tono de color premium. Desbloquéalo para usar este color.</string>

@@ -7,36 +7,49 @@ import android.content.Intent
 import android.os.SystemClock
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.activity.ComponentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.contactapp.R
 import com.example.contactapp.ads.NativeOrBannerAdView
 import com.example.contactapp.service.FakeCallReceiver
 import com.example.contactapp.ui.components.CommonHeader
+import com.example.contactapp.ui.components.ContactItem
 import com.example.contactapp.ui.components.CustomSwitch
 import com.example.contactapp.ui.components.SettingsCard
+import com.example.contactapp.ui.features.contacts.ContactsViewModel
 import com.example.contactapp.ui.theme.PrimaryGreen
 import com.example.contactapp.util.AnalyticsManager
 import com.example.contactapp.util.CallReliabilityUtils
@@ -55,6 +68,14 @@ fun FakeCallSetupScreen(
     var name by remember { mutableStateOf("") }
     var number by remember { mutableStateOf("") }
     var selectedDelaySec by remember { mutableIntStateOf(10) }
+
+    // Lets the user pick a real contact instead of typing a fake caller's name/number by hand —
+    // shown as this app's own search-then-list picker (ContactPickerDialog below) rather than the
+    // system's contact-chooser UI, matching the app's own Contacts screen look.
+    var showContactPicker by remember { mutableStateOf(false) }
+    // Same picker, reused for the "Quick Trigger Profile" (shake-to-fake-call) fields below —
+    // a separate flag since either field's picker can be open independently of the other's.
+    var showShakeContactPicker by remember { mutableStateOf(false) }
 
     var shakeCallerName by remember { mutableStateOf(viewModel.getShakeCallerName()) }
     var shakeCallerNumber by remember { mutableStateOf(viewModel.getShakeCallerNumber()) }
@@ -139,7 +160,8 @@ fun FakeCallSetupScreen(
                             .fillMaxWidth()
                             .padding(16.dp),
                         shape = RoundedCornerShape(12.dp),
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        trailingIcon = { PickContactIconButton(onClick = { showContactPicker = true }) }
                     )
 
                     OutlinedTextField(
@@ -270,6 +292,7 @@ fun FakeCallSetupScreen(
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(12.dp),
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        trailingIcon = { PickContactIconButton(onClick = { showShakeContactPicker = true }) },
                         isError = nameIsInvalid,
                         supportingText = if (nameIsInvalid) {
                             { Text(fillProfileFirstMessage) }
@@ -447,6 +470,187 @@ fun FakeCallSetupScreen(
                             showTimePicker = false
                         }) {
                             Text(stringResource(R.string.select))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showContactPicker) {
+        ContactPickerDialog(
+            onDismiss = { showContactPicker = false },
+            onContactSelected = { pickedName, pickedNumber ->
+                name = pickedName
+                number = pickedNumber
+                showContactPicker = false
+            }
+        )
+    }
+
+    if (showShakeContactPicker) {
+        ContactPickerDialog(
+            onDismiss = { showShakeContactPicker = false },
+            onContactSelected = { pickedName, pickedNumber ->
+                shakeCallerName = pickedName
+                shakeCallerNumber = pickedNumber
+                showShakeContactPicker = false
+            }
+        )
+    }
+}
+
+/** The round "pick a contact" trailing icon shared by every caller-name field on this screen. */
+@Composable
+private fun PickContactIconButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(44.dp)) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PersonAdd,
+                contentDescription = stringResource(R.string.pick_contact),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+/** A search bar on top and the app's own contacts list below, styled like the main Contacts
+ * screen — used instead of the system's contact-chooser UI so picking a fake caller feels
+ * consistent with the rest of the app. */
+@Composable
+private fun ContactPickerDialog(
+    onDismiss: () -> Unit,
+    onContactSelected: (name: String, number: String) -> Unit,
+    viewModel: ContactsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    var query by remember { mutableStateOf("") }
+    val allContacts = remember(uiState.groupedContacts) { uiState.groupedContacts.values.flatten() }
+    val filteredContacts = remember(allContacts, query) {
+        if (query.isBlank()) {
+            allContacts
+        } else {
+            allContacts.filter {
+                it.name.contains(query, ignoreCase = true) || it.number.contains(query)
+            }
+        }
+    }
+
+    val searchFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        searchFocusRequester.requestFocus()
+        keyboardController?.show()
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+                CommonHeader(
+                    title = stringResource(R.string.pick_contact),
+                    onBackClick = onDismiss
+                )
+
+                // Same search-pill look/behavior as SearchScreen.kt (Recents' own search) — a
+                // rounded surface, live-filtering text field, and a clear ("X") icon that only
+                // appears once there's something to clear.
+                Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 2.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (query.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.search_contacts),
+                                        style = androidx.compose.ui.text.TextStyle(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 16.sp
+                                        )
+                                    )
+                                }
+                                androidx.compose.foundation.text.BasicTextField(
+                                    value = query,
+                                    onValueChange = { query = it },
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 16.sp
+                                    ),
+                                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.onSurface),
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester)
+                                )
+                            }
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = { query = "" }) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Clear",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (uiState.isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else if (query.isNotBlank() && filteredContacts.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Image(
+                                painter = painterResource(id = R.drawable.no_search_new),
+                                contentDescription = null,
+                                modifier = Modifier.size(160.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.no_result_found),
+                                modifier = Modifier.offset(y = (-35).dp),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(items = filteredContacts, key = { it.id }) { contact ->
+                            ContactItem(
+                                contact = contact,
+                                onClick = { onContactSelected(contact.name, contact.number) },
+                                showCallButton = false
+                            )
                         }
                     }
                 }

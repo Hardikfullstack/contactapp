@@ -123,6 +123,7 @@
     <string name="schedule_call">جدولة مكالمة وهمية</string>
     <string name="call_scheduled">تم جدولة مكالمة وهمية خلال %1$s</string>
     <string name="pick_time">اختر الوقت</string>
+    <string name="pick_contact">اختر من جهات الاتصال</string>
 
     <!-- Call Announcer Feature -->
     <string name="call_announcer">معلن المكالمات</string>
@@ -316,6 +317,7 @@
     <string name="action_go_to_settings">الانتقال إلى الإعدادات</string>
     <string name="action_grant_autostart_permission">منح إذن التشغيل التلقائي</string>
     <string name="action_grant_permission">منح الإذن</string>
+    <string name="call_log_permission_needed">إذن سجل المكالمات مطلوب لعرض مكالماتك الأخيرة</string>
     <string name="action_set_default">تعيين كافتراضي</string>
     <string name="add_call">إضافة مكالمة</string>
     <string name="add_reminder">إضافة تذكير</string>

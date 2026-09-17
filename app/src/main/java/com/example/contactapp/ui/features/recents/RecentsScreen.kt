@@ -548,6 +548,10 @@ fun RecentsScreen(
                 }
 
                 val inlineNativeAds = remember { mutableStateMapOf<String, NativeAd?>() }
+                // Tracks a slot that genuinely failed (primary AND fallback both) — distinct from
+                // "not in inlineNativeAds yet" (still loading), so a failed slot can collapse to
+                // nothing instead of showing a shimmer skeleton forever like it's still loading.
+                val failedInlineAdRowIds = remember { mutableStateMapOf<String, Boolean>() }
 
                 // Cleanup only — runs once when this composable instance leaves composition for
                 // good (e.g. navigating away from Recents), not on every rows/filter change.
@@ -586,7 +590,11 @@ fun RecentsScreen(
                             }
 
                             is RecentsListRow.Ad -> {
-                                if (inlineListNativeAdUnitId != null) {
+                                // Once a slot has genuinely failed (primary AND fallback both),
+                                // this whole branch stops composing — the row collapses to zero
+                                // height instead of leaving a stuck "still loading" skeleton or an
+                                // empty gap behind.
+                                if (inlineListNativeAdUnitId != null && failedInlineAdRowIds[row.id] != true) {
                                     // Flush, no rounded corners/gap of its own — sits inside the
                                     // same card as the surrounding calls instead of floating as a
                                     // visually separate box. The divider above it already comes
@@ -631,7 +639,7 @@ fun RecentsScreen(
                                                                         if (!isFallback && inlineListFallbackAdUnitId != null) {
                                                                             loadAd(inlineListFallbackAdUnitId, isFallback = true)
                                                                         } else {
-                                                                            inlineNativeAds[row.id] = null
+                                                                            failedInlineAdRowIds[row.id] = true
                                                                         }
                                                                     }
                                                                 })

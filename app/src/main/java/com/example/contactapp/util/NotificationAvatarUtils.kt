@@ -7,24 +7,33 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Shader
 import android.net.Uri
+import androidx.core.content.ContextCompat
+import com.example.contactapp.R
 
 /**
  * RemoteViews (used for the custom call notification) needs an actual Bitmap for its ImageView —
  * unlike the rest of the app's avatars, which are just a Composable Box + Text, there's no live
  * layout tree here to draw into, so this renders the exact same look (contact photo if present,
- * otherwise getAvatarColor()'s color with the name's first initial) onto a plain Bitmap instead.
+ * name's first initial if a real contact matched, otherwise the same generic "unknown person" icon
+ * used by the Recents list) onto a plain Bitmap instead.
  */
 object NotificationAvatarUtils {
 
-    fun createAvatarBitmap(context: Context, photoUri: String?, name: String, sizeDp: Int = 48): Bitmap {
+    fun createAvatarBitmap(
+        context: Context,
+        photoUri: String?,
+        name: String,
+        hasContactName: Boolean = true,
+        sizeDp: Int = 48
+    ): Bitmap {
         val density = context.resources.displayMetrics.density
         val sizePx = (sizeDp * density).toInt().coerceAtLeast(1)
 
         val photoBitmap = photoUri?.let { loadContactPhoto(context, it, sizePx) }
-        return if (photoBitmap != null) {
-            circleCrop(photoBitmap, sizePx)
-        } else {
-            initialAvatar(name, sizePx)
+        return when {
+            photoBitmap != null -> circleCrop(photoBitmap, sizePx)
+            hasContactName -> initialAvatar(name, sizePx)
+            else -> unknownAvatar(context, sizePx)
         }
     }
 
@@ -77,6 +86,27 @@ object NotificationAvatarUtils {
         }
         val textY = radius - (textPaint.descent() + textPaint.ascent()) / 2f
         canvas.drawText(initial, radius, textY, textPaint)
+        return output
+    }
+
+    /** Matches CallComponents.kt's CallItem fallback for a call with no resolved contact name:
+     * a plain gray (#9E9E9E) circle with a generic person silhouette, instead of a misleading
+     * initial taken from the raw phone number. */
+    private fun unknownAvatar(context: Context, sizePx: Int): Bitmap {
+        val output = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
+        val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.parseColor("#9E9E9E")
+        }
+        val radius = sizePx / 2f
+        canvas.drawCircle(radius, radius, radius, circlePaint)
+
+        val iconSize = (sizePx * 0.6f).toInt()
+        val offset = (sizePx - iconSize) / 2
+        ContextCompat.getDrawable(context, R.drawable.ic_unknown_person)?.apply {
+            setBounds(offset, offset, offset + iconSize, offset + iconSize)
+            draw(canvas)
+        }
         return output
     }
 

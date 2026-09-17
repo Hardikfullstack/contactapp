@@ -38,7 +38,7 @@ fun QuickActionButton(
                 onClick()
             },
         shape = RoundedCornerShape(50),
-        color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF7F7F7),
+        color = if (LocalIsDarkTheme.current) Color(0xFF4B4F4D) else Color(0xFFF7F7F7),
     ) {
 
         Row(

@@ -163,6 +163,7 @@ fun InCallScreen(
                 CallAvatar(
                     photoUri = photoUri,
                     name = displayName,
+                    hasContactName = contactName != null,
                     accentColor = theme.accentColor,
                     pulsing = isRinging || isDialing
                 )
@@ -490,6 +491,7 @@ fun AddCallSheet(onCall: (String) -> Unit, onDismiss: () -> Unit) {
 fun CallAvatar(
     photoUri: String?,
     name: String,
+    hasContactName: Boolean,
     accentColor: Color,
     pulsing: Boolean,
     modifier: Modifier = Modifier
@@ -531,17 +533,30 @@ fun CallAvatar(
                 .border(3.dp, accentColor, CircleShape)
                 .padding(4.dp)
                 .clip(CircleShape)
-                .background(if (photoUri != null) Color.Transparent else getAvatarColor(name)),
+                .background(
+                    when {
+                        photoUri != null -> Color.Transparent
+                        hasContactName -> getAvatarColor(name)
+                        else -> Color(0xFF9E9E9E)
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             if (photoUri != null) {
                 ContactAvatarImage(photoUri = photoUri, modifier = Modifier.fillMaxSize())
-            } else {
+            } else if (hasContactName) {
                 Text(
                     text = name.take(1).uppercase(),
                     color = Color.White,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(64.dp)
                 )
             }
         }

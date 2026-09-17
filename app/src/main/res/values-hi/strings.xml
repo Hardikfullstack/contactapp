@@ -124,6 +124,7 @@
     <string name="schedule_call">फेक कॉल शेड्यूल करें</string>
     <string name="call_scheduled">%1$s में फेक कॉल शेड्यूल की गई</string>
     <string name="pick_time">समय चुनें</string>
+    <string name="pick_contact">संपर्कों से चुनें</string>
 
     <!-- Call Announcer Feature -->
     <string name="call_announcer">कॉल उद्घोषक</string>
@@ -317,6 +318,7 @@
     <string name="action_go_to_settings">सेटिंग्स में जाएं</string>
     <string name="action_grant_autostart_permission">ऑटो-स्टार्ट अनुमति दें</string>
     <string name="action_grant_permission">अनुमति दें</string>
+    <string name="call_log_permission_needed">आपकी हाल की कॉल दिखाने के लिए कॉल लॉग की अनुमति आवश्यक है</string>
     <string name="action_set_default">डिफ़ॉल्ट सेट करें</string>
     <string name="add_call">कॉल जोड़ें</string>
     <string name="add_reminder">रिमाइंडर जोड़ें</string>

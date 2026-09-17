@@ -108,6 +108,10 @@ class ContactCallService : InCallService() {
         // is what actually surfaces the saved name instead of silently falling back to the number.
         var resolvedDisplayName = call.details.callerDisplayName ?: number
         var resolvedPhotoUri: String? = null
+        // True only once a real saved contact is matched — drives the notification/in-call avatar's
+        // choice between an initial letter and the generic "unknown person" icon, since falling back
+        // to the raw number/Telecom guess is not a real contact name.
+        var hasContactName = false
         // Captured once, the first time this call reaches STATE_ACTIVE — reused on every
         // subsequent re-render (Mute/Speaker toggle, resuming from hold) so the notification's
         // Chronometer keeps counting from the true connect time instead of restarting. Shifted
@@ -126,7 +130,10 @@ class ContactCallService : InCallService() {
 
             scope.launch {
                 val contact = contactRepository.findContactByNumber(number)
-                if (contact?.name != null) resolvedDisplayName = contact.name
+                if (contact?.name != null) {
+                    resolvedDisplayName = contact.name
+                    hasContactName = true
+                }
                 resolvedPhotoUri = contact?.photoUri
                 callAnnouncerManager.announceCall(resolvedDisplayName)
 
@@ -140,7 +147,8 @@ class ContactCallService : InCallService() {
                     resolvedDisplayName,
                     number,
                     spamStatus.isSpam(),
-                    resolvedPhotoUri
+                    resolvedPhotoUri,
+                    hasContactName
                 )
                 promoteToForeground()
             }
@@ -150,13 +158,17 @@ class ContactCallService : InCallService() {
             // Answer/Decline on our own outgoing call.
             scope.launch {
                 val contact = contactRepository.findContactByNumber(number)
-                if (contact?.name != null) resolvedDisplayName = contact.name
+                if (contact?.name != null) {
+                    resolvedDisplayName = contact.name
+                    hasContactName = true
+                }
                 resolvedPhotoUri = contact?.photoUri
                 callNotificationManager.showActiveCallNotification(
                     resolvedDisplayName,
                     resolvedPhotoUri,
                     getString(R.string.dialing),
-                    callConnectedAtMillis = null
+                    callConnectedAtMillis = null,
+                    hasContactName = hasContactName
                 )
                 promoteToForeground()
             }
@@ -188,7 +200,8 @@ class ContactCallService : InCallService() {
                         callNotificationManager.showActiveCallNotification(
                             resolvedDisplayName,
                             resolvedPhotoUri,
-                            callConnectedAtMillis = callConnectedAtMillis
+                            callConnectedAtMillis = callConnectedAtMillis,
+                            hasContactName = hasContactName
                         )
                         promoteToForeground()
                     }
@@ -200,7 +213,8 @@ class ContactCallService : InCallService() {
                             resolvedDisplayName,
                             resolvedPhotoUri,
                             getString(R.string.on_hold),
-                            callConnectedAtMillis = null
+                            callConnectedAtMillis = null,
+                            hasContactName = hasContactName
                         )
                     }
                     Call.STATE_DISCONNECTED -> {

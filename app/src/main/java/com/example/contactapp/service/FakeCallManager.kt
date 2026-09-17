@@ -48,6 +48,17 @@ object FakeCallManager {
      * not re-derive ringing state, since startRinging() already owns that.
      */
     fun attachConnection(connection: FakeCallConnection) {
+        if (_callState.value == Call.STATE_DISCONNECTED) {
+            // The user already answered-and-ended (or declined) via the in-app UI before Telecom's
+            // self-managed connection even finished arriving — endFromUi() ran while `connection`
+            // was still null, so it had nothing to disconnect. Without this, the connection would
+            // sit in Telecom's registry as a permanently "ringing"/active self-managed call —
+            // exactly what produces a stuck OEM "return to call" banner and makes a later real call
+            // look like it conflicts with an "ongoing call" that no longer actually exists.
+            connection.setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
+            connection.destroy()
+            return
+        }
         this.connection = connection
         if (preAnswered) {
             // User already answered via UI before this connection existed — sync Telecom's side

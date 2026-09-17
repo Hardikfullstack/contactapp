@@ -267,6 +267,7 @@
     <string name="action_go_to_settings">Aller aux paramètres</string>
     <string name="action_grant_autostart_permission">Autoriser le démarrage automatique</string>
     <string name="action_grant_permission">Autoriser l\'accès</string>
+    <string name="call_log_permission_needed">L\'autorisation Journal d\'appels est nécessaire pour afficher vos appels récents</string>
     <string name="action_set_default">Définir par défaut</string>
     <string name="add_call">Ajouter un appel</string>
     <string name="add_reminder">Ajouter un rappel</string>
@@ -380,6 +381,7 @@
     <string name="pick_date_first">Veuillez choisir une date</string>
     <string name="pick_date_time">DATE &amp; HEURE</string>
     <string name="pick_time">Choisir l\'heure</string>
+    <string name="pick_contact">Choisir dans les contacts</string>
     <string name="premium">Premium</string>
     <string name="premium_color_dialog_title">Couleur Premium</string>
     <string name="premium_color_dialog_message">Ceci est une teinte de couleur premium. Débloquez-la pour utiliser cette couleur.</string>
