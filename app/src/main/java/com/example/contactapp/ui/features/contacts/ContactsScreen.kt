@@ -212,8 +212,8 @@ fun ContactsScreen(
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 14.dp, bottom = 80.dp) // Space for FAB
+                        modifier = Modifier.fillMaxSize().padding(top = 10.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
                     ) {
                         uiState.groupedContacts.forEach { (initial, contacts) ->
                             stickyHeader(key = "header_$initial") {

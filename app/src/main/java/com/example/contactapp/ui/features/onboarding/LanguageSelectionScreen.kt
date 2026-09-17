@@ -1,6 +1,8 @@
 package com.example.contactapp.ui.features.onboarding
 
 import android.app.Activity
+import android.app.LocaleManager
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.appcompat.app.AppCompatDelegate
@@ -75,9 +77,24 @@ fun LanguageSelectionScreen(
     isFirstRun: Boolean = false,
     onBackClick: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val systemDefaultTitle = stringResource(R.string.system_default)
     val dynamicLanguages = remember(systemDefaultTitle) {
-        val systemLocale = Locale.getDefault()
+        // Neither Locale.getDefault() nor Resources.getSystem() is safe here — Android 13+'s
+        // native per-app language feature (which AppCompatDelegate.setApplicationLocales() below
+        // hooks into) rewrites BOTH of those, process-wide, to match whatever the user picked, so
+        // after choosing Hindi, "System Default" would misleadingly show "(Hindi)" even on a phone
+        // whose real OS language is something else. LocaleManager.getSystemLocales() is the one
+        // API (13+) that's guaranteed to return the device's actual system locale regardless of
+        // this app's own override; older APIs never had this override problem in the first place
+        // since per-app locales were purely an AppCompat-side simulation back then.
+        val systemLocale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val localeManager = context.getSystemService(LocaleManager::class.java)
+            localeManager?.systemLocales?.takeIf { !it.isEmpty }?.get(0)
+                ?: android.content.res.Resources.getSystem().configuration.locales[0]
+        } else {
+            android.content.res.Resources.getSystem().configuration.locales[0]
+        }
         val systemDefaultLanguage = Language(
             name = systemDefaultTitle,
             nativeName = "(${systemLocale.getDisplayLanguage(Locale.ENGLISH)})",
@@ -111,7 +128,6 @@ fun LanguageSelectionScreen(
     BackHandler(enabled = isFirstRun) {}
 
     // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
-    val context = LocalContext.current
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
     val adConfig by appConfigViewModel.appResponse.collectAsState()
     val bigNativeAdUnitId = adConfig?.result?.let { result ->

@@ -91,7 +91,6 @@ fun InCallScreen(
     val callState by CallManager.callState.collectAsState()
 
     // Telecom hands over a bare local number with no country code at all — format it with one
-    // (e.g. "+91 98765 43210") wherever it's actually shown, same as the call notifications.
     val context = LocalContext.current
     val displayNumber = remember(number) { PhoneNumberFormatter.withCountryCode(context, number) }
     val displayName = contactName ?: displayNumber.ifBlank { stringResource(R.string.unknown) }
@@ -354,51 +353,77 @@ fun InCallScreen(
                                 .navigationBarsPadding(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Primary in-call controls up top, secondary/extra actions below.
+                            // A single 3-column row (Add Call/Speaker, blank/Keypad, Hold/Mute)
+                            // instead of two independently-centered rows — SpaceEvenly on rows with
+                            // different item counts (2 vs 3) wouldn't actually line their buttons up
+                            // vertically, so each column gets equal weight and Add Call sits directly
+                            // above Speaker, Hold directly above Mute.
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                CallControlButton(
-                                    icon = Icons.Default.Dialpad,
-                                    label = stringResource(R.string.keypad),
-                                    active = showKeypad,
-                                    onClick = { showKeypad = true }
-                                )
-                                CallControlButton(
-                                    icon = if (audioState?.isMuted == true) Icons.Default.MicOff else Icons.Default.Mic,
-                                    label = stringResource(R.string.mute),
-                                    active = audioState?.isMuted == true,
-                                    onClick = onToggleMute
-                                )
-                                CallControlButton(
-                                    icon = Icons.AutoMirrored.Filled.VolumeUp,
-                                    label = stringResource(R.string.speaker),
-                                    active = audioState?.route == CallAudioState.ROUTE_SPEAKER,
-                                    onClick = onToggleSpeaker
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                CallControlButton(
-                                    icon = Icons.Default.Pause,
-                                    label = stringResource(R.string.hold),
-                                    active = isOnHold,
-                                    enabled = canHold,
-                                    onClick = onToggleHold
-                                )
-                                CallControlButton(
-                                    icon = Icons.Default.PersonAdd,
-                                    label = stringResource(R.string.add_call),
-                                    active = false,
-                                    enabled = canAddCall,
-                                    onClick = { showAddCallSheet = true }
-                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    CallControlButton(
+                                        icon = Icons.Default.PersonAdd,
+                                        label = stringResource(R.string.add_call),
+                                        active = false,
+                                        enabled = canAddCall,
+                                        onClick = { showAddCallSheet = true }
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    CallControlButton(
+                                        icon = Icons.AutoMirrored.Filled.VolumeUp,
+                                        label = stringResource(R.string.speaker),
+                                        active = audioState?.route == CallAudioState.ROUTE_SPEAKER,
+                                        onClick = onToggleSpeaker
+                                    )
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    // Invisible placeholder — same composable as a real button (not
+                                    // a guessed-height Spacer) so this column's Keypad button lands
+                                    // at the exact same y as Speaker/Mute either side of it.
+                                    Box(modifier = Modifier.alpha(0f)) {
+                                        CallControlButton(
+                                            icon = Icons.Default.Dialpad,
+                                            label = stringResource(R.string.keypad),
+                                            active = false,
+                                            enabled = false,
+                                            onClick = {}
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    CallControlButton(
+                                        icon = Icons.Default.Dialpad,
+                                        label = stringResource(R.string.keypad),
+                                        active = showKeypad,
+                                        onClick = { showKeypad = true }
+                                    )
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    CallControlButton(
+                                        icon = Icons.Default.Pause,
+                                        label = stringResource(R.string.hold),
+                                        active = isOnHold,
+                                        enabled = canHold,
+                                        onClick = onToggleHold
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    CallControlButton(
+                                        icon = if (audioState?.isMuted == true) Icons.Default.MicOff else Icons.Default.Mic,
+                                        label = stringResource(R.string.mute),
+                                        active = audioState?.isMuted == true,
+                                        onClick = onToggleMute
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(20.dp))
