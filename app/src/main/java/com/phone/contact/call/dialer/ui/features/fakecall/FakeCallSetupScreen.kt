@@ -469,7 +469,7 @@ fun FakeCallSetupScreen(
                             useCustomTime = true
                             showTimePicker = false
                         }) {
-                            Text(stringResource(R.string.select))
+                            Text(stringResource(R.string.select).uppercase())
                         }
                     }
                 }

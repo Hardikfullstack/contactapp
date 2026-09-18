@@ -583,7 +583,7 @@ fun FakeCallContent(
                     fakeSecondaryCallerName = enteredName.ifBlank { unknownLabel }
                     showAddCallDialog = false
                 }) {
-                    Text(stringResource(R.string.add_call))
+                    Text(stringResource(R.string.add_call).uppercase())
                 }
             },
             dismissButton = {

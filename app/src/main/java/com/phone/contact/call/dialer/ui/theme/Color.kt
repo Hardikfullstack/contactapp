@@ -15,8 +15,8 @@ val DividerGray = Color(0xFFEEEEEE)
 val ErrorRed = Color(0xFFD32F2F)
 
 // Premium Dark Palette
-val DarkBackground = Color(0xFF121412)
-val DarkSurface = Color(0xFF1B1F1B)
+val DarkBackground = Color(0xFF1A1A1B)
+val DarkSurface = Color(0xFF2A2A2A)
 val DarkOnSurface = Color(0xFFE2E3DE)
 val DarkOnSurfaceVariant = Color(0xFFA4A9A1)
 val DarkOutline = Color(0xFF3F443F)

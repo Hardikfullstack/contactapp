@@ -61,7 +61,10 @@
     <string name="outgoing">Outgoing</string>
     <string name="rejected">Rejected</string>
     <string name="missed">Missed</string>
+    <string name="blocked">Blocked</string>
     <string name="incoming_call">Incoming call</string>
+    <string name="call_waiting">Call waiting</string>
+    <string name="answer_and_end_other_call">Answer and end other call</string>
     <string name="outgoing_call">Outgoing call</string>
     <string name="missed_call">Missed call</string>
     <string name="rejected_call">Rejected call</string>
@@ -74,6 +77,7 @@
 
     <!-- Actions -->
     <string name="call">Call</string>
+    <string name="call_back">Call back</string>
     <string name="message">Message</string>
     <string name="history">History</string>
     <string name="cancel">CANCEL</string>
@@ -344,6 +348,12 @@
     <string name="quick_reply_3">Sorry, I\'m busy right now.</string>
     <string name="quick_reply_4">On my way.</string>
     <string name="add_call">Add call</string>
+    <string name="manage_call">Manage call</string>
+    <string name="merge">Merge</string>
+    <string name="conference_call">Conference call</string>
+    <string name="conference_call_connected">Conference call connected</string>
+    <string name="conference_contacts_count">%1$d Contacts</string>
+    <string name="conference_list">Conference List</string>
 
     <!-- Shake-to-Fake-Call -->
     <string name="quick_trigger_profile">QUICK TRIGGER PROFILE</string>

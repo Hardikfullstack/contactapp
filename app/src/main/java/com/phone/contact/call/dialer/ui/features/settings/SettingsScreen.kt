@@ -337,7 +337,7 @@ fun SettingsScreen(
                     AfterCallState.setEnabled(context, false)
                     showAfterCallDisableDialog = false
                 }) {
-                    Text(stringResource(R.string.turn_off), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.turn_off).uppercase(), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {

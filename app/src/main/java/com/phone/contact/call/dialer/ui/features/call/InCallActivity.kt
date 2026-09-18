@@ -1,12 +1,15 @@
 package com.phone.contact.call.dialer.ui.features.call
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.PowerManager
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -15,7 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
+import com.phone.contact.call.dialer.R
 import com.phone.contact.call.dialer.domain.model.Contact
 import com.phone.contact.call.dialer.domain.repository.ContactRepository
 import com.phone.contact.call.dialer.service.AutoReplyManager
@@ -147,9 +152,116 @@ class InCallActivity : ComponentActivity() {
         setContent {
             val callState by CallManager.callState.collectAsState()
             val call by CallManager.currentCall.collectAsState()
-            val rawNumber = call?.details?.handle?.schemeSpecificPart
             val secondaryCall by CallManager.secondaryCall.collectAsState()
+            val secondaryCallState by CallManager.secondaryCallState.collectAsState()
             val audioState by CallManager.audioState.collectAsState()
+            val conferenceChildren by CallManager.conferenceChildren.collectAsState()
+
+            // Which of the two simultaneous calls is shown "in front" (big avatar/name/state) is
+            // decided purely from their live states, never by reassigning which Call object
+            // Telecom/CallManager itself tracks as primary vs secondary — an earlier version did
+            // that reassignment and an in-flight outgoing call's Call object getting replaced by
+            // Telecom mid-dial flipped the display back to the original call. Deciding it fresh
+            // from state on every recomposition means there's nothing to get out of sync: whichever
+            // call isn't on hold is the one currently "in use" and belongs up front, matching the
+            // reference dialer's own behavior after Add Call and after every Swap.
+            val secondaryIsFront = secondaryCall != null &&
+                callState == Call.STATE_HOLDING &&
+                secondaryCallState != Call.STATE_HOLDING &&
+                secondaryCallState != Call.STATE_RINGING
+            val frontCall = if (secondaryIsFront) secondaryCall else call
+            val backCall = if (secondaryIsFront) call else secondaryCall
+            val frontCallState = if (secondaryIsFront) secondaryCallState else callState
+            val backCallState = if (secondaryIsFront) callState else secondaryCallState
+
+            // conferenceChildren is always seeded from whichever call CallManager tracks as
+            // primary (`call`) — a conference is never the secondary call, only ever promoted to
+            // primary. Once every participant but one has left, this isn't really a "conference"
+            // display anymore — it should fall back to looking like an ordinary single call again,
+            // showing that one remaining participant's own name/number instead of the parent
+            // conference call's own (always blank) handle.
+            val isRealConference = conferenceChildren.size > 1
+            val lastRemainingChild = conferenceChildren.singleOrNull()
+            // "is call the front" mirrors secondaryIsFront's own logic (call is front unless the
+            // secondary is) — conferenceChildren only ever applies to `call`, never `secondaryCall`.
+            val frontIsConference = !secondaryIsFront && isRealConference
+            val backIsConference = secondaryIsFront && isRealConference
+            val rawNumber = if (!secondaryIsFront && lastRemainingChild != null) {
+                lastRemainingChild.details?.handle?.schemeSpecificPart
+            } else {
+                frontCall?.details?.handle?.schemeSpecificPart
+            }
+
+            // A one-time toast right when the conference actually forms — conferenceChildren
+            // flips from empty to non-empty at exactly that moment, so this only fires once per
+            // merge, not on every recomposition while it stays a conference.
+            val hasConferenceNow = isRealConference
+            LaunchedEffect(hasConferenceNow) {
+                if (hasConferenceNow) {
+                    android.widget.Toast.makeText(
+                        this@InCallActivity,
+                        getString(R.string.conference_call_connected),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            // Safety net for canMerge: Call.Details.CAPABILITY_MERGE_CONFERENCE is supposed to
+            // trigger onDetailsChanged when the network grants it, but that hasn't always been
+            // observed to fire promptly (or at all) on every OEM/carrier telephony stack — a short
+            // poll while two calls are up guarantees Merge enables itself as soon as it's actually
+            // available, regardless of whether that event was missed.
+            LaunchedEffect(call, secondaryCall) {
+                while (call != null && secondaryCall != null) {
+                    CallManager.refreshCapabilities()
+                    delay(1000)
+                }
+            }
+
+            // Resolved the same way as the primary/secondary callers — Telecom's children only
+            // carry a raw number, not a saved contact's name/photo.
+            var conferenceParticipants by remember { mutableStateOf<List<ConferenceParticipant>>(emptyList()) }
+            LaunchedEffect(conferenceChildren) {
+                conferenceParticipants = conferenceChildren.map { child ->
+                    val childNumber = child.details?.handle?.schemeSpecificPart ?: ""
+                    val contact = if (childNumber.isNotBlank()) contactRepository.findContactByNumber(childNumber) else null
+                    ConferenceParticipant(
+                        call = child,
+                        number = contact?.number ?: childNumber,
+                        name = contact?.name ?: childNumber,
+                        photoUri = contact?.photoUri
+                    )
+                }
+            }
+
+            // Add Call opens the real Recents screen (AddCallPickerActivity) instead of a bare
+            // dial pad — the picked number comes back here, where it's dialed as the second,
+            // simultaneous call exactly like tapping a Recents entry's call button normally would.
+            val addCallPickerLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                val number = result.data?.getStringExtra(AddCallPickerActivity.EXTRA_PICKED_NUMBER)
+                if (!number.isNullOrBlank()) {
+                    val current = CallManager.currentCall.value
+                    if (current != null && current.state == Call.STATE_ACTIVE) {
+                        // Wait for the hold to actually be CONFIRMED (STATE_HOLDING) before dialing
+                        // the second call — firing hold() and the new call back-to-back raced ahead
+                        // of the modem on some devices/carriers, surfacing the system's own
+                        // "Couldn't make call" error instead of placing it.
+                        current.registerCallback(object : Call.Callback() {
+                            override fun onStateChanged(call: Call, state: Int) {
+                                if (state == Call.STATE_HOLDING || state == Call.STATE_DISCONNECTED) {
+                                    call.unregisterCallback(this)
+                                    CallUtils.makeCall(this@InCallActivity, number)
+                                }
+                            }
+                        })
+                        current.hold()
+                    } else {
+                        CallUtils.makeCall(this@InCallActivity, number)
+                    }
+                }
+            }
 
             LaunchedEffect(callState, audioState?.route) {
                 // Only take over screen control for an active call on the earpiece — while
@@ -172,6 +284,10 @@ class InCallActivity : ComponentActivity() {
             // the same PhoneLookup-backed matching the rest of the app trusts, not raw comparison.
             var resolvedNumber by remember { mutableStateOf<String?>(null) }
             var resolvedContact by remember { mutableStateOf<Contact?>(null) }
+            // Telecom/carrier-provided caller ID (CNAP) for a number with no saved contact match —
+            // ContactCallService already shows this same name in the incoming-call notification;
+            // this surfaces it on the call screen too instead of just the bare number.
+            var resolvedCallerIdName by remember { mutableStateOf<String?>(null) }
             LaunchedEffect(rawNumber) {
                 // Once resolved, hold onto it — rawNumber goes null right as the call disconnects,
                 // briefly before this Activity finishes; resetting here would flash "Unknown".
@@ -179,6 +295,31 @@ class InCallActivity : ComponentActivity() {
                 val contact = contactRepository.findContactByNumber(raw)
                 resolvedContact = contact
                 resolvedNumber = contact?.number ?: raw
+                resolvedCallerIdName = if (contact == null) {
+                    frontCall?.details?.callerDisplayName?.takeIf { it.isNotBlank() }
+                } else {
+                    null
+                }
+            }
+
+            // Same resolution for whichever call is currently the small "secondary" chip — the
+            // reference dialer shows a saved contact's name there too, not just a bare number. A
+            // conference has no single handle/number to resolve at all — when it's the one
+            // demoted to "back" (e.g. a third call being added on top of it), the chip needs a
+            // generic "Conference call" label instead, matching the reference dialer's own chip.
+            val conferenceCallLabel = stringResource(R.string.conference_call)
+            var backContactName by remember { mutableStateOf<String?>(null) }
+            val backNumber = if (secondaryIsFront && lastRemainingChild != null) {
+                lastRemainingChild.details?.handle?.schemeSpecificPart
+            } else {
+                backCall?.details?.handle?.schemeSpecificPart
+            }
+            LaunchedEffect(backNumber, backIsConference) {
+                backContactName = if (backIsConference) {
+                    conferenceCallLabel
+                } else {
+                    backNumber?.let { contactRepository.findContactByNumber(it)?.name }
+                }
             }
 
             val globalSelection by preferenceManager.wallpaperSelectionFlow.collectAsState(
@@ -233,13 +374,14 @@ class InCallActivity : ComponentActivity() {
                 val isSpamByCallManager by CallManager.isSpam.collectAsState()
                 val canHold by CallManager.canHold.collectAsState()
                 val canAddCall by CallManager.canAddCall.collectAsState()
-                val secondaryCallState by CallManager.secondaryCallState.collectAsState()
+                val canMerge by CallManager.canMerge.collectAsState()
 
                 InCallScreen(
-                    contactName = resolvedContact?.name,
+                    contactName = resolvedContact?.name ?: resolvedCallerIdName,
                     number = resolvedNumber ?: rawNumber ?: "",
                     photoUri = resolvedContact?.photoUri,
-                    onHangup = { CallManager.disconnect() },
+                    callState = frontCallState,
+                    onHangup = { frontCall?.let { CallManager.disconnectCall(it) } },
                     onDecline = {
                         CallManager.reject()
                         resolvedNumber?.let { autoReplyManager.sendReplyIfEnabled(it) }
@@ -255,24 +397,26 @@ class InCallActivity : ComponentActivity() {
                     onToggleMute = { CallManager.toggleMute() },
                     onToggleSpeaker = { CallManager.toggleSpeaker() },
                     canHold = canHold,
-                    onToggleHold = { CallManager.toggleHold() },
+                    onToggleHold = { frontCall?.let { CallManager.toggleHoldForCall(it) } },
                     onPlayDtmf = { digit -> CallManager.playDtmfTone(digit) },
                     onStopDtmf = { CallManager.stopDtmfTone() },
                     canAddCall = canAddCall,
-                    secondaryCallNumber = secondaryCall?.details?.handle?.schemeSpecificPart,
-                    secondaryCallState = secondaryCallState,
-                    onAddCall = { number ->
-                        // Hold the current call first — Telecom generally does this
-                        // automatically when a second call is placed, but making it explicit
-                        // avoids depending on that OEM/carrier-specific behavior.
-                        val current = CallManager.currentCall.value
-                        if (current?.state == Call.STATE_ACTIVE) current.hold()
-                        CallUtils.makeCall(this@InCallActivity, number)
+                    canMerge = canMerge,
+                    secondaryCallNumber = backCall?.details?.handle?.schemeSpecificPart,
+                    secondaryCallContactName = backContactName,
+                    secondaryCallState = backCallState,
+                    onAddCallClick = {
+                        addCallPickerLauncher.launch(Intent(this@InCallActivity, AddCallPickerActivity::class.java))
                     },
-                    onEndSecondaryCall = { secondaryCall?.disconnect() },
+                    onEndSecondaryCall = { backCall?.disconnect() },
                     onAnswerSecondaryCall = { CallManager.answerSecondaryCall() },
                     onDeclineSecondaryCall = { CallManager.rejectSecondaryCall() },
+                    onAnswerAndEndOtherCall = { CallManager.answerAndEndOtherCall() },
                     onSwapCalls = { CallManager.swapCalls() },
+                    onMergeCalls = { CallManager.mergeCalls() },
+                    showConferenceInMainDisplay = frontIsConference,
+                    conferenceParticipants = conferenceParticipants,
+                    onDisconnectParticipant = { participantCall -> CallManager.disconnectConferenceParticipant(participantCall) },
                     selection = selection,
                     theme = callTheme
                 )

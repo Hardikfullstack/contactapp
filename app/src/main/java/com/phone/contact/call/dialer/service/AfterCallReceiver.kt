@@ -68,26 +68,12 @@ class AfterCallReceiver : BroadcastReceiver() {
         // Only act on a transition INTO idle from an active call — not app startup or repeats.
         if (state != TelephonyManager.EXTRA_STATE_IDLE || !wasActive) return
 
-        if (!AfterCallState.readEnabled(context)) {
-            return
-        }
-        // MIUI has its own separate "background pop-up" AppOp, distinct from — and not satisfied
-        // by — the standard overlay permission, so it needs its own check instead of
-        // Settings.canDrawOverlays() there. Being the default dialer alone lets Android treat the
-        // post-call startActivity() as a legitimate continuation of a Telecom-handled call, so it
-        // doesn't need the display permission on top of that — same as the reference app, which
-        // only nags for it when the app is ALSO not the default dialer. Only bail out (and nudge
-        // the user to fix it) when neither is true.
-        val hasDisplayPermission = if (CallReliabilityUtils.isMiui()) {
-            CallReliabilityUtils.isMiuiBackgroundPopupGranted(context)
-        } else {
-            Settings.canDrawOverlays(context)
-        }
-        if (!hasDisplayPermission && !isDefaultDialer(context)) {
-            Log.w(TAG, "onReceive: skipped — no display-over-other-apps permission and not the default dialer")
-            AfterCallNotificationHelper.showOverlayPermissionMissingNotification(context.applicationContext)
-            return
-        }
+        // The missed-call notification below is a core telephony feature, always shown regardless
+        // of this toggle (matching the reference/stock dialer) — only the After Call quick-actions
+        // overlay itself (display permission checks + launching AfterCallActivity, further down)
+        // is gated on it.
+        val afterCallEnabled = AfterCallState.readEnabled(context)
+
         if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
             Log.w(TAG, "onReceive: skipped — READ_CALL_LOG permission not granted")
             return
@@ -95,7 +81,9 @@ class AfterCallReceiver : BroadcastReceiver() {
 
         val appContext = context.applicationContext
 
-        preloadAfterCallNativeAds(appContext)
+        if (afterCallEnabled) {
+            preloadAfterCallNativeAds(appContext)
+        }
 
         val pendingResult = goAsync()
 
@@ -119,6 +107,7 @@ class AfterCallReceiver : BroadcastReceiver() {
                 val seconds = duration % 60
                 val durationText = String.format("%02d:%02d", minutes, seconds)
 
+                val isMissed = type != CallLog.Calls.OUTGOING_TYPE && type != CallLog.Calls.INCOMING_TYPE
                 val callInfoLine1 = when (type) {
                     CallLog.Calls.OUTGOING_TYPE -> String.format(appContext.getString(R.string.after_call_duration_outgoing), durationText)
                     CallLog.Calls.INCOMING_TYPE -> String.format(appContext.getString(R.string.after_call_duration_incoming), durationText)
@@ -128,6 +117,36 @@ class AfterCallReceiver : BroadcastReceiver() {
                 val callInfoLine2 = String.format(appContext.getString(R.string.after_call_just_now_template), timeText)
 
                 val contactName = lookupContactName(appContext, number)
+
+                // Posted unconditionally alongside the AfterCall overlay below — not only as a
+                // fallback when the overlay fails to show — since the two serve different jobs:
+                // the overlay is a transient quick-actions popup, this is the persistent shade
+                // record of "who called while I was away", matching the reference/stock dialer.
+                if (isMissed) {
+                    AfterCallNotificationHelper.showMissedCallNotification(appContext, number, contactName)
+                }
+
+                if (!afterCallEnabled) {
+                    return@launch
+                }
+
+                // MIUI has its own separate "background pop-up" AppOp, distinct from — and not
+                // satisfied by — the standard overlay permission, so it needs its own check
+                // instead of Settings.canDrawOverlays() there. Being the default dialer alone lets
+                // Android treat the post-call startActivity() as a legitimate continuation of a
+                // Telecom-handled call, so it doesn't need the display permission on top of that —
+                // same as the reference app, which only nags for it when the app is ALSO not the
+                // default dialer. Only bail out (and nudge the user to fix it) when neither is true.
+                val hasDisplayPermission = if (CallReliabilityUtils.isMiui()) {
+                    CallReliabilityUtils.isMiuiBackgroundPopupGranted(appContext)
+                } else {
+                    Settings.canDrawOverlays(appContext)
+                }
+                if (!hasDisplayPermission && !isDefaultDialer(appContext)) {
+                    Log.w(TAG, "onReceive: skipped AfterCall overlay — no display-over-other-apps permission and not the default dialer")
+                    AfterCallNotificationHelper.showOverlayPermissionMissingNotification(appContext)
+                    return@launch
+                }
 
                 withContext(Dispatchers.Main) {
                     AppOpenBackgroundReturnTrigger.isAdPaused = true

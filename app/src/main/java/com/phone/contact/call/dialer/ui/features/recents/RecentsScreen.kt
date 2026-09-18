@@ -88,6 +88,10 @@ fun RecentsScreen(
     onSearchClick: () -> Unit,
     onHistoryClick: (String, String) -> Unit,
     onKeypadClick: () -> Unit,
+    // Non-null when this screen is being used as the "Add Call" picker (a second, simultaneous
+    // call) instead of its normal standalone role — tapping a call's number then hands the number
+    // back to that flow instead of placing an ordinary outgoing call itself.
+    onNumberPicked: ((String) -> Unit)? = null,
     viewModel: RecentsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -203,7 +207,7 @@ fun RecentsScreen(
                     }
                     context.startActivity(intent)
                 }) {
-                    Text(stringResource(R.string.open_settings), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.open_settings).uppercase(), color = PrimaryGreen, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -699,7 +703,10 @@ fun RecentsScreen(
                                             expanded = isExpanded,
                                             onClick = { viewModel.onCallClicked(call.id) },
                                             onLongClick = { viewModel.onCallLongClick(call) },
-                                            onCallClick = { CallUtils.makeCall(context, call.number) },
+                                            onCallClick = {
+                                                if (onNumberPicked != null) onNumberPicked(call.number)
+                                                else CallUtils.makeCall(context, call.number)
+                                            },
                                             onMessageClick = { MessageUtils.sendMessage(context, call.number) },
                                             onHistoryClick = { onHistoryClick(call.name ?: "", call.number) }
                                         )
@@ -731,7 +738,7 @@ fun RecentsScreen(
             text = { Text(stringResource(R.string.clear_spam_text, uiState.spamNumbers.size)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.deleteAllSpamCalls() }) {
-                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete).uppercase(), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {

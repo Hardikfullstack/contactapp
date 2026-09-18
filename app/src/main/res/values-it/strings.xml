@@ -34,6 +34,7 @@
     <string name="outgoing">In uscita</string>
     <string name="rejected">Rifiutata</string>
     <string name="missed">Persa</string>
+    <string name="blocked">Bloccata</string>
 
     <!-- Keypad Quick Actions -->
     <string name="create_new_contact">Crea nuovo contatto</string>
@@ -42,6 +43,7 @@
 
     <!-- Actions -->
     <string name="call">Chiama</string>
+    <string name="call_back">Richiama</string>
     <string name="message">Messaggio</string>
     <string name="history">Cronologia</string>
     <string name="cancel">ANNULLA</string>
@@ -270,6 +272,12 @@
     <string name="call_log_permission_needed">L\'autorizzazione al Registro chiamate è necessaria per mostrare le tue chiamate recenti</string>
     <string name="action_set_default">Imposta come Predefinito</string>
     <string name="add_call">Aggiungi chiamata</string>
+    <string name="manage_call">Gestisci chiamata</string>
+    <string name="merge">Unisci</string>
+    <string name="conference_call">Chiamata in conferenza</string>
+    <string name="conference_call_connected">Chiamata in conferenza connessa</string>
+    <string name="conference_contacts_count">%1$d Contatti</string>
+    <string name="conference_list">Elenco conferenza</string>
     <string name="add_reminder">Aggiungi Promemoria</string>
     <string name="after_call_disable_dialog_message">Non vedrai più azioni rapide dopo le tue chiamate. Puoi riattivarle in qualsiasi momento.</string>
     <string name="after_call_disable_dialog_title">Disattivare la schermata Dopo Chiamata?</string>
@@ -350,6 +358,8 @@
     <string name="import_failed">Importazione fallita</string>
     <string name="import_success">%1$d contatti importati con successo</string>
     <string name="incoming_call">Chiamata in arrivo</string>
+    <string name="call_waiting">Chiamata in attesa</string>
+    <string name="answer_and_end_other_call">Rispondi e termina l\'altra chiamata</string>
     <string name="incoming_call_status">Chiamata in Arrivo</string>
     <string name="maintenance_dialog_desc">Stiamo apportando alcuni miglioramenti in questo momento. Ricontrolla tra un po\'.</string>
     <string name="maintenance_dialog_exit_button">Esci dall\'App</string>

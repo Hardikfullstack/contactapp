@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phone.contact.call.dialer.R
 import com.phone.contact.call.dialer.ui.features.recents.CallFilter
+import com.phone.contact.call.dialer.ui.theme.LocalIsDarkTheme
 import com.phone.contact.call.dialer.ui.theme.PrimaryGreen
 
 @Composable
@@ -36,7 +37,12 @@ fun FilterDropdown(
             offset = DpOffset(x = (-145).dp, y = 13.dp),
             modifier = Modifier
                 .width(170.dp)
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                .background(
+                    // Dark mode matches QuickActionButton's own dark-mode pill color instead of
+                    // the theme's default (darker/less contrasty) surface color.
+                    if (LocalIsDarkTheme.current) Color(0xFF4B4F4D) else MaterialTheme.colorScheme.surface,
+                    RoundedCornerShape(16.dp)
+                )
         ) {
             CallFilter.values().forEach { filter ->
                 val isSelected = selectedFilter == filter

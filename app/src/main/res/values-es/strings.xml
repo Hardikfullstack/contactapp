@@ -34,7 +34,10 @@
     <string name="outgoing">Saliente</string>
     <string name="rejected">Rechazada</string>
     <string name="missed">Perdida</string>
+    <string name="blocked">Bloqueada</string>
     <string name="incoming_call">Llamada entrante</string>
+    <string name="call_waiting">Llamada en espera</string>
+    <string name="answer_and_end_other_call">Contestar y finalizar la otra llamada</string>
     <string name="outgoing_call">Llamada saliente</string>
     <string name="missed_call">Llamada perdida</string>
     <string name="rejected_call">Llamada rechazada</string>
@@ -47,6 +50,7 @@
 
     <!-- Actions -->
     <string name="call">Llamar</string>
+    <string name="call_back">Devolver llamada</string>
     <string name="message">Mensaje</string>
     <string name="history">Historial</string>
     <string name="cancel">CANCELAR</string>
@@ -320,6 +324,12 @@
     <string name="call_log_permission_needed">Se necesita el permiso de Registro de Llamadas para mostrar tus llamadas recientes</string>
     <string name="action_set_default">Establecer como Predeterminado</string>
     <string name="add_call">Añadir llamada</string>
+    <string name="manage_call">Gestionar llamada</string>
+    <string name="merge">Combinar</string>
+    <string name="conference_call">Llamada en conferencia</string>
+    <string name="conference_call_connected">Llamada en conferencia conectada</string>
+    <string name="conference_contacts_count">%1$d Contactos</string>
+    <string name="conference_list">Lista de conferencia</string>
     <string name="add_reminder">Añadir Recordatorio</string>
     <string name="after_call_disable_dialog_message">No verás acciones rápidas después de que terminen tus llamadas. Puedes volver a activarlo en cualquier momento.</string>
     <string name="after_call_disable_dialog_title">¿Desactivar la pantalla Después de la Llamada?</string>

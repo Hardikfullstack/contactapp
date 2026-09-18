@@ -35,6 +35,7 @@
     <string name="outgoing">बाहर जाने वाली</string>
     <string name="rejected">अस्वीकृत</string>
     <string name="missed">छूटी हुई</string>
+    <string name="blocked">ब्लॉक किया गया</string>
 
     <!-- Keypad Quick Actions -->
     <string name="create_new_contact">नया संपर्क बनाएं</string>
@@ -43,6 +44,7 @@
 
     <!-- Actions -->
     <string name="call">कॉल करें</string>
+    <string name="call_back">वापस कॉल करें</string>
     <string name="message">संदेश</string>
     <string name="history">इतिहास</string>
     <string name="cancel">रद्द करें</string>
@@ -61,6 +63,8 @@
     <string name="ongoing_call">कॉल चालू है</string>
     <string name="dialing">डायल किया जा रहा है...</string>
     <string name="incoming_call">आने वाली कॉल</string>
+    <string name="call_waiting">कॉल वेटिंग</string>
+    <string name="answer_and_end_other_call">जवाब दें और दूसरी कॉल समाप्त करें</string>
     <string name="outgoing_call">बाहर जाने वाली कॉल</string>
     <string name="missed_call">छूटी हुई कॉल</string>
     <string name="rejected_call">अस्वीकृत कॉल</string>
@@ -321,6 +325,12 @@
     <string name="call_log_permission_needed">आपकी हाल की कॉल दिखाने के लिए कॉल लॉग की अनुमति आवश्यक है</string>
     <string name="action_set_default">डिफ़ॉल्ट सेट करें</string>
     <string name="add_call">कॉल जोड़ें</string>
+    <string name="manage_call">कॉल प्रबंधित करें</string>
+    <string name="merge">मर्ज करें</string>
+    <string name="conference_call">कॉन्फ़्रेंस कॉल</string>
+    <string name="conference_call_connected">कॉन्फ़्रेंस कॉल कनेक्ट हो गई</string>
+    <string name="conference_contacts_count">%1$d संपर्क</string>
+    <string name="conference_list">कॉन्फ़्रेंस सूची</string>
     <string name="add_reminder">रिमाइंडर जोड़ें</string>
     <string name="after_call_disable_dialog_message">आपको अपनी कॉल खत्म होने के बाद क्विक एक्शन दिखाई नहीं देंगे। आप इसे कभी भी वापस चालू कर सकते हैं।</string>
     <string name="after_call_disable_dialog_title">After Call स्क्रीन बंद करें?</string>

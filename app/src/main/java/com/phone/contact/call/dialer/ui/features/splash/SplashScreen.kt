@@ -332,6 +332,7 @@ private fun SplashLogo() {
                 .size(120.dp)
                 .scale(circleScale.value)
                 .alpha(circleAlpha.value)
+                .clip(RoundedCornerShape(20.dp))
         )
     }
 }

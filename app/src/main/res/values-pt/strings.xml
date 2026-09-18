@@ -34,6 +34,7 @@
     <string name="outgoing">Efetuada</string>
     <string name="rejected">Rejeitada</string>
     <string name="missed">Perdida</string>
+    <string name="blocked">Bloqueada</string>
 
     <!-- Keypad Quick Actions -->
     <string name="create_new_contact">Criar novo contacto</string>
@@ -42,6 +43,7 @@
 
     <!-- Actions -->
     <string name="call">Ligar</string>
+    <string name="call_back">Retornar chamada</string>
     <string name="message">Mensagem</string>
     <string name="history">Histórico</string>
     <string name="cancel">CANCELAR</string>
@@ -270,6 +272,12 @@
     <string name="call_log_permission_needed">A permissão de Registro de Chamadas é necessária para mostrar suas chamadas recentes</string>
     <string name="action_set_default">Definir como Padrão</string>
     <string name="add_call">Adicionar chamada</string>
+    <string name="manage_call">Gerir chamada</string>
+    <string name="merge">Fundir</string>
+    <string name="conference_call">Chamada em conferência</string>
+    <string name="conference_call_connected">Chamada em conferência ligada</string>
+    <string name="conference_contacts_count">%1$d Contactos</string>
+    <string name="conference_list">Lista de conferência</string>
     <string name="add_reminder">Adicionar Lembrete</string>
     <string name="after_call_disable_dialog_message">Você não verá mais ações rápidas após suas chamadas. Você pode reativar isso a qualquer momento.</string>
     <string name="after_call_disable_dialog_title">Desativar a tela Após a Chamada?</string>
@@ -350,6 +358,8 @@
     <string name="import_failed">Falha na importação</string>
     <string name="import_success">%1$d contatos importados com sucesso</string>
     <string name="incoming_call">Chamada recebida</string>
+    <string name="call_waiting">Chamada em espera</string>
+    <string name="answer_and_end_other_call">Atender e terminar a outra chamada</string>
     <string name="incoming_call_status">Chamada Recebida</string>
     <string name="maintenance_dialog_desc">Estamos fazendo algumas melhorias no momento. Volte a verificar em breve.</string>
     <string name="maintenance_dialog_exit_button">Sair do Aplicativo</string>

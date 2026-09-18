@@ -57,13 +57,23 @@ class CallNotificationManager @Inject constructor(
     // running Chronometer instead of losing/resetting it on every re-render.
     private var activeCallStartTimeMillis: Long? = null
 
+    // Remembered the same way — so a Mute/Speaker-triggered refresh doesn't accidentally drop
+    // back to showing the caller's own name/photo mid-conference.
+    private var activeCallIsConference: Boolean = false
+
     companion object {
         const val INCOMING_CALL_CHANNEL_ID = "incoming_call_channel"
         const val ACTIVE_CALL_CHANNEL_ID = "active_call_channel"
         const val NOTIFICATION_ID = 2001
+        // A second, distinct ID so a call-waiting notification can be shown ALONGSIDE the
+        // existing ongoing-call notification (two stacked heads-up pills), matching the
+        // reference/stock dialer — sharing NOTIFICATION_ID would just replace one with the other.
+        const val CALL_WAITING_NOTIFICATION_ID = 2002
 
         const val ACTION_ANSWER = "com.phone.contact.call.dialer.ACTION_ANSWER"
         const val ACTION_DECLINE = "com.phone.contact.call.dialer.ACTION_DECLINE"
+        const val ACTION_ANSWER_WAITING = "com.phone.contact.call.dialer.ACTION_ANSWER_WAITING"
+        const val ACTION_DECLINE_WAITING = "com.phone.contact.call.dialer.ACTION_DECLINE_WAITING"
         const val ACTION_HANGUP = "com.phone.contact.call.dialer.ACTION_HANGUP"
         const val ACTION_TOGGLE_MUTE = "com.phone.contact.call.dialer.ACTION_TOGGLE_MUTE"
         const val ACTION_TOGGLE_SPEAKER = "com.phone.contact.call.dialer.ACTION_TOGGLE_SPEAKER"
@@ -121,7 +131,7 @@ class CallNotificationManager @Inject constructor(
         incomingHasContactName = hasContactName
 
         val fullScreenIntent = Intent(context, InCallActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
         }
         val fullScreenPendingIntent = PendingIntent.getActivity(
             context, 0, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -173,6 +183,62 @@ class CallNotificationManager @Inject constructor(
         }
     }
 
+    /** A second call ringing in while already on a call — its own separate notification (see
+     * CALL_WAITING_NOTIFICATION_ID) shown alongside the existing ongoing-call one, since the
+     * reference/stock dialer shows both simultaneously instead of only ever having one call
+     * notification. No setFullScreenIntent here (unlike showIncomingCallNotification) — the app
+     * is already on-screen for the first call, so a call-waiting arrival gets a normal heads-up
+     * instead of forcibly interrupting whatever's currently showing. */
+    fun showCallWaitingNotification(
+        callerName: String,
+        number: String,
+        photoUri: String? = null,
+        hasContactName: Boolean = true
+    ) {
+        val contentIntent = Intent(context, InCallActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
+        val contentPendingIntent = PendingIntent.getActivity(
+            context, 1, contentIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val answerPendingIntent = actionPendingIntent(ACTION_ANSWER_WAITING, 8)
+        val declinePendingIntent = actionPendingIntent(ACTION_DECLINE_WAITING, 9)
+
+        val statusText = context.getString(R.string.call_waiting)
+        val (nameColor, statusColor) = notificationTextColors()
+        val views = RemoteViews(context.packageName, R.layout.notification_call_incoming).apply {
+            setTextViewText(R.id.tvContactName, callerName)
+            setTextViewText(R.id.tvCallStatus, statusText)
+            setTextColor(R.id.tvContactName, nameColor)
+            setTextColor(R.id.tvCallStatus, statusColor)
+            setImageViewBitmap(R.id.ivAvatar, NotificationAvatarUtils.createAvatarBitmap(context, photoUri, callerName, hasContactName))
+            setOnClickPendingIntent(R.id.btnAnswer, answerPendingIntent)
+            setOnClickPendingIntent(R.id.btnDecline, declinePendingIntent)
+        }
+
+        val builder = NotificationCompat.Builder(context, INCOMING_CALL_CHANNEL_ID)
+            .setSmallIcon(R.drawable.notification_icon)
+            .setContentTitle(callerName)
+            .setContentText(statusText)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setContentIntent(contentPendingIntent)
+            .setCustomContentView(views)
+            .setCustomBigContentView(views)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+
+        if (checkNotificationPermission()) {
+            notificationManager.notify(CALL_WAITING_NOTIFICATION_ID, builder.build())
+        }
+    }
+
+    fun cancelCallWaitingNotification() {
+        notificationManager.cancel(CALL_WAITING_NOTIFICATION_ID)
+    }
+
     /** Same custom-layout treatment for the ongoing call — Mute/Speaker reflect CallManager's
      * live audioState so this stays in sync with whatever InCallActivity itself shows. */
     fun showActiveCallNotification(
@@ -189,16 +255,23 @@ class CallNotificationManager @Inject constructor(
         // (refreshActiveCallNotification) keeps the Chronometer running instead of resetting;
         // omit (null) while still dialing/connecting.
         callConnectedAtMillis: Long? = activeCallStartTimeMillis,
-        hasContactName: Boolean = activeCallerHasContactName
+        hasContactName: Boolean = activeCallerHasContactName,
+        // True once this call has merged into a real (2+ participant) conference — swaps the
+        // avatar/title to a generic group icon + "Conference call" instead of the last individual
+        // caller's own name/photo, matching the reference dialer's own conference notification.
+        // Our own small status-bar icon (setSmallIcon below) stays exactly as-is either way.
+        isConference: Boolean = activeCallIsConference
     ) {
         activeCallerName = callerName
         activeCallerPhotoUri = photoUri
         activeCallerStatusText = statusText
         activeCallStartTimeMillis = callConnectedAtMillis
         activeCallerHasContactName = hasContactName
+        activeCallIsConference = isConference
+        val displayName = if (isConference) context.getString(R.string.conference_call) else callerName
 
         val contentIntent = Intent(context, InCallActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         }
         val contentPendingIntent = PendingIntent.getActivity(
             context, 0, contentIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -218,7 +291,7 @@ class CallNotificationManager @Inject constructor(
 
         val (nameColor, statusColor) = notificationTextColors()
         val views = RemoteViews(context.packageName, R.layout.notification_call_active).apply {
-            setTextViewText(R.id.tvContactName, callerName)
+            setTextViewText(R.id.tvContactName, displayName)
             setTextColor(R.id.tvContactName, nameColor)
             setTextColor(R.id.tvCallStatus, statusColor)
             setTextColor(R.id.chronoCallTimer, statusColor)
@@ -231,7 +304,12 @@ class CallNotificationManager @Inject constructor(
                 setViewVisibility(R.id.tvCallStatus, android.view.View.VISIBLE)
                 setViewVisibility(R.id.chronoCallTimer, android.view.View.GONE)
             }
-            setImageViewBitmap(R.id.ivAvatar, NotificationAvatarUtils.createAvatarBitmap(context, photoUri, callerName, hasContactName))
+            val avatarBitmap = if (isConference) {
+                NotificationAvatarUtils.createConferenceAvatarBitmap(context)
+            } else {
+                NotificationAvatarUtils.createAvatarBitmap(context, photoUri, callerName, hasContactName)
+            }
+            setImageViewBitmap(R.id.ivAvatar, avatarBitmap)
             setImageViewResource(R.id.btnMute, if (isMuted) R.drawable.ic_notif_mic_off else R.drawable.ic_notif_mic)
             setImageViewResource(R.id.btnSpeaker, if (isSpeakerOn) R.drawable.ic_notif_volume_up else R.drawable.ic_notif_volume_off)
             setOnClickPendingIntent(R.id.btnMute, mutePendingIntent)
@@ -241,7 +319,7 @@ class CallNotificationManager @Inject constructor(
 
         val builder = NotificationCompat.Builder(context, ACTIVE_CALL_CHANNEL_ID)
             .setSmallIcon(R.drawable.notification_icon)
-            .setContentTitle(callerName)
+            .setContentTitle(displayName)
             .setContentText(statusText)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_CALL)
@@ -281,6 +359,8 @@ class CallNotificationManager @Inject constructor(
         activeCallerStatusText = null
         activeCallStartTimeMillis = null
         activeCallerHasContactName = true
+        activeCallIsConference = false
+        notificationManager.cancel(CALL_WAITING_NOTIFICATION_ID)
         incomingCallerName = null
         incomingNumber = null
         incomingPhotoUri = null
@@ -354,7 +434,7 @@ class CallActionReceiver : BroadcastReceiver() {
                 CallManager.answer()
                 // Ensure the UI opens immediately when answering from a heads-up notification.
                 val activityIntent = Intent(context, InCallActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                 }
                 context.startActivity(activityIntent)
             }
@@ -363,6 +443,20 @@ class CallActionReceiver : BroadcastReceiver() {
                 // (InCallActivity) — this is just the other delivery path for the same action.
                 val number = CallManager.currentCall.value?.details?.handle?.schemeSpecificPart
                 CallManager.reject()
+                number?.let { autoReplyManager.sendReplyIfEnabled(it) }
+            }
+            CallNotificationManager.ACTION_ANSWER_WAITING -> {
+                CallManager.answerSecondaryCall()
+                callNotificationManager.cancelCallWaitingNotification()
+                val activityIntent = Intent(context, InCallActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                }
+                context.startActivity(activityIntent)
+            }
+            CallNotificationManager.ACTION_DECLINE_WAITING -> {
+                val number = CallManager.secondaryCall.value?.details?.handle?.schemeSpecificPart
+                CallManager.rejectSecondaryCall()
+                callNotificationManager.cancelCallWaitingNotification()
                 number?.let { autoReplyManager.sendReplyIfEnabled(it) }
             }
             CallNotificationManager.ACTION_HANGUP -> CallManager.disconnect()

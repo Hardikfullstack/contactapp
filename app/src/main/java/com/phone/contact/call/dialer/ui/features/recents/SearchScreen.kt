@@ -40,6 +40,10 @@ import com.phone.contact.call.dialer.util.CallUtils
 fun SearchScreen(
     onBack: () -> Unit,
     onContactClick: (String, String) -> Unit,
+    // Non-null when this screen is being used as the "Add Call" picker's search — tapping a
+    // result (row or call icon) hands its number back to that flow instead of navigating to
+    // History or placing an ordinary outgoing call itself.
+    onNumberPicked: ((String) -> Unit)? = null,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val query by viewModel.query.collectAsState()
@@ -191,8 +195,14 @@ fun SearchScreen(
                 ) { contact ->
                     ContactItem(
                         contact = contact,
-                        onClick = { onContactClick(contact.name, contact.number) },
-                        onCallClick = { CallUtils.makeCall(context, contact.number) }
+                        onClick = {
+                            if (onNumberPicked != null) onNumberPicked(contact.number)
+                            else onContactClick(contact.name, contact.number)
+                        },
+                        onCallClick = {
+                            if (onNumberPicked != null) onNumberPicked(contact.number)
+                            else CallUtils.makeCall(context, contact.number)
+                        }
                     )
                 }
             }

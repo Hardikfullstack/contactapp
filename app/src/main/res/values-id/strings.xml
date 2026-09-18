@@ -34,6 +34,7 @@
     <string name="outgoing">Keluar</string>
     <string name="rejected">Ditolak</string>
     <string name="missed">Tak Terjawab</string>
+    <string name="blocked">Diblokir</string>
 
     <!-- Keypad Quick Actions -->
     <string name="create_new_contact">Buat kontak baru</string>
@@ -42,6 +43,7 @@
 
     <!-- Actions -->
     <string name="call">Panggil</string>
+    <string name="call_back">Telepon balik</string>
     <string name="message">Pesan</string>
     <string name="history">Riwayat</string>
     <string name="cancel">BATAL</string>
@@ -270,6 +272,12 @@
     <string name="call_log_permission_needed">Izin Log Panggilan diperlukan untuk menampilkan panggilan terbaru Anda</string>
     <string name="action_set_default">Jadikan Default</string>
     <string name="add_call">Tambah panggilan</string>
+    <string name="manage_call">Kelola panggilan</string>
+    <string name="merge">Gabungkan</string>
+    <string name="conference_call">Panggilan konferensi</string>
+    <string name="conference_call_connected">Panggilan konferensi tersambung</string>
+    <string name="conference_contacts_count">%1$d Kontak</string>
+    <string name="conference_list">Daftar konferensi</string>
     <string name="add_reminder">Tambah Pengingat</string>
     <string name="after_call_disable_dialog_message">Anda tidak akan melihat tindakan cepat setelah panggilan Anda berakhir. Anda dapat mengaktifkannya kembali kapan saja.</string>
     <string name="after_call_disable_dialog_title">Matikan layar Setelah Panggilan?</string>
@@ -350,6 +358,8 @@
     <string name="import_failed">Impor gagal</string>
     <string name="import_success">%1$d kontak berhasil diimpor</string>
     <string name="incoming_call">Panggilan masuk</string>
+    <string name="call_waiting">Panggilan menunggu</string>
+    <string name="answer_and_end_other_call">Jawab dan akhiri panggilan lain</string>
     <string name="incoming_call_status">Panggilan Masuk</string>
     <string name="maintenance_dialog_desc">Kami sedang melakukan beberapa perbaikan sekarang. Silakan periksa kembali sebentar lagi.</string>
     <string name="maintenance_dialog_exit_button">Keluar Aplikasi</string>

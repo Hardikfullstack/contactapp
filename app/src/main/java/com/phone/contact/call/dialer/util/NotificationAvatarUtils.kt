@@ -89,6 +89,29 @@ object NotificationAvatarUtils {
         return output
     }
 
+    /** Conference calls have no single caller/photo to show — a group-of-people glyph instead,
+     * matching the reference dialer's own conference notification, while still using our own
+     * app's accent color (not copying the reference app's own icon/branding). */
+    fun createConferenceAvatarBitmap(context: Context, sizeDp: Int = 48): Bitmap {
+        val density = context.resources.displayMetrics.density
+        val sizePx = (sizeDp * density).toInt().coerceAtLeast(1)
+        val output = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
+        val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.parseColor("#4CAF50")
+        }
+        val radius = sizePx / 2f
+        canvas.drawCircle(radius, radius, radius, circlePaint)
+
+        val iconSize = (sizePx * 0.6f).toInt()
+        val offset = (sizePx - iconSize) / 2
+        ContextCompat.getDrawable(context, R.drawable.ic_group_conference)?.apply {
+            setBounds(offset, offset, offset + iconSize, offset + iconSize)
+            draw(canvas)
+        }
+        return output
+    }
+
     /** Matches CallComponents.kt's CallItem fallback for a call with no resolved contact name:
      * a plain gray (#9E9E9E) circle with a generic person silhouette, instead of a misleading
      * initial taken from the raw phone number. */

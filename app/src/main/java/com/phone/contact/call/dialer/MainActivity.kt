@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity() {
         // instead of jumping straight back into it like every real dialer does.
         if (com.phone.contact.call.dialer.service.CallManager.currentCall.value != null) {
             startActivity(Intent(this, com.phone.contact.call.dialer.ui.features.call.InCallActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             })
             finish()
             return
@@ -87,6 +87,24 @@ class MainActivity : AppCompatActivity() {
         // on any screen — not just calls (InCallActivity already sets this separately).
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
+
+        // enableEdgeToEdge() alone picks status/nav bar icon appearance from the SYSTEM's own
+        // dark-mode state at this exact moment — not this app's own in-app theme preference. When
+        // the user has explicitly forced "Dark" while the system itself is in light mode (or vice
+        // versa), that mismatch left the status bar showing dark icons on this app's own dark
+        // background (invisible) on some devices, since the later Compose-side correction (see
+        // SideEffect below) doesn't reliably override it everywhere. Resolving the real theme here
+        // and applying it immediately, before Compose even starts, fixes that at the source.
+        val resolvedDarkAtStart = when (preferenceManager.getAppTheme()) {
+            "Dark" -> true
+            "Light" -> false
+            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !resolvedDarkAtStart
+            isAppearanceLightNavigationBars = !resolvedDarkAtStart
+        }
+
         setContent {
             // Instantiated here so its init{} fires and fetches the remote ad/app config on
             // startup, and shared (Activity-scoped) with any nested screen — e.g.

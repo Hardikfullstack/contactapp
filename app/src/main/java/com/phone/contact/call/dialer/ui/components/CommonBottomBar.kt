@@ -39,7 +39,7 @@ fun CommonBottomBar(
             color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCDCDCD)
         )
         NavigationBar(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = if (LocalIsDarkTheme.current) Color(0xFF1A1A1B) else MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp,
             windowInsets = windowInsets
         ) {

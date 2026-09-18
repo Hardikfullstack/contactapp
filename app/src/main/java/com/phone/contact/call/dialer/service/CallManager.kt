@@ -33,11 +33,36 @@ object CallManager {
     private val _canAddCall = MutableStateFlow(false)
     val canAddCall = _canAddCall.asStateFlow()
 
+    /** Whether the two simultaneous calls can be merged into a conference — only meaningful once
+     *  a secondary call already exists, and still depends on carrier/SIM conference support. */
+    private val _canMerge = MutableStateFlow(false)
+    val canMerge = _canMerge.asStateFlow()
+
+    /** Public re-check, called on a short poll from the UI while two calls are up — capability
+     *  flags like CAPABILITY_MERGE_CONFERENCE are supposed to trigger onDetailsChanged when they
+     *  change, but that event has been observed to not always fire promptly (or at all) on some
+     *  OEM/carrier telephony stacks, which would otherwise leave Merge stuck disabled even once
+     *  the network genuinely supports it. */
+    fun refreshCapabilities() = recomputeCapabilities()
+
     private fun recomputeCapabilities() {
         val call = _currentCall.value
+        val secondary = _secondaryCall.value
         _canHold.value = call?.details?.can(Call.Details.CAPABILITY_HOLD) == true
-        _canAddCall.value = call != null && _secondaryCall.value == null &&
+        _canAddCall.value = call != null && secondary == null &&
             call.details.can(Call.Details.CAPABILITY_HOLD)
+        // Call.conferenceableCalls (with its own dedicated onConferenceableCallsChanged callback)
+        // is the API AOSP's own Dialer checks for "can these two calls merge" — CAPABILITY_
+        // MERGE_CONFERENCE is a separate, unreliable signal that some telephony stacks never set
+        // even when a real network-side merge is genuinely available, which left Merge stuck
+        // disabled despite both calls being fully connected. Kept as a fallback OR, not a
+        // replacement, since the reverse gap (capability set, conferenceableCalls empty) is
+        // possible on other stacks.
+        _canMerge.value = call != null && secondary != null &&
+            (call.conferenceableCalls.contains(secondary) ||
+                secondary.conferenceableCalls.contains(call) ||
+                call.details.can(Call.Details.CAPABILITY_MERGE_CONFERENCE) ||
+                secondary.details.can(Call.Details.CAPABILITY_MERGE_CONFERENCE))
     }
 
     private val _isSpam = MutableStateFlow(false)
@@ -53,12 +78,39 @@ object CallManager {
     // outlives any single call/service instance and must never be the thing keeping it alive.
     private var serviceRef: WeakReference<InCallService>? = null
 
+    /** Populated once the current call becomes a merged conference — Telecom reports the
+     *  individual participants as this call's children rather than as a separate top-level call,
+     *  which is also the signal used to detect that a merge actually went through. */
+    private val _conferenceChildren = MutableStateFlow<List<Call>>(emptyList())
+    /** Empty whenever there's no conference — callers derive "is this a conference" from
+     *  `.isNotEmpty()` directly rather than a separate boolean flow. */
+    val conferenceChildren = _conferenceChildren.asStateFlow()
+
     private val callCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
             _callState.value = state
         }
 
         override fun onDetailsChanged(call: Call, details: Call.Details) {
+            recomputeCapabilities()
+        }
+
+        override fun onChildrenChanged(call: Call, children: MutableList<Call>) {
+            _conferenceChildren.value = children.toList()
+            // Some ConnectionServices merge by populating the EXISTING primary call's children
+            // directly instead of delivering a brand-new "conference" Call via onCallAdded — in
+            // that path promoteToConference() never runs, so without this, the just-merged
+            // secondary call would keep sitting in _secondaryCall as a stale, separately-tracked
+            // call alongside the new conference display.
+            if (children.isNotEmpty() && _secondaryCall.value != null) {
+                _secondaryCall.value?.unregisterCallback(secondaryCallCallback)
+                _secondaryCall.value = null
+                _secondaryCallState.value = Call.STATE_DISCONNECTED
+            }
+            recomputeCapabilities()
+        }
+
+        override fun onConferenceableCallsChanged(call: Call, conferenceableCalls: MutableList<Call>) {
             recomputeCapabilities()
         }
     }
@@ -81,6 +133,11 @@ object CallManager {
         _currentCall.value?.unregisterCallback(callCallback)
         _currentCall.value = call
         _callState.value = call?.state ?: Call.STATE_DISCONNECTED
+        // Seeded immediately from the call's own current children, not left to wait for the
+        // first onChildrenChanged callback — a call that's already a conference by the time it's
+        // assigned here (e.g. promoteToConference) would otherwise show no participants at all
+        // until Telecom happens to fire that callback again.
+        _conferenceChildren.value = call?.children?.toList() ?: emptyList()
         if (call == null) {
             _isSpam.value = false
         }
@@ -107,6 +164,18 @@ object CallManager {
     /** Ends a call that's already dialing/active. */
     fun disconnect() {
         _currentCall.value?.disconnect()
+    }
+
+    /** Same as [disconnect]/[toggleHold] but targeted at an explicit [Call] rather than always
+     *  [_currentCall] — used when the screen is displaying the secondary call as the "front" call
+     *  (e.g. a just-placed Add Call leg while the original call sits on hold) and its End/Hold
+     *  buttons need to act on that one instead of whichever Telecom itself still tracks as primary. */
+    fun disconnectCall(targetCall: Call) {
+        targetCall.disconnect()
+    }
+
+    fun toggleHoldForCall(targetCall: Call) {
+        if (targetCall.state == Call.STATE_HOLDING) targetCall.unhold() else targetCall.hold()
     }
 
     /** Toggles hold on the current call — Telecom exposes hold/unhold as separate calls, not a
@@ -163,6 +232,18 @@ object CallManager {
         override fun onStateChanged(call: Call, state: Int) {
             _secondaryCallState.value = state
         }
+
+        override fun onDetailsChanged(call: Call, details: Call.Details) {
+            // CAPABILITY_MERGE_CONFERENCE is frequently granted to the SECONDARY call, not the
+            // primary one — without this, canMerge never recomputes when that capability actually
+            // arrives (it only reacts to the primary call's own onDetailsChanged), leaving Merge
+            // permanently disabled even once the carrier genuinely supports it.
+            recomputeCapabilities()
+        }
+
+        override fun onConferenceableCallsChanged(call: Call, conferenceableCalls: MutableList<Call>) {
+            recomputeCapabilities()
+        }
     }
 
     /** Registers the second simultaneous call placed via "Add call". Telecom itself decides
@@ -193,6 +274,17 @@ object CallManager {
         AnalyticsManager.logEventWithAction("incoming_call", "CallManager", "answer_call_waiting")
     }
 
+    /** The other stock-dialer call-waiting option — ends the current call outright instead of
+     *  holding it, then answers the waiting one. Disconnecting first (rather than after) means
+     *  ContactCallService's own onCallRemoved() cleanup naturally promotes this secondary call to
+     *  primary once the old one actually finishes disconnecting, without any extra bookkeeping here. */
+    fun answerAndEndOtherCall() {
+        val waiting = _secondaryCall.value ?: return
+        _currentCall.value?.disconnect()
+        waiting.answer(VideoProfile.STATE_AUDIO_ONLY)
+        AnalyticsManager.logEventWithAction("incoming_call", "CallManager", "answer_end_other_call")
+    }
+
     /** Declines a still-ringing secondary (call-waiting) call — reject(), not disconnect(), same
      *  reason as the primary's reject(): Telecom needs this to signal "declined" to the network. */
     fun rejectSecondaryCall() {
@@ -214,6 +306,31 @@ object CallManager {
                 primary.unhold()
             }
         }
+    }
+
+    /** Merges the two simultaneous calls into a conference — Telecom's own convention is to call
+     *  conference() on whichever call reports CAPABILITY_MERGE_CONFERENCE (checked via canMerge). */
+    fun mergeCalls() {
+        val primary = _currentCall.value ?: return
+        val secondary = _secondaryCall.value ?: return
+        primary.conference(secondary)
+        AnalyticsManager.logEventWithAction("incoming_call", "CallManager", "merge_calls")
+    }
+
+    /** Called when Telecom hands over the merged conference call itself (detected via
+     *  CAPABILITY_MANAGE_CONFERENCE or a non-empty children list) — the two individual legs are
+     *  now this call's children, not separate top-level calls, so the old secondary-call tracking
+     *  is cleared in favor of it. */
+    fun promoteToConference(call: Call) {
+        _secondaryCall.value?.unregisterCallback(secondaryCallCallback)
+        _secondaryCall.value = null
+        _secondaryCallState.value = Call.STATE_DISCONNECTED
+        updateCall(call)
+    }
+
+    /** Disconnects a single participant out of the current conference. */
+    fun disconnectConferenceParticipant(call: Call) {
+        call.disconnect()
     }
 
     /** The primary call ended while a secondary one was still up — promote the survivor so the

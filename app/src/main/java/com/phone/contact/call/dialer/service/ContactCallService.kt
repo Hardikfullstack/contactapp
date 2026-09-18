@@ -91,13 +91,22 @@ class ContactCallService : InCallService() {
         // skip its next check so a full-screen App Open ad never races on top of the call screen.
         com.phone.contact.call.dialer.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
 
+        // Telecom hands over the merged conference as either a call already reporting this
+        // capability, or one whose children list is already populated — either way, this is not
+        // a plain second call and needs its own promotion path (see promoteToConference's doc).
+        val isConferenceCall = call.details.can(Call.Details.CAPABILITY_MANAGE_CONFERENCE) || call.children.isNotEmpty()
         val isFirstCall = CallManager.currentCall.value == null
-        if (isFirstCall) {
-            CallManager.updateCall(call)
-        } else {
-            // A call already exists — this is the second leg from "Add call", not a
-            // replacement for the primary call.
-            CallManager.addSecondaryCall(call)
+
+        // NOTE: an earlier version also promoted an outgoing Add-Call leg straight to primary
+        // here (demoting the previous call to secondary) to match the stock dialer's own display.
+        // Reverted — Telecom can replace an in-flight outgoing call's Call object once the network
+        // confirms it, and onCallRemoved()'s existing "primary ended, promote secondary" cleanup
+        // then fired for that transient object, flipping the display back to the original call.
+        // Second calls stay secondary-only (as before) until that swap can be redone safely.
+        when {
+            isConferenceCall -> CallManager.promoteToConference(call)
+            isFirstCall -> CallManager.updateCall(call)
+            else -> CallManager.addSecondaryCall(call)
         }
 
         val number = call.details.handle?.schemeSpecificPart ?: "Unknown"
@@ -114,12 +123,10 @@ class ContactCallService : InCallService() {
         var hasContactName = false
         // Captured once, the first time this call reaches STATE_ACTIVE — reused on every
         // subsequent re-render (Mute/Speaker toggle, resuming from hold) so the notification's
-        // Chronometer keeps counting from the true connect time instead of restarting. Shifted
-        // forward by however long each hold lasts (see STATE_HOLDING/STATE_ACTIVE below) so the
-        // displayed elapsed time pauses during a hold instead of counting through it, matching
-        // InCallScreen's own elapsed-time counter.
+        // Chronometer keeps counting from the true connect time instead of restarting. Keeps
+        // ticking straight through a hold too (never shifted/reset), matching InCallScreen's own
+        // elapsed-time counter and the reference/stock dialer's own behavior.
         var callConnectedAtMillis: Long? = null
-        var holdStartedAtElapsedRealtime: Long? = null
 
         // Trigger Call Announcer and Flash Alert for incoming calls — only for the primary call.
         // A second (call-waiting) call ringing in while already on a call gets Telecom's own
@@ -172,6 +179,29 @@ class ContactCallService : InCallService() {
                 )
                 promoteToForeground()
             }
+        } else if (call.state == Call.STATE_RINGING) {
+            // Call-waiting: a second call ringing in while already on a call. Telecom gives it its
+            // own native waiting tone, but this app's OWN notification only ever showed for the
+            // first call — so a call-waiting call previously got no notification of its own at
+            // all. Show it as a separate, non-full-screen heads-up alongside the existing
+            // ongoing-call notification, matching the reference dialer's two-stacked-pills look.
+            scope.launch {
+                val contact = contactRepository.findContactByNumber(number)
+                callNotificationManager.showCallWaitingNotification(
+                    contact?.name ?: number,
+                    number,
+                    contact?.photoUri,
+                    hasContactName = contact?.name != null
+                )
+            }
+            call.registerCallback(object : Call.Callback() {
+                override fun onStateChanged(call: Call, state: Int) {
+                    if (state != Call.STATE_RINGING) {
+                        callNotificationManager.cancelCallWaitingNotification()
+                        call.unregisterCallback(this)
+                    }
+                }
+            })
         }
 
         call.registerCallback(object : Call.Callback() {
@@ -190,31 +220,25 @@ class ContactCallService : InCallService() {
                         if (callConnectedAtMillis == null) {
                             callConnectedAtMillis = android.os.SystemClock.elapsedRealtime()
                         }
-                        // Resuming from a hold — push the base forward by however long the hold
-                        // lasted, so the displayed elapsed time continues from where it paused
-                        // instead of jumping ahead to include the hold gap.
-                        holdStartedAtElapsedRealtime?.let { holdStart ->
-                            callConnectedAtMillis = callConnectedAtMillis!! + (android.os.SystemClock.elapsedRealtime() - holdStart)
-                            holdStartedAtElapsedRealtime = null
-                        }
                         callNotificationManager.showActiveCallNotification(
                             resolvedDisplayName,
                             resolvedPhotoUri,
                             callConnectedAtMillis = callConnectedAtMillis,
-                            hasContactName = hasContactName
+                            hasContactName = hasContactName,
+                            isConference = call.children.size > 1
                         )
                         promoteToForeground()
                     }
                     Call.STATE_HOLDING -> {
-                        if (holdStartedAtElapsedRealtime == null) {
-                            holdStartedAtElapsedRealtime = android.os.SystemClock.elapsedRealtime()
-                        }
+                        // Keep the same Chronometer base ticking straight through the hold —
+                        // matching InCallScreen's own timer — instead of freezing it on a static
+                        // "On hold" label.
                         callNotificationManager.showActiveCallNotification(
                             resolvedDisplayName,
                             resolvedPhotoUri,
-                            getString(R.string.on_hold),
-                            callConnectedAtMillis = null,
-                            hasContactName = hasContactName
+                            callConnectedAtMillis = callConnectedAtMillis,
+                            hasContactName = hasContactName,
+                            isConference = call.children.size > 1
                         )
                     }
                     Call.STATE_DISCONNECTED -> {
@@ -222,11 +246,27 @@ class ContactCallService : InCallService() {
                     }
                 }
             }
+
+            override fun onChildrenChanged(call: Call, children: MutableList<Call>) {
+                // Telecom can populate this same call's children directly (no separate
+                // onCallAdded for the conference) — re-render the notification the moment that
+                // happens too, not just on the next state transition, so the "Conference call"
+                // icon/title switch shows up immediately when a merge completes.
+                if (call !== CallManager.currentCall.value) return
+                if (call.state != Call.STATE_ACTIVE && call.state != Call.STATE_HOLDING) return
+                callNotificationManager.showActiveCallNotification(
+                    resolvedDisplayName,
+                    resolvedPhotoUri,
+                    callConnectedAtMillis = callConnectedAtMillis,
+                    hasContactName = hasContactName,
+                    isConference = children.size > 1
+                )
+            }
         })
 
         // Show the In-Call UI
         val intent = Intent(this, InCallActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         }
         startActivity(intent)
     }
@@ -236,8 +276,19 @@ class ContactCallService : InCallService() {
 
         if (call === CallManager.secondaryCall.value) {
             // Only the second leg ended — the primary call is still up, so none of the
-            // ringtone/notification/flash cleanup below applies.
+            // ringtone/notification/flash cleanup below applies. Still a safety net for the
+            // call-waiting notification itself: if this call is removed straight from RINGING
+            // (e.g. the caller hangs up before being answered) without an onStateChanged first.
+            callNotificationManager.cancelCallWaitingNotification()
             CallManager.clearSecondaryCall()
+            return
+        }
+
+        if (call !== CallManager.currentCall.value) {
+            // Not the tracked primary or secondary — e.g. one of the two original legs Telecom
+            // removed after absorbing it into a new conference Call object via
+            // promoteToConference(). That conference is still ongoing under a different Call, so
+            // there's nothing to clean up for this one.
             return
         }
 

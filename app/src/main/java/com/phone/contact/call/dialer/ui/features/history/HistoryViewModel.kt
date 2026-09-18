@@ -15,6 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -56,7 +57,6 @@ class HistoryViewModel @Inject constructor(
         fetchContactDetails()
         fetchHistory()
         observeFavoriteStatus()
-        observeBlockedStatus()
     }
 
     /** Re-fetches name/photo — call when returning from More Details, where they can change. */
@@ -126,30 +126,28 @@ class HistoryViewModel @Inject constructor(
         }
     }
 
-    private fun observeBlockedStatus() {
-        if (number.isNotBlank()) {
-            val target = PhoneNumberMatcher.normalize(number)
-            viewModelScope.launch {
-                callLogRepository.getBlockedNumbers().collect { blockedList ->
-                    val isBlocked = blockedList.any {
-                        PhoneNumberMatcher.normalize(it) == target && target.isNotEmpty()
-                    }
-                    _uiState.value = _uiState.value.copy(isBlocked = isBlocked)
-                }
-            }
-        }
-    }
-
     private var fetchJob: kotlinx.coroutines.Job? = null
 
+    /** Combined (not two separate collectors) so every row in groupedCalls is re-tagged the
+     * moment this number's block status changes, without waiting for the call log itself to
+     * change too — matching the reference dialer, which marks EVERY history entry for a
+     * currently-blocked number as "Blocked", not just calls the OS itself logged as blocked. */
     private fun fetchHistory() {
         if (number.isBlank() || fetchJob != null) return
-        
+
+        val target = PhoneNumberMatcher.normalize(number)
         _uiState.value = _uiState.value.copy(isLoading = true)
         fetchJob = viewModelScope.launch {
-            callLogRepository.fetchCallHistory(number).collect { logs ->
+            combine(
+                callLogRepository.fetchCallHistory(number),
+                callLogRepository.getBlockedNumbers()
+            ) { logs, blockedList ->
+                val isBlocked = target.isNotEmpty() && blockedList.any { PhoneNumberMatcher.normalize(it) == target }
+                isBlocked to logs.map { it.copy(isBlocked = isBlocked) }
+            }.collect { (isBlocked, logs) ->
                 _uiState.value = _uiState.value.copy(
                     groupedCalls = groupLogs(logs),
+                    isBlocked = isBlocked,
                     isLoading = false
                 )
             }

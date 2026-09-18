@@ -87,7 +87,16 @@
         <activity
             android:name=".ui.features.call.InCallActivity"
             android:exported="false"
-            android:launchMode="singleInstance"
+            android:taskAffinity="${applicationId}.incall"
+            android:documentLaunchMode="intoExisting"
+            android:excludeFromRecents="false"
+            android:screenOrientation="portrait"
+            android:showOnLockScreen="true"
+            android:theme="@style/Theme.ContactApp" />
+
+        <activity
+            android:name=".ui.features.call.AddCallPickerActivity"
+            android:exported="false"
             android:screenOrientation="portrait"
             android:showOnLockScreen="true"
             android:theme="@style/Theme.ContactApp" />
@@ -136,6 +145,11 @@
 
         <receiver
             android:name=".service.CallActionReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.MissedCallActionReceiver"
             android:enabled="true"
             android:exported="false" />
 

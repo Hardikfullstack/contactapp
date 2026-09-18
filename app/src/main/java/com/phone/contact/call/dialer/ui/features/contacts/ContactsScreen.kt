@@ -44,6 +44,10 @@ import kotlin.math.abs
 fun ContactsScreen(
     onContactClick: (String, String) -> Unit,
     onSearchClick: () -> Unit,
+    // Non-null when this screen is being used as the "Add Call" picker instead of its normal
+    // standalone role — tapping a contact (row or call icon) then hands its number back to that
+    // flow instead of navigating to History or placing an ordinary outgoing call itself.
+    onNumberPicked: ((String) -> Unit)? = null,
     viewModel: ContactsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -244,6 +248,8 @@ fun ContactsScreen(
                                     onClick = {
                                         if (uiState.isSelectionMode) {
                                             viewModel.toggleSelection(contact.id)
+                                        } else if (onNumberPicked != null) {
+                                            onNumberPicked(contact.number)
                                         } else {
                                             onContactClick(contact.name, contact.number)
                                         }
@@ -251,7 +257,10 @@ fun ContactsScreen(
                                     onLongClick = {
                                         viewModel.toggleSelection(contact.id)
                                     },
-                                    onCallClick = { CallUtils.makeCall(context, contact.number) }
+                                    onCallClick = {
+                                        if (onNumberPicked != null) onNumberPicked(contact.number)
+                                        else CallUtils.makeCall(context, contact.number)
+                                    }
                                 )
                             }
                         }

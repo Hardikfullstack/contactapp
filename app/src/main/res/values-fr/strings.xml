@@ -34,6 +34,7 @@
     <string name="outgoing">Sortant</string>
     <string name="rejected">Refusé</string>
     <string name="missed">Manqué</string>
+    <string name="blocked">Bloqué</string>
 
     <!-- Keypad Quick Actions -->
     <string name="create_new_contact">Créer un nouveau contact</string>
@@ -42,6 +43,7 @@
 
     <!-- Actions -->
     <string name="call">Appeler</string>
+    <string name="call_back">Rappeler</string>
     <string name="message">Message</string>
     <string name="history">Historique</string>
     <string name="cancel">ANNULER</string>
@@ -270,6 +272,12 @@
     <string name="call_log_permission_needed">L\'autorisation Journal d\'appels est nécessaire pour afficher vos appels récents</string>
     <string name="action_set_default">Définir par défaut</string>
     <string name="add_call">Ajouter un appel</string>
+    <string name="manage_call">Gérer l\'appel</string>
+    <string name="merge">Fusionner</string>
+    <string name="conference_call">Appel en conférence</string>
+    <string name="conference_call_connected">Appel en conférence connecté</string>
+    <string name="conference_contacts_count">%1$d Contacts</string>
+    <string name="conference_list">Liste de conférence</string>
     <string name="add_reminder">Ajouter un rappel</string>
     <string name="after_call_disable_dialog_message">Vous ne verrez plus d\'actions rapides après vos appels. Vous pouvez réactiver cette option à tout moment.</string>
     <string name="after_call_disable_dialog_title">Désactiver l\'écran après appel ?</string>
@@ -350,6 +358,8 @@
     <string name="import_failed">Échec de l\'importation</string>
     <string name="import_success">%1$d contacts importés avec succès</string>
     <string name="incoming_call">Appel entrant</string>
+    <string name="call_waiting">Appel en attente</string>
+    <string name="answer_and_end_other_call">Répondre et mettre fin à l\'autre appel</string>
     <string name="incoming_call_status">Appel entrant</string>
     <string name="maintenance_dialog_desc">Nous apportons actuellement quelques améliorations. Veuillez revenir un peu plus tard.</string>
     <string name="maintenance_dialog_exit_button">Quitter l\'application</string>

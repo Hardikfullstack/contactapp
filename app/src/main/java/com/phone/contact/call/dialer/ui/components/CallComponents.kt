@@ -11,7 +11,6 @@ import androidx.compose.material.icons.automirrored.filled.CallMissedOutgoing
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,7 +42,13 @@ fun CallItem(
     val timeString = DateFormat.getTimeFormat(context).format(Date(call.timestamp))
     val hasContactName = !call.name.isNullOrBlank()
     val displayName = if (hasContactName) call.name!! else call.number.ifBlank { stringResource(R.string.unknown) }
-    
+    // Two separate signals for "was this blocked": call.isBlocked is a live overlay (is this
+    // number CURRENTLY in the block list), while call.type == BLOCKED is the OS's own permanent
+    // record that THIS call specifically got blocked at the time — that record doesn't change
+    // just because the number was unblocked afterwards, so a historical blocked entry still
+    // needs to show as Blocked even after unblocking.
+    val isBlockedEntry = call.isBlocked || call.type == CallType.BLOCKED
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -56,17 +62,17 @@ fun CallItem(
                 .clip(CircleShape)
                 .background(
                     when {
-                        call.isBlocked -> MaterialTheme.colorScheme.surfaceVariant
+                        isBlockedEntry -> MaterialTheme.colorScheme.surfaceVariant
                         !hasContactName -> Color(0xFF9E9E9E)
                         else -> getAvatarColor(displayName)
                     }
                 ),
             contentAlignment = Alignment.Center
         ) {
-            if (call.isBlocked) {
+            if (isBlockedEntry) {
                 Icon(
                     imageVector = Icons.Default.Block,
-                    contentDescription = "Blocked",
+                    contentDescription = stringResource(R.string.blocked),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp)
                 )
@@ -83,8 +89,13 @@ fun CallItem(
                     fontWeight = FontWeight.Normal
                 )
             } else {
+                // A local vector drawable (same one the notification avatar already uses for
+                // this exact "unknown caller" case) instead of the material-icons-core
+                // Icons.Default.Person — that runtime-built ImageVector has been observed to
+                // fail to draw at all (background renders, icon glyph doesn't) on some devices,
+                // while a plain AAPT-compiled drawable resource doesn't hit that path.
                 Icon(
-                    imageVector = Icons.Default.Person,
+                    painter = painterResource(R.drawable.ic_unknown_person),
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(32.dp)
@@ -105,7 +116,7 @@ fun CallItem(
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(2.dp))
-            val isMissedOrRejected = call.type == CallType.MISSED || call.type == CallType.REJECTED
+            val isMissedOrRejected = isBlockedEntry || call.type == CallType.MISSED || call.type == CallType.REJECTED
             val statusColor = if (isMissedOrRejected) {
                 // Dark mode keeps the theme's own semantic error color (as it always did);
                 // light mode uses the flat #F20004 red requested for this row.
@@ -117,18 +128,21 @@ fun CallItem(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = getCallIcon(call.type),
+                    imageVector = if (isBlockedEntry) Icons.Default.Block else getCallIcon(call.type),
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
                     tint = statusColor
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                val typeString = when(call.type) {
+                val typeString = if (isBlockedEntry) {
+                    stringResource(R.string.blocked)
+                } else when(call.type) {
                     CallType.INCOMING -> stringResource(R.string.incoming)
                     CallType.OUTGOING -> stringResource(R.string.outgoing)
                     CallType.MISSED -> stringResource(R.string.missed)
                     CallType.REJECTED -> stringResource(R.string.rejected)
                     CallType.SPAM -> stringResource(R.string.spam_call)
+                    CallType.BLOCKED -> stringResource(R.string.blocked)
                     else -> ""
                 }
                 Text(
@@ -164,6 +178,7 @@ fun getCallIcon(type: CallType): ImageVector {
         CallType.MISSED -> Icons.AutoMirrored.Filled.CallMissed
         CallType.REJECTED -> Icons.AutoMirrored.Filled.CallMissedOutgoing
         CallType.SPAM -> Icons.Default.Report
+        CallType.BLOCKED -> Icons.Default.Block
         else -> Icons.Default.Call
     }
 }
@@ -171,7 +186,7 @@ fun getCallIcon(type: CallType): ImageVector {
 @Composable
 fun getCallColor(type: CallType): Color {
     return when (type) {
-        CallType.MISSED, CallType.REJECTED, CallType.SPAM -> MaterialTheme.colorScheme.error
+        CallType.MISSED, CallType.REJECTED, CallType.SPAM, CallType.BLOCKED -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }

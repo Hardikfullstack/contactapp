@@ -659,7 +659,7 @@ private fun AfterCallReminderForm(
                     .clickable(enabled = canSave) { onSave(note.trim(), targetMillis, colorIndex) },
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = strSave, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                Text(text = strSave.uppercase(), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
             }
         }
     }

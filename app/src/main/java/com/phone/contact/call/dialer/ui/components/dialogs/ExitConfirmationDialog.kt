@@ -5,8 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -21,7 +19,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.phone.contact.call.dialer.R
 import com.phone.contact.call.dialer.ads.NativeAdTemplate
 import com.phone.contact.call.dialer.ads.NativeAdView
-import com.phone.contact.call.dialer.ui.theme.PrimaryGreen
 
 /**
  * Shown on back-press from any top-level tab instead of exiting immediately — a bottom sheet
@@ -79,12 +76,6 @@ fun ExitConfirmationDialog(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = null,
-                        tint = PrimaryGreen
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.tap_here_to_exit),
                         style = MaterialTheme.typography.titleMedium,

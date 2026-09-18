@@ -294,7 +294,7 @@ fun PermissionScreen(
                     }
                     settingsLauncher.launch(intent)
                 }) {
-                    Text(stringResource(R.string.open_settings), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.open_settings).uppercase(), color = PrimaryGreen, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

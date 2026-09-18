@@ -217,7 +217,7 @@ fun HistoryScreen(
                 text = { Text(text = stringResource(R.string.delete_contact_text)) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.deleteHistoryAndContact() }) {
-                        Text(text = stringResource(R.string.delete), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text(text = stringResource(R.string.delete).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
@@ -257,7 +257,7 @@ fun HistoryScreen(
                 text = { Text(text = stringResource(R.string.delete_call_text)) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.confirmDeleteCall() }) {
-                        Text(text = stringResource(R.string.delete), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text(text = stringResource(R.string.delete).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {

@@ -112,11 +112,14 @@ fun CallWallpaperScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 1. "None" option
+                // 1. "None" option — a fixed dark color (not MaterialTheme.colorScheme.surfaceVariant,
+                // which flips with light/dark app theme) since this swatch is a preview of the real
+                // call screen's actual fallback background, which is always this same dark color
+                // regardless of the app's own theme.
                 item {
                     WallpaperCard(
                         isSelected = selection is WallpaperSelection.None,
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        color = Color(0xFF1A1A1A),
                         onClick = { viewModel.selectNone() }
                     )
                 }

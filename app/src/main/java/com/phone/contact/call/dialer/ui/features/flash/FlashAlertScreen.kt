@@ -191,7 +191,7 @@ fun FlashAlertScreen(
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }
                 }) {
-                    Text(if (isPermanentlyDenied) stringResource(R.string.open_settings) else stringResource(R.string.try_again))
+                    Text((if (isPermanentlyDenied) stringResource(R.string.open_settings) else stringResource(R.string.try_again)).uppercase())
                 }
             },
             dismissButton = {

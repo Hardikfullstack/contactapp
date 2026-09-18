@@ -35,7 +35,10 @@
     <string name="outgoing">صادرة</string>
     <string name="rejected">مرفوضة</string>
     <string name="missed">فائتة</string>
+    <string name="blocked">محظورة</string>
     <string name="incoming_call">مكالمة واردة</string>
+    <string name="call_waiting">مكالمة منتظرة</string>
+    <string name="answer_and_end_other_call">الرد وإنهاء المكالمة الأخرى</string>
     <string name="outgoing_call">مكالمة صادرة</string>
     <string name="missed_call">مكالمة فائتة</string>
     <string name="rejected_call">مكالمة مرفوضة</string>
@@ -48,6 +51,7 @@
 
     <!-- Actions -->
     <string name="call">اتصال</string>
+    <string name="call_back">معاودة الاتصال</string>
     <string name="message">رسالة</string>
     <string name="history">السجل</string>
     <string name="cancel">إلغاء</string>
@@ -320,6 +324,12 @@
     <string name="call_log_permission_needed">إذن سجل المكالمات مطلوب لعرض مكالماتك الأخيرة</string>
     <string name="action_set_default">تعيين كافتراضي</string>
     <string name="add_call">إضافة مكالمة</string>
+    <string name="manage_call">إدارة المكالمة</string>
+    <string name="merge">دمج</string>
+    <string name="conference_call">مكالمة جماعية</string>
+    <string name="conference_call_connected">تم توصيل المكالمة الجماعية</string>
+    <string name="conference_contacts_count">%1$d جهات اتصال</string>
+    <string name="conference_list">قائمة المكالمة الجماعية</string>
     <string name="add_reminder">إضافة تذكير</string>
     <string name="after_call_disable_dialog_message">لن ترى إجراءات سريعة بعد انتهاء مكالماتك. يمكنك إعادة تفعيل هذا في أي وقت.</string>
     <string name="after_call_disable_dialog_title">إيقاف شاشة ما بعد المكالمة؟</string>

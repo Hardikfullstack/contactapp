@@ -34,6 +34,7 @@
     <string name="outgoing">Ausgehend</string>
     <string name="rejected">Abgelehnt</string>
     <string name="missed">Verpasst</string>
+    <string name="blocked">Blockiert</string>
 
     <!-- Keypad Quick Actions -->
     <string name="create_new_contact">Neuen Kontakt erstellen</string>
@@ -42,6 +43,7 @@
 
     <!-- Actions -->
     <string name="call">Anrufen</string>
+    <string name="call_back">Zurückrufen</string>
     <string name="message">Nachricht</string>
     <string name="history">Verlauf</string>
     <string name="cancel">ABBRECHEN</string>
@@ -270,6 +272,12 @@
     <string name="call_log_permission_needed">Die Anrufliste-Berechtigung wird benötigt, um deine letzten Anrufe anzuzeigen</string>
     <string name="action_set_default">Als Standard festlegen</string>
     <string name="add_call">Anruf hinzufügen</string>
+    <string name="manage_call">Anruf verwalten</string>
+    <string name="merge">Zusammenführen</string>
+    <string name="conference_call">Konferenzgespräch</string>
+    <string name="conference_call_connected">Konferenzgespräch verbunden</string>
+    <string name="conference_contacts_count">%1$d Kontakte</string>
+    <string name="conference_list">Konferenzliste</string>
     <string name="add_reminder">Erinnerung hinzufügen</string>
     <string name="after_call_disable_dialog_message">Sie sehen nach Ihren Anrufen keine Schnellaktionen mehr. Sie können dies jederzeit wieder aktivieren.</string>
     <string name="after_call_disable_dialog_title">Bildschirm nach dem Anruf deaktivieren?</string>
@@ -350,6 +358,8 @@
     <string name="import_failed">Import fehlgeschlagen</string>
     <string name="import_success">%1$d Kontakte erfolgreich importiert</string>
     <string name="incoming_call">Eingehender Anruf</string>
+    <string name="call_waiting">Anklopfen</string>
+    <string name="answer_and_end_other_call">Annehmen und anderen Anruf beenden</string>
     <string name="incoming_call_status">Eingehender Anruf</string>
     <string name="maintenance_dialog_desc">Wir nehmen gerade einige Verbesserungen vor. Bitte schauen Sie in Kürze wieder vorbei.</string>
     <string name="maintenance_dialog_exit_button">App beenden</string>

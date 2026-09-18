@@ -3,6 +3,7 @@ package com.phone.contact.call.dialer.ui.features.settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.PrivacyTip
@@ -13,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -63,7 +65,9 @@ fun AboutUsScreen(
                 Image(
                     painter = painterResource(R.drawable.logo_cotntacts),
                     contentDescription = null,
-                    modifier = Modifier.size(96.dp)
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(RoundedCornerShape(20.dp))
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(

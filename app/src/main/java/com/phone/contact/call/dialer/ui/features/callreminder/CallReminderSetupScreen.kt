@@ -281,7 +281,7 @@ fun CallReminderSetupScreen(
                 TextButton(onClick = {
                     selectedDateMillis = datePickerState.selectedDateMillis
                     showDatePicker = false
-                }) { Text(stringResource(R.string.select)) }
+                }) { Text(stringResource(R.string.select).uppercase()) }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.cancel)) }
@@ -319,7 +319,7 @@ fun CallReminderSetupScreen(
                             selectedMinute = timePickerState.minute
                             showTimePicker = false
                         }) {
-                            Text(stringResource(R.string.select))
+                            Text(stringResource(R.string.select).uppercase())
                         }
                     }
                 }
