@@ -1,16 +1,9 @@
 package com.phone.contact.call.dialer.ui.features.onboarding
 
 import android.Manifest
-import android.app.Activity
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -75,7 +68,6 @@ fun PermissionScreen(
             add(listOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE))
         }
     }
-    val permissionsToRequest = remember(permissionGroups) { permissionGroups.flatten() }
     var permissionGroupIndex by remember { mutableIntStateOf(0) }
 
     // The background reliability chain (overlay, MIUI autostart, etc) is handled by
@@ -86,23 +78,17 @@ fun PermissionScreen(
         onContinue()
     }
 
-    var showSettingsDialog by remember { mutableStateOf(false) }
-
-    val settingsLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { _ ->
-        val allGranted = permissionsToRequest.all {
-            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-        }
-        if (allGranted) proceedAfterPermissions()
-    }
-
     // lateinit (not val) because the callback below needs to launch the NEXT group by calling
     // this same launcher again — a val's initializer lambda can't reference the val itself.
     lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
     permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ ->
+        // Always chain into the next group regardless of whether THIS group was granted or
+        // denied — Notification, then Call/Phone State, both get their own real chance to show,
+        // matching the intended sequential order. Once every group has been asked (whatever the
+        // outcome), just move the user forward — AdvancedPermissionScreen (Display over other
+        // apps, next) still gets its own chance regardless of what happened with these.
         permissionGroupIndex++
         if (permissionGroupIndex < permissionGroups.size) {
             val nextGroup = permissionGroups[permissionGroupIndex]
@@ -114,24 +100,7 @@ fun PermissionScreen(
                 permissionLauncher.launch(nextGroup.toTypedArray())
             }
         } else {
-            val allGranted = permissionsToRequest.all {
-                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-            }
-            if (allGranted) {
-                proceedAfterPermissions()
-            } else {
-                // If the system can no longer show a rationale for any still-denied permission,
-                // the user has denied it (usually the second time) with "Don't allow" — the
-                // request dialog won't reappear, so send them to app settings instead.
-                val activity = context as? Activity
-                val canAskAgain = activity != null && permissionsToRequest.any { permission ->
-                    ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED &&
-                        ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
-                }
-                if (!canAskAgain) {
-                    showSettingsDialog = true
-                }
-            }
+            proceedAfterPermissions()
         }
     }
 
@@ -280,30 +249,6 @@ fun PermissionScreen(
         }
     }
 
-    if (showSettingsDialog) {
-        AlertDialog(
-            onDismissRequest = { showSettingsDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text(stringResource(R.string.permission_permanently_denied_title)) },
-            text = { Text(stringResource(R.string.permission_permanently_denied_desc)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSettingsDialog = false
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", context.packageName, null)
-                    }
-                    settingsLauncher.launch(intent)
-                }) {
-                    Text(stringResource(R.string.open_settings).uppercase(), color = PrimaryGreen, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSettingsDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        )
-    }
 
 }
 

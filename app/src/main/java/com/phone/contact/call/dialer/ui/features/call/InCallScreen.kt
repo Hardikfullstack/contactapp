@@ -1,5 +1,6 @@
 package com.phone.contact.call.dialer.ui.features.call
 
+import android.os.SystemClock
 import android.telecom.Call
 import android.telecom.CallAudioState
 import androidx.compose.animation.AnimatedVisibility
@@ -69,6 +70,12 @@ fun InCallScreen(
     // matches the reference dialer's own "whichever call you're not holding is up front" rule
     // without this composable needing to know about that swap itself.
     callState: Int,
+    // SystemClock.elapsedRealtime() at the moment the FRONT call first connected — null until
+    // then. The on-screen timer below recomputes itself from this wall-clock anchor every tick
+    // instead of counting up from a local 0, so it shows the true elapsed duration immediately
+    // even right after this whole Activity/Composable was torn down and recreated (e.g. the app
+    // was backgrounded during the call and reopened later) instead of restarting from 00:00.
+    connectedAtElapsedRealtime: Long? = null,
     onHangup: () -> Unit,
     onDecline: () -> Unit,
     onAnswer: () -> Unit,
@@ -159,13 +166,22 @@ fun InCallScreen(
     // Counts total call duration since it first connected — keeps running straight through a
     // hold instead of pausing, matching the reference/stock dialer's own behavior (the timer
     // reflects true wall-clock time since connection, not just "actively talking" time).
-    var elapsedSeconds by remember { mutableIntStateOf(0) }
+    // Recomputed from connectedAtElapsedRealtime (a fixed wall-clock anchor) every tick, rather
+    // than just incremented — a plain counter resets to 0 whenever this Composable is torn down
+    // and recreated (e.g. the app backgrounded during the call and reopened later), even though
+    // the real call kept going the whole time; recomputing from the anchor means the very first
+    // recomposition after returning already shows the true elapsed time.
     val isConnected = isActive || isOnHold
-    LaunchedEffect(isConnected) {
-        if (isConnected) {
+    var elapsedSeconds by remember(connectedAtElapsedRealtime) {
+        mutableIntStateOf(
+            connectedAtElapsedRealtime?.let { ((SystemClock.elapsedRealtime() - it) / 1000).toInt().coerceAtLeast(0) } ?: 0
+        )
+    }
+    LaunchedEffect(connectedAtElapsedRealtime, isConnected) {
+        if (isConnected && connectedAtElapsedRealtime != null) {
             while (true) {
+                elapsedSeconds = ((SystemClock.elapsedRealtime() - connectedAtElapsedRealtime) / 1000).toInt().coerceAtLeast(0)
                 delay(1000)
-                elapsedSeconds++
             }
         }
     }

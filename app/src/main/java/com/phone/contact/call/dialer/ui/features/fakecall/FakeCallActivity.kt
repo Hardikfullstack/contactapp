@@ -212,6 +212,7 @@ class FakeCallActivity : ComponentActivity() {
             val insetsController = remember { WindowCompat.getInsetsController(window, window.decorView) }
             SideEffect {
                 insetsController.isAppearanceLightStatusBars = !selection.isDarkOnCallScreen()
+                insetsController.isAppearanceLightNavigationBars = !selection.isDarkOnCallScreen()
             }
 
             ContactAppTheme(darkTheme = true) { // Always dark for call UI

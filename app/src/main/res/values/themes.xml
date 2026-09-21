@@ -15,6 +15,19 @@
         <item name="android:windowBackground">#FFF7F7F7</item>
     </style>
 
+    <!-- InCallActivity/FakeCallActivity force ContactAppTheme(darkTheme = true) unconditionally —
+         their Compose UI is always dark regardless of the system/app light-dark setting. But the
+         plain Theme.ContactApp (DayNight) still resolves this native windowBackground to LIGHT
+         whenever the system itself is in light mode, since values-night/themes.xml's dark override
+         only applies under system dark mode. That light native background then peeks through at
+         the very edges Compose doesn't explicitly paint over (e.g. behind a transparent
+         edge-to-edge 3-button navigation bar), showing as a stray white strip on an otherwise
+         all-dark call screen. Hardcoding this here (no DayNight parent, so it never varies by
+         system mode) matches this app's own DarkBackground (see Color.kt) unconditionally. -->
+    <style name="Theme.ContactApp.CallScreen" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#FF1A1A1B</item>
+    </style>
+
     <!-- Android 12+ always shows a system splash screen on cold start, before the first frame is
          drawn. windowSplashScreenBackground is transparent (no green flash before SplashScreen.kt's
          own composable takes over) and windowSplashScreenAnimatedIcon is transparent too (no

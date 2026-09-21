@@ -81,8 +81,7 @@ class AppConfigViewModel(application: Application) : AndroidViewModel(applicatio
     private fun fetchAppData() {
         viewModelScope.launch {
             try {
-                val rawResponse = ApiClient.fetchAppConfig()
-                val response = injectTestAds(rawResponse)
+                val response = ApiClient.fetchAppConfig()
                 if (response.status == 200) {
                     _appResponse.value = response
 
@@ -110,98 +109,4 @@ class AppConfigViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /**
-     * Temporary: forces every ad slot except Rewarded onto Google's official test ad unit IDs
-     * and "on", regardless of what the panel actually returned — so ad placements can be built
-     * and verified before this app has real, approved ad units. Rewarded is left untouched so it
-     * keeps whatever the server sends. Remove once real ad unit IDs are wired up.
-     */
-    private fun injectTestAds(response: AppResponse): AppResponse {
-        val res = response.result ?: return response
-        val testResult = res.copy(
-            google_ads_on_off = "on",
-            app_name = "Contacts",
-            native_1 = "ca-app-pub-3940256099942544/2247696110",
-            native_2 = "ca-app-pub-3940256099942544/2247696110",
-            native_3 = "ca-app-pub-3940256099942544/2247696110",
-            native_4 = "ca-app-pub-3940256099942544/2247696110",
-            native_5 = "ca-app-pub-3940256099942544/2247696110",
-            native_6 = "ca-app-pub-3940256099942544/2247696110",
-            native_7 = "ca-app-pub-3940256099942544/2247696110",
-            native_8 = "ca-app-pub-3940256099942544/2247696110",
-            native_9 = "ca-app-pub-3940256099942544/2247696110",
-            native_10 = "ca-app-pub-3940256099942544/2247696110",
-            native_11 = "ca-app-pub-3940256099942544/2247696110",
-            native_12 = "ca-app-pub-3940256099942544/2247696110",
-            native_13 = "ca-app-pub-3940256099942544/2247696110",
-            native_14 = "ca-app-pub-3940256099942544/2247696110",
-            native_15 = "ca-app-pub-3940256099942544/2247696110",
-            native_16 = "ca-app-pub-3940256099942544/2247696110",
-            native_1_on_off = "on",
-            native_2_on_off = "on",
-            native_3_on_off = "on",
-            native_4_on_off = "on",
-            native_5_on_off = "on",
-            native_6_on_off = "on",
-            native_7_on_off = "on",
-            native_8_on_off = "on",
-            native_9_on_off = "on",
-            native_10_on_off = "on",
-            native_11_on_off = "on",
-            native_12_on_off = "on",
-            native_13_on_off = "on",
-            native_14_on_off = "on",
-            native_15_on_off = "on",
-            native_16_on_off = "on",
-            extra_data_2_message = "1.0.0",
-
-            banner_1 = "ca-app-pub-3940256099942544/6300978111",
-            banner_2 = "ca-app-pub-3940256099942544/6300978111",
-            banner_3 = "ca-app-pub-3940256099942544/6300978111",
-            banner_4 = "ca-app-pub-3940256099942544/6300978111",
-            banner_5 = "ca-app-pub-3940256099942544/6300978111",
-            banner_6 = "ca-app-pub-3940256099942544/6300978111",
-            banner_7 = "ca-app-pub-3940256099942544/6300978111",
-            banner_8 = "ca-app-pub-3940256099942544/6300978111",
-            banner_9 = "ca-app-pub-3940256099942544/6300978111",
-            banner_10 = "ca-app-pub-3940256099942544/6300978111",
-            banner_1_on_off = "on",
-            banner_2_on_off = "on",
-            banner_3_on_off = "on",
-            banner_4_on_off = "on",
-            banner_5_on_off = "on",
-            banner_6_on_off = "on",
-            banner_7_on_off = "on",
-            banner_8_on_off = "on",
-            banner_9_on_off = "on",
-            banner_10_on_off = "on",
-
-            interstitial_1 = "ca-app-pub-3940256099942544/1033173712",
-            interstitial_2 = "ca-app-pub-3940256099942544/1033173712",
-            interstitial_3 = "ca-app-pub-3940256099942544/1033173712",
-            interstitial_4 = "ca-app-pub-3940256099942544/1033173712",
-            interstitial_5 = "ca-app-pub-3940256099942544/1033173712",
-            interstitial_6 = "ca-app-pub-3940256099942544/1033173712",
-            interstitial_7 = "ca-app-pub-3940256099942544/1033173712",
-            interstitial_1_on_off = "on",
-            interstitial_2_on_off = "on",
-            interstitial_3_on_off = "on",
-            interstitial_4_on_off = "on",
-            interstitial_5_on_off = "on",
-            interstitial_6_on_off = "on",
-            interstitial_7_on_off = "on",
-
-            app_open_1 = "ca-app-pub-3940256099942544/9257395921",
-            app_open_2 = "ca-app-pub-3940256099942544/9257395921",
-            app_open_3 = "ca-app-pub-3940256099942544/9257395921",
-            app_open_4 = "ca-app-pub-3940256099942544/9257395921",
-            app_open_1_on_off = "on",
-            app_open_2_on_off = "on",
-            app_open_3_on_off = "on",
-            app_open_4_on_off = "on",
-
-            back_click = "1"
-        )
-        return response.copy(result = testResult)
-    }
 }

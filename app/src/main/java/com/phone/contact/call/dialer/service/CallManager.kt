@@ -86,9 +86,25 @@ object CallManager {
      *  `.isNotEmpty()` directly rather than a separate boolean flow. */
     val conferenceChildren = _conferenceChildren.asStateFlow()
 
+    // SystemClock.elapsedRealtime() at the moment this call first went ACTIVE — the single
+    // source of truth InCallScreen's own on-screen timer recomputes itself from on every tick,
+    // instead of a plain incrementing counter. A counter resets to 0 whenever its Composable is
+    // torn down and recreated (e.g. the app backgrounded during a call and reopened later), even
+    // though the real call is still going — recomputing from this wall-clock anchor instead means
+    // the very first recomposition after returning shows the true elapsed time, not 0. Kept
+    // non-null (never reset) across hold/resume and across a merge/promote reassigning
+    // _currentCall to a different Call object, so the displayed duration stays continuous through
+    // those exactly like a real phone call's duration does — only nulled out in updateCall(null)
+    // once the call truly ends.
+    private val _connectedAtElapsedRealtime = MutableStateFlow<Long?>(null)
+    val connectedAtElapsedRealtime = _connectedAtElapsedRealtime.asStateFlow()
+
     private val callCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
             _callState.value = state
+            if (state == Call.STATE_ACTIVE && _connectedAtElapsedRealtime.value == null) {
+                _connectedAtElapsedRealtime.value = android.os.SystemClock.elapsedRealtime()
+            }
         }
 
         override fun onDetailsChanged(call: Call, details: Call.Details) {
@@ -106,6 +122,7 @@ object CallManager {
                 _secondaryCall.value?.unregisterCallback(secondaryCallCallback)
                 _secondaryCall.value = null
                 _secondaryCallState.value = Call.STATE_DISCONNECTED
+                _secondaryConnectedAtElapsedRealtime.value = null
             }
             recomputeCapabilities()
         }
@@ -140,6 +157,7 @@ object CallManager {
         _conferenceChildren.value = call?.children?.toList() ?: emptyList()
         if (call == null) {
             _isSpam.value = false
+            _connectedAtElapsedRealtime.value = null
         }
         call?.registerCallback(callCallback)
         recomputeCapabilities()
@@ -228,9 +246,18 @@ object CallManager {
     private val _secondaryCallState = MutableStateFlow(Call.STATE_DISCONNECTED)
     val secondaryCallState = _secondaryCallState.asStateFlow()
 
+    // Same wall-clock-anchor pattern as _connectedAtElapsedRealtime, for whichever call is
+    // currently the secondary one (e.g. an Add Call leg) — needed so its own on-screen timer is
+    // also correct after the app is backgrounded and reopened, not just the primary call's.
+    private val _secondaryConnectedAtElapsedRealtime = MutableStateFlow<Long?>(null)
+    val secondaryConnectedAtElapsedRealtime = _secondaryConnectedAtElapsedRealtime.asStateFlow()
+
     private val secondaryCallCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
             _secondaryCallState.value = state
+            if (state == Call.STATE_ACTIVE && _secondaryConnectedAtElapsedRealtime.value == null) {
+                _secondaryConnectedAtElapsedRealtime.value = android.os.SystemClock.elapsedRealtime()
+            }
         }
 
         override fun onDetailsChanged(call: Call, details: Call.Details) {
@@ -254,6 +281,7 @@ object CallManager {
         _secondaryCall.value?.unregisterCallback(secondaryCallCallback)
         _secondaryCall.value = call
         _secondaryCallState.value = call.state
+        _secondaryConnectedAtElapsedRealtime.value = null
         call.registerCallback(secondaryCallCallback)
         recomputeCapabilities()
     }
@@ -262,6 +290,7 @@ object CallManager {
         _secondaryCall.value?.unregisterCallback(secondaryCallCallback)
         _secondaryCall.value = null
         _secondaryCallState.value = Call.STATE_DISCONNECTED
+        _secondaryConnectedAtElapsedRealtime.value = null
         recomputeCapabilities()
     }
 
@@ -325,6 +354,7 @@ object CallManager {
         _secondaryCall.value?.unregisterCallback(secondaryCallCallback)
         _secondaryCall.value = null
         _secondaryCallState.value = Call.STATE_DISCONNECTED
+        _secondaryConnectedAtElapsedRealtime.value = null
         updateCall(call)
     }
 
@@ -334,12 +364,16 @@ object CallManager {
     }
 
     /** The primary call ended while a secondary one was still up — promote the survivor so the
-     *  UI has exactly one primary call again. */
+     *  UI has exactly one primary call again. Carries over the secondary's own connect time as
+     *  the new primary's, so its on-screen duration keeps counting from when IT actually
+     *  connected instead of resetting/inheriting the old primary's. */
     fun promoteSecondaryToPrimary() {
         val secondary = _secondaryCall.value ?: return
         _secondaryCall.value?.unregisterCallback(secondaryCallCallback)
         _secondaryCall.value = null
         _secondaryCallState.value = Call.STATE_DISCONNECTED
+        _connectedAtElapsedRealtime.value = _secondaryConnectedAtElapsedRealtime.value
+        _secondaryConnectedAtElapsedRealtime.value = null
         updateCall(secondary)
     }
 }

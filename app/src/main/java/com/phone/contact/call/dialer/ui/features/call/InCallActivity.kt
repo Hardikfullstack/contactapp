@@ -156,6 +156,8 @@ class InCallActivity : ComponentActivity() {
             val secondaryCallState by CallManager.secondaryCallState.collectAsState()
             val audioState by CallManager.audioState.collectAsState()
             val conferenceChildren by CallManager.conferenceChildren.collectAsState()
+            val connectedAtElapsedRealtime by CallManager.connectedAtElapsedRealtime.collectAsState()
+            val secondaryConnectedAtElapsedRealtime by CallManager.secondaryConnectedAtElapsedRealtime.collectAsState()
 
             // Which of the two simultaneous calls is shown "in front" (big avatar/name/state) is
             // decided purely from their live states, never by reassigning which Call object
@@ -173,6 +175,11 @@ class InCallActivity : ComponentActivity() {
             val backCall = if (secondaryIsFront) call else secondaryCall
             val frontCallState = if (secondaryIsFront) secondaryCallState else callState
             val backCallState = if (secondaryIsFront) callState else secondaryCallState
+            // Whichever call is front's own connect time — InCallScreen recomputes its on-screen
+            // timer from this wall-clock anchor every tick instead of a plain incrementing
+            // counter, so it shows the true elapsed duration even right after the app was
+            // backgrounded and reopened mid-call, not 0.
+            val frontConnectedAtElapsedRealtime = if (secondaryIsFront) secondaryConnectedAtElapsedRealtime else connectedAtElapsedRealtime
 
             // conferenceChildren is always seeded from whichever call CallManager tracks as
             // primary (`call`) — a conference is never the secondary call, only ever promoted to
@@ -368,6 +375,7 @@ class InCallActivity : ComponentActivity() {
             val insetsController = remember { WindowCompat.getInsetsController(window, window.decorView) }
             SideEffect {
                 insetsController.isAppearanceLightStatusBars = !selection.isDarkOnCallScreen()
+                insetsController.isAppearanceLightNavigationBars = !selection.isDarkOnCallScreen()
             }
 
             ContactAppTheme(darkTheme = true) { // Always dark for call UI — matches FakeCallActivity
@@ -381,6 +389,7 @@ class InCallActivity : ComponentActivity() {
                     number = resolvedNumber ?: rawNumber ?: "",
                     photoUri = resolvedContact?.photoUri,
                     callState = frontCallState,
+                    connectedAtElapsedRealtime = frontConnectedAtElapsedRealtime,
                     onHangup = { frontCall?.let { CallManager.disconnectCall(it) } },
                     onDecline = {
                         CallManager.reject()

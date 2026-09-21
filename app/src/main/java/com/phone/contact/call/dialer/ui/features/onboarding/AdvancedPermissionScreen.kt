@@ -47,8 +47,10 @@ fun AdvancedPermissionScreen(
     val prefs = remember { PreferenceManager(context.applicationContext) }
 
     fun computeNextStep(): PermissionStep {
-        // Overlay is only forced during onboarding on MIUI — other OEMs skip straight through
-        // here (the After Call flow still requests it later, on-demand, if it's ever needed).
+        // Overlay is now forced during onboarding on EVERY OEM whenever it isn't already
+        // granted — not just MIUI — so a user who reaches this screen (including one who just
+        // denied the earlier basic permissions) still gets a real chance to grant "Display over
+        // other apps" here instead of it only ever coming up later, on-demand, from After Call.
         val isMiui = CallReliabilityUtils.isMiui()
         val canDrawOverlays = Settings.canDrawOverlays(context)
         // MIUI quirk: canDrawOverlays() can falsely report true right after install, silently
@@ -57,7 +59,7 @@ fun AdvancedPermissionScreen(
         // between onboarding sessions, doesn't forget it was already forced and force it again
         // even after the permission was genuinely granted.
         val forceOverlayOnMiui = isMiui && !prefs.isOverlayPermissionAutoPrompted()
-        val step = if (isMiui && (!canDrawOverlays || forceOverlayOnMiui)) PermissionStep.OVERLAY
+        val step = if (!canDrawOverlays || forceOverlayOnMiui) PermissionStep.OVERLAY
         else if (isMiui && !CallReliabilityUtils.isMiuiBackgroundPopupGranted(context)) PermissionStep.MIUI_PERMISSIONS
         else if (isMiui && !CallReliabilityUtils.isMiuiAutostartGranted(context)) PermissionStep.MIUI_AUTOSTART
         // OnePlus/Oppo autostart step not forced during onboarding — matches Messages, which only

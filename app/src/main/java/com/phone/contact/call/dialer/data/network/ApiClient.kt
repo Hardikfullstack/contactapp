@@ -16,8 +16,7 @@ object ApiClient {
     private const val BASE_URL = "https://panel.aavakar.com/"
 
     // Ad-panel package identifier used to fetch this app's remote ad config.
-    // TODO: replace with the real identifier once one is issued for Connect on the panel.
-    private val API_PACKAGE_NAME = "Spin_Master_Test"
+    private val API_PACKAGE_NAME = "Contact_1.0.0"
 
     private val json = Json {
         ignoreUnknownKeys = true

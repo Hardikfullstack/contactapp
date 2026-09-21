@@ -48,10 +48,9 @@
         android:localeConfig="@xml/locales_config"
         android:theme="@style/Theme.ContactApp">
 
-        <!-- Google's public test AdMob App ID — replace with the real one before release -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-2874047397258653~6099965871" />
 
         <!-- Firebase Analytics and AdMob both declare this property with different values —
              keep AdMob's, since ad-services config is what we actually need here. -->
@@ -92,7 +91,7 @@
             android:excludeFromRecents="false"
             android:screenOrientation="portrait"
             android:showOnLockScreen="true"
-            android:theme="@style/Theme.ContactApp" />
+            android:theme="@style/Theme.ContactApp.CallScreen" />
 
         <activity
             android:name=".ui.features.call.AddCallPickerActivity"
@@ -131,7 +130,7 @@
             android:showOnLockScreen="true"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
-            android:theme="@style/Theme.ContactApp" />
+            android:theme="@style/Theme.ContactApp.CallScreen" />
 
         <receiver
             android:name=".service.FakeCallReceiver"
