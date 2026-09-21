@@ -292,6 +292,7 @@
     <string name="avg_duration">Durchschn. Dauer</string>
     <string name="block">Blockieren</string>
     <string name="block_confirmation">Anrufe und Nachrichten von diesem Kontakt werden blockiert.</string>
+    <string name="bluetooth">Bluetooth</string>
     <string name="button_shape">Schaltflächenform</string>
     <string name="call_breakdown">Anrufübersicht</string>
     <string name="call_history_entry">- %1$s: %2$s</string>
@@ -324,6 +325,7 @@
     <string name="color_picker_title">Hintergrundfarbe wählen</string>
     <string name="connecting">Verbindung wird hergestellt...</string>
     <string name="custom_image">Galerie</string>
+    <string name="continue_with">Fortfahren mit</string>
     <string name="custom_time">Benutzerdefinierte Zeit</string>
     <string name="decline_call">Ablehnen</string>
     <string name="decline_call_short">Ablehnen</string>
@@ -334,6 +336,7 @@
     <string name="delete_call_title">Diesen Anruf löschen?</string>
     <string name="dialing">Wird gewählt...</string>
     <string name="disconnected">Getrennt</string>
+    <string name="ear_piece_normal_call">Hörmuschel (normaler Anruf)</string>
     <string name="enable_auto_reply">Automatische Antwort aktivieren</string>
     <string name="enable_caller_id_spam_protection">Anrufer-ID- &amp; Spam-Schutz aktivieren</string>
     <string name="enable_shake_trigger">Schüttel-Auslöser aktivieren</string>
@@ -458,6 +461,7 @@
     <string name="view_day">Tag</string>
     <string name="view_hour">Stunde</string>
     <string name="view_month">Monat</string>
+    <string name="wired_headset">Kabelgebundenes Headset</string>
     <string name="write_settings_permission_desc">Um den Klingelton Ihres Telefons einzustellen, erlauben Sie Connect, die Systemeinstellungen zu ändern.</string>
     <string name="write_settings_permission_title">Klingeltonänderungen erlauben</string>
 </resources>

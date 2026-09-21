@@ -342,6 +342,7 @@
     <string name="auto_reply_message_label">जवाब का मैसेज</string>
     <string name="auto_reply_permission_note">ऑटो-रिप्लाई काम करने के लिए SMS अनुमति आवश्यक है।</string>
     <string name="avg_duration">औसत अवधि</string>
+    <string name="bluetooth">ब्लूटूथ</string>
     <string name="button_shape">बटन का आकार</string>
     <string name="call_breakdown">कॉल विवरण</string>
     <string name="call_now">अभी कॉल करें</string>
@@ -365,6 +366,7 @@
     <string name="color_category_purples">बैंगनी रंग</string>
     <string name="color_category_reds_pinks">लाल और गुलाबी</string>
     <string name="color_category_warm">गर्म और नारंगी</string>
+    <string name="continue_with">इसके साथ जारी रखें</string>
     <string name="custom_time">कस्टम समय</string>
     <string name="decline_call">अस्वीकार करें</string>
     <string name="decline_call_short">अस्वीकार करें</string>
@@ -373,6 +375,7 @@
     <string name="default_ringtone">डिफ़ॉल्ट</string>
     <string name="delete_call_text">यह कॉल एंट्री इतिहास से हटा दी जाएगी।</string>
     <string name="delete_call_title">यह कॉल हटाएं?</string>
+    <string name="ear_piece_normal_call">ईयरपीस (सामान्य कॉल)</string>
     <string name="enable_auto_reply">ऑटो-रिप्लाई चालू करें</string>
     <string name="enable_caller_id_spam_protection">कॉलर आईडी और स्पैम सुरक्षा चालू करें</string>
     <string name="enable_shake_trigger">शेक ट्रिगर चालू करें</string>
@@ -466,6 +469,7 @@
     <string name="view_day">दिन</string>
     <string name="view_hour">घंटा</string>
     <string name="view_month">महीना</string>
+    <string name="wired_headset">वायर्ड हेडसेट</string>
     <string name="write_settings_permission_desc">अपने फोन की रिंगटोन सेट करने के लिए, Connect को सिस्टम सेटिंग्स बदलने की अनुमति दें।</string>
     <string name="write_settings_permission_title">रिंगटोन बदलने की अनुमति दें</string>
 </resources>

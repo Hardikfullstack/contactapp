@@ -71,6 +71,21 @@ object CallReliabilityUtils {
         return manufacturer in brands || brand in brands
     }
 
+    /** Reads AOSP's own "how is the user navigating" setting — 2 means gesture navigation (the
+     * thin edge-swipe pill), 0/1 mean 2/3-button navigation. Not a public API (no Android SDK
+     * exposes this directly), but this internal resource is the standard, widely-used way apps
+     * detect it; OEMs that heavily customize navigation (MIUI, some ColorOS builds) can leave it
+     * inaccurate, which is why callers should treat "false" here as "assume button navigation,
+     * safe to fully hide the bar" rather than a hard guarantee. */
+    fun isGestureNavigationEnabled(context: Context): Boolean {
+        return try {
+            val resourceId = context.resources.getIdentifier("config_navBarInteractionMode", "integer", "android")
+            resourceId > 0 && context.resources.getInteger(resourceId) == 2
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     // Known OEM "autostart" / "protected apps" screens, tried in order until one launches
     // successfully. Manufacturer/brand keys match Build.MANUFACTURER/BRAND (lowercased).
     private val autoStartCandidates: Map<String, List<Pair<String, String>>> = mapOf(

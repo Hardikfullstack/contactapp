@@ -87,17 +87,29 @@ fun NativeAdView(
     template: NativeAdTemplate,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    // Non-null only for slots that must survive scrolling/navigating away and back without
+    // reloading (list screens like Recents' inline ads). Looked up/stored via ListAdCache instead
+    // of the plain single-slot NativeAdCache used otherwise, and never destroyed on dispose —
+    // the cache owns its lifecycle (bounded + staleness-checked there) independent of any one
+    // row's own composition lifetime.
+    cacheKey: String? = null,
+    // Tried once, right after adUnitId itself fails to load, before falling back to onFailed.
+    fallbackAdUnitId: String? = null,
+    // Fires once the moment this ad unit (and fallbackAdUnitId, if any) fails to load — lets a
+    // caller collapse/hide this slot instead of it sitting on the loading skeleton forever.
     onFailed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isDarkTheme = LocalIsDarkTheme.current
-    var nativeAd by remember(adUnitId) { mutableStateOf(NativeAdCache.take(adUnitId)) }
-    var hasFailed by remember(adUnitId) { mutableStateOf(false) }
+    var nativeAd by remember(adUnitId, cacheKey) {
+        mutableStateOf(cacheKey?.let { ListAdCache.get(it) } ?: NativeAdCache.take(adUnitId))
+    }
+    var hasFailed by remember(adUnitId, cacheKey) { mutableStateOf(false) }
 
     // Retries a failed load once connectivity comes back — without this, a load that failed
     // while offline just sits failed forever, since the DisposableEffect below only fires once
     // per composable lifetime on its own.
-    var retryGeneration by remember(adUnitId) { mutableStateOf(0) }
+    var retryGeneration by remember(adUnitId, cacheKey) { mutableStateOf(0) }
     val reconnectTick by AdConnectivityRetry.tick.collectAsState()
     LaunchedEffect(reconnectTick) {
         if (hasFailed) {
@@ -107,33 +119,45 @@ fun NativeAdView(
         }
     }
 
-    DisposableEffect(adUnitId, retryGeneration) {
-        // A cached ad (preloaded ahead of time via NativeAdCache) is already in hand — skip
-        // loading a fresh one.
+    DisposableEffect(adUnitId, cacheKey, retryGeneration) {
+        // A cached ad (preloaded ahead of time via NativeAdCache/ListAdCache) is already in hand —
+        // skip loading a fresh one.
         if (nativeAd != null) {
-            return@DisposableEffect onDispose { nativeAd?.destroy() }
+            return@DisposableEffect onDispose {
+                if (cacheKey == null) nativeAd?.destroy()
+            }
         }
         hasFailed = false
-        val adLoader = AdLoader.Builder(context, adUnitId)
-            .forNativeAd { ad ->
-                nativeAd = ad
-                AnalyticsManager.logAdEvent("native", adUnitId, "loaded")
-            }
-            .withAdListener(object : AdListener() {
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    hasFailed = true
-                    AnalyticsManager.logAdEvent("native", adUnitId, "failed_to_load")
-                    onFailed()
-                }
 
-                override fun onAdClicked() {
-                    AnalyticsManager.logAdEvent("native", adUnitId, "clicked")
+        fun loadInto(unitId: String, isFallback: Boolean) {
+            AnalyticsManager.logAdEvent("native", unitId, "request")
+            val adLoader = AdLoader.Builder(context, unitId)
+                .forNativeAd { ad ->
+                    nativeAd = ad
+                    if (cacheKey != null) ListAdCache.put(cacheKey, ad)
+                    AnalyticsManager.logAdEvent("native", unitId, "loaded")
                 }
-            })
-            .build()
-        AnalyticsManager.logAdEvent("native", adUnitId, "request")
-        adLoader.loadAd(AdRequest.Builder().build())
-        onDispose { nativeAd?.destroy() }
+                .withAdListener(object : AdListener() {
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        AnalyticsManager.logAdEvent("native", unitId, "failed_to_load")
+                        if (!isFallback && fallbackAdUnitId != null) {
+                            loadInto(fallbackAdUnitId, isFallback = true)
+                        } else {
+                            hasFailed = true
+                            onFailed()
+                        }
+                    }
+
+                    override fun onAdClicked() {
+                        AnalyticsManager.logAdEvent("native", unitId, "clicked")
+                    }
+                })
+                .build()
+            adLoader.loadAd(AdRequest.Builder().build())
+        }
+        loadInto(adUnitId, isFallback = false)
+
+        onDispose { if (cacheKey == null) nativeAd?.destroy() }
     }
 
     // No fill / network error / misconfigured unit id — collapse rather than shimmering forever.
@@ -159,45 +183,6 @@ fun NativeAdView(
                     NativeAdTemplate.SMALL -> Modifier.height(SmallNativeAdHeight)
                     // No fixed height here — at large font sizes the text can wrap past
                     // MediumNativeAdHeight, and forcing it would clip the CTA button.
-                    NativeAdTemplate.MEDIUM -> Modifier
-                    NativeAdTemplate.LARGE -> Modifier
-                    NativeAdTemplate.EXIT -> Modifier
-                }
-            ),
-        factory = { ctx ->
-            val layoutRes = when (template) {
-                NativeAdTemplate.SMALL -> R.layout.native_ad_small
-                NativeAdTemplate.MEDIUM -> R.layout.native_ad_medium
-                NativeAdTemplate.LARGE -> R.layout.native_ad_large
-                NativeAdTemplate.EXIT -> R.layout.native_ad_exit
-            }
-            LayoutInflater.from(ctx).inflate(layoutRes, null) as com.google.android.gms.ads.nativead.NativeAdView
-        },
-        update = { adView ->
-            applyCardColors(adView, template, isDarkTheme)
-            bindNativeAd(adView, ad, template, compact)
-        }
-    )
-}
-
-/** Renders an already-loaded [ad] directly — no loading or [NativeAdCache] lookup of its own.
- * For a caller that hoists and owns the NativeAd's load/lifecycle itself (e.g. a LazyColumn row
- * that would otherwise reload a fresh ad every time Compose disposes/recomposes it on scroll,
- * since the self-loading [NativeAdView] overload above ties the load to its own composition). */
-@Composable
-fun NativeAdView(
-    ad: NativeAd,
-    template: NativeAdTemplate,
-    modifier: Modifier = Modifier,
-    compact: Boolean = false
-) {
-    val isDarkTheme = LocalIsDarkTheme.current
-    AndroidView(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                when (template) {
-                    NativeAdTemplate.SMALL -> Modifier.height(SmallNativeAdHeight)
                     NativeAdTemplate.MEDIUM -> Modifier
                     NativeAdTemplate.LARGE -> Modifier
                     NativeAdTemplate.EXIT -> Modifier

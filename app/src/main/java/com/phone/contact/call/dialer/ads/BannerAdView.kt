@@ -116,7 +116,22 @@ fun BannerAdView(
                         }
                     }
                 },
-                onRelease = { it.destroy() }
+                // Navigating away from the screen holding this banner disposes this AndroidView —
+                // unconditionally destroying it here (as before) meant every return to that screen
+                // started a brand new load from scratch, no matter how recently the banner had
+                // already loaded. responseInfo is only non-null once a load has genuinely
+                // succeeded (nulled by AdMob for a still-loading or failed banner, so this also
+                // correctly destroys rather than caches a bad view on a retryGeneration swap) —
+                // hand a successfully-loaded banner back to BannerAdCache instead of destroying
+                // it, so returning to this screen re-adopts the same live banner via
+                // BannerAdCache.take() above.
+                onRelease = { view ->
+                    if (view.responseInfo != null) {
+                        BannerAdCache.put(adUnitId, view)
+                    } else {
+                        view.destroy()
+                    }
+                }
             )
         }
 

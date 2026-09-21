@@ -292,6 +292,7 @@
     <string name="avg_duration">Duração Média</string>
     <string name="block">Bloquear</string>
     <string name="block_confirmation">As chamadas e mensagens deste contato serão bloqueadas.</string>
+    <string name="bluetooth">Bluetooth</string>
     <string name="button_shape">Formato do Botão</string>
     <string name="call_breakdown">Resumo de Chamadas</string>
     <string name="call_history_entry">- %1$s: %2$s</string>
@@ -324,6 +325,7 @@
     <string name="color_picker_title">Escolher Cor de Fundo</string>
     <string name="connecting">Conectando...</string>
     <string name="custom_image">Galeria</string>
+    <string name="continue_with">Continuar com</string>
     <string name="custom_time">Horário Personalizado</string>
     <string name="decline_call">Recusar</string>
     <string name="decline_call_short">Recusar</string>
@@ -334,6 +336,7 @@
     <string name="delete_call_title">Excluir Esta Chamada?</string>
     <string name="dialing">Discando...</string>
     <string name="disconnected">Desconectado</string>
+    <string name="ear_piece_normal_call">Fone de Ouvido (Chamada Normal)</string>
     <string name="enable_auto_reply">Ativar Resposta Automática</string>
     <string name="enable_caller_id_spam_protection">Ativar Identificador de Chamadas e Proteção Contra Spam</string>
     <string name="enable_shake_trigger">Ativar Gatilho por Agitação</string>
@@ -458,6 +461,7 @@
     <string name="view_day">Dia</string>
     <string name="view_hour">Hora</string>
     <string name="view_month">Mês</string>
+    <string name="wired_headset">Fone com Fio</string>
     <string name="write_settings_permission_desc">Para definir o toque do seu telefone, permita que o Connect modifique as configurações do sistema.</string>
     <string name="write_settings_permission_title">Permitir Alterações de Toque</string>
 </resources>

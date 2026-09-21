@@ -108,5 +108,4 @@ class AppConfigViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
     }
-
 }

@@ -197,12 +197,22 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Bottom (gesture/nav) bar stays hidden throughout the app, not just during splash —
-            // a swipe from the edge still reveals it briefly (standard immersive behavior).
+            // Bottom nav bar stays hidden throughout the app on 3-button navigation devices (a
+            // swipe from the edge still reveals it briefly — standard immersive behavior; there's
+            // no edge-swipe "back" to break in button navigation anyway, back is a tap on the
+            // temporarily-revealed bar). On GESTURE navigation devices, actually hiding the bar
+            // via insetsController.hide() has been observed to also disable the OS's own
+            // edge-swipe back gesture entirely on some OEM skins (OxygenOS/ColorOS) — the bar
+            // being "hidden" and the gesture-recognition zone are apparently the same thing to
+            // their implementation. enableEdgeToEdge() alone (already in effect) already draws
+            // content behind that thin gesture pill without needing to hide it, so gesture-nav
+            // devices skip the explicit hide and keep working back-swipes.
             LaunchedEffect(Unit) {
-                insetsController.systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                insetsController.hide(WindowInsetsCompat.Type.navigationBars())
+                if (!CallReliabilityUtils.isGestureNavigationEnabled(this@MainActivity)) {
+                    insetsController.systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    insetsController.hide(WindowInsetsCompat.Type.navigationBars())
+                }
             }
 
             ContactAppTheme(darkTheme = isDarkTheme) {

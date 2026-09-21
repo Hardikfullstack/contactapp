@@ -59,7 +59,7 @@ fun RecycleBinScreen(
     Scaffold(
         bottomBar = {
             if (nativeAdUnitId != null || bannerAdUnitId != null) {
-                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId, cacheKey = "recycle_bin_ad")
             }
         },
         topBar = {

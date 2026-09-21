@@ -292,6 +292,7 @@
     <string name="avg_duration">Durata Media</string>
     <string name="block">Blocca</string>
     <string name="block_confirmation">Le chiamate e i messaggi da questo contatto verranno bloccati.</string>
+    <string name="bluetooth">Bluetooth</string>
     <string name="button_shape">Forma del Pulsante</string>
     <string name="call_breakdown">Riepilogo Chiamate</string>
     <string name="call_history_entry">- %1$s: %2$s</string>
@@ -324,6 +325,7 @@
     <string name="color_picker_title">Scegli il Colore di Sfondo</string>
     <string name="connecting">Connessione in corso...</string>
     <string name="custom_image">Galleria</string>
+    <string name="continue_with">Continua con</string>
     <string name="custom_time">Orario Personalizzato</string>
     <string name="decline_call">Rifiuta</string>
     <string name="decline_call_short">Rifiuta</string>
@@ -334,6 +336,7 @@
     <string name="delete_call_title">Eliminare questa Chiamata?</string>
     <string name="dialing">Composizione...</string>
     <string name="disconnected">Disconnesso</string>
+    <string name="ear_piece_normal_call">Auricolare (Chiamata Normale)</string>
     <string name="enable_auto_reply">Attiva Risposta Automatica</string>
     <string name="enable_caller_id_spam_protection">Attiva ID Chiamante e Protezione Spam</string>
     <string name="enable_shake_trigger">Attiva Attivazione con Scuotimento</string>
@@ -458,6 +461,7 @@
     <string name="view_day">Giorno</string>
     <string name="view_hour">Ora</string>
     <string name="view_month">Mese</string>
+    <string name="wired_headset">Cuffie Cablate</string>
     <string name="write_settings_permission_desc">Per impostare la suoneria del telefono, consenti a Connect di modificare le impostazioni di sistema.</string>
     <string name="write_settings_permission_title">Consenti Modifiche Suoneria</string>
 </resources>

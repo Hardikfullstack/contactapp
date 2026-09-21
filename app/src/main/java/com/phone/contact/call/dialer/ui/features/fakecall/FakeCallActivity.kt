@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Dialpad
@@ -24,21 +27,18 @@ import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.WindowCompat
@@ -53,13 +53,16 @@ import com.phone.contact.call.dialer.service.FlashAlertManager
 import com.phone.contact.call.dialer.service.SpamManager
 import com.phone.contact.call.dialer.service.cancelActiveCallNotification
 import com.phone.contact.call.dialer.service.postActiveCallNotification
+import com.phone.contact.call.dialer.ui.components.AudioRouteOption
+import com.phone.contact.call.dialer.ui.components.AudioRouteSheet
 import com.phone.contact.call.dialer.ui.components.CallWallpaperBackground
 import com.phone.contact.call.dialer.ui.components.ContactAvatarImage
 import com.phone.contact.call.dialer.ui.components.SwipeUpCallButton
-import com.phone.contact.call.dialer.ui.components.lightened
 import com.phone.contact.call.dialer.ui.components.toComposeShape
+import com.phone.contact.call.dialer.ui.features.call.CallActionButtons
 import com.phone.contact.call.dialer.ui.features.call.CallControlButton
 import com.phone.contact.call.dialer.ui.features.call.DtmfKeypadSheet
+import com.phone.contact.call.dialer.ui.features.call.getCallStateText
 import com.phone.contact.call.dialer.ui.theme.ContactAppTheme
 import com.phone.contact.call.dialer.util.CallAccentColors
 import com.phone.contact.call.dialer.util.CallButtonShape
@@ -248,6 +251,15 @@ class FakeCallActivity : ComponentActivity() {
         super.onStop()
         isVisible = false
     }
+
+    // Home/Recents pressed while a fake call is showing should end it too — matching the
+    // BackHandler above. Without this, leaving via Home/Recents just backgrounds this
+    // singleInstance Activity while the call stays "ringing"/active, stranding the ringtone
+    // playing forever with no way to stop it except the notification's hang-up action.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        FakeCallManager.endFromUi()
+    }
 }
 
 @Composable
@@ -295,8 +307,48 @@ fun FakeCallContent(
     val displayNumber = remember(number) { PhoneNumberFormatter.withCountryCode(context, number) }
     val audioManager = remember { context.getSystemService(AudioManager::class.java) }
     var isMuted by remember { mutableStateOf(false) }
-    var isSpeakerOn by remember { mutableStateOf(false) }
+    var audioRoute by remember { mutableStateOf(AudioRouteOption.EARPIECE) }
+    var showAudioRouteSheet by remember { mutableStateOf(false) }
     var showKeypad by remember { mutableStateOf(false) }
+    // No real Telecom CallAudioState to read here (see the comment above) — checked directly off
+    // AudioManager's own connected-devices list instead. Re-read each time the button/sheet is
+    // shown rather than cached once, since a Bluetooth device can connect/disconnect mid-call.
+    fun hasBluetoothDeviceConnected(): Boolean {
+        return audioManager?.getDevices(AudioManager.GET_DEVICES_OUTPUTS)?.any {
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+        } == true
+    }
+    fun applyAudioRoute(route: AudioRouteOption) {
+        audioRoute = route
+        when (route) {
+            AudioRouteOption.SPEAKER -> {
+                audioManager?.stopBluetoothSco()
+                audioManager?.isBluetoothScoOn = false
+                audioManager?.isSpeakerphoneOn = true
+            }
+            AudioRouteOption.BLUETOOTH -> {
+                audioManager?.isSpeakerphoneOn = false
+                audioManager?.startBluetoothSco()
+                audioManager?.isBluetoothScoOn = true
+            }
+            AudioRouteOption.EARPIECE, AudioRouteOption.WIRED_HEADSET -> {
+                audioManager?.stopBluetoothSco()
+                audioManager?.isBluetoothScoOn = false
+                audioManager?.isSpeakerphoneOn = false
+            }
+        }
+    }
+
+    // Mirrors a real call's own default behavior: audio goes to a connected Bluetooth device
+    // automatically the moment the call becomes active, instead of always starting on the
+    // earpiece regardless of what's actually connected — without this, audioRoute's initial
+    // EARPIECE default never updates on its own, so the button kept showing the Speaker icon
+    // even with a Bluetooth device already connected.
+    LaunchedEffect(isAccepted) {
+        if (isAccepted && hasBluetoothDeviceConnected()) {
+            applyAudioRoute(AudioRouteOption.BLUETOOTH)
+        }
+    }
 
     // Add Call here is purely cosmetic — there's no real second caller to add on a fake call,
     // so this is only for the acting illusion.
@@ -305,9 +357,12 @@ fun FakeCallContent(
 
     DisposableEffect(Unit) {
         onDispose {
-            // Never leave the device's real mic/speaker state altered after the fake call ends.
+            // Never leave the device's real mic/speaker/Bluetooth-SCO state altered after the
+            // fake call ends.
             audioManager?.isMicrophoneMute = false
             audioManager?.isSpeakerphoneOn = false
+            audioManager?.stopBluetoothSco()
+            audioManager?.isBluetoothScoOn = false
         }
     }
 
@@ -330,9 +385,20 @@ fun FakeCallContent(
             Column(
                 modifier = Modifier
                     .padding(horizontal = 24.dp)
-                    .padding(top = 80.dp),
+                    .padding(top = 60.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Call status line above the avatar — matches the real in-call screen exactly
+                // (same wording, same Call.STATE_* constants FakeCallManager already reuses).
+                Text(
+                    text = getCallStateText(state),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White.copy(alpha = 0.75f)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 // Avatar
                 Box(
                     modifier = Modifier
@@ -376,12 +442,25 @@ fun FakeCallContent(
                     modifier = Modifier.fillMaxWidth(0.9f)
                 )
 
+                // The number stays visible the whole time (matching the real in-call screen's own
+                // separate name+number lines) instead of being replaced by the timer once
+                // accepted — that previously made the picked contact's number disappear the
+                // moment the call was answered.
                 Text(
-                    text = if (isAccepted) { if (isFakeOnHold) stringResource(R.string.on_hold) else formatTimer(timer) } else displayNumber,
+                    text = displayNumber,
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.8f),
                     modifier = Modifier.padding(top = 8.dp)
                 )
+
+                if (isAccepted) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (isFakeOnHold) stringResource(R.string.on_hold) else formatTimer(timer),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
 
                 if (fakeSecondaryCallerName != null) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -477,10 +556,12 @@ fun FakeCallContent(
                     modifier = Modifier.fillMaxWidth(),
                     enter = slideInVertically(animationSpec = tween(450)) { fullHeight -> fullHeight } + fadeIn(tween(450))
                 ) {
+                    // Transparent (not a solid tray color) so the call wallpaper shows through
+                    // behind it, matching the real in-call screen exactly.
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                        color = Color(0xFF1E1E1E)
+                        color = Color.Transparent
                     ) {
                         Column(
                             modifier = Modifier
@@ -489,64 +570,94 @@ fun FakeCallContent(
                                 .navigationBarsPadding(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            // Same 3-column grid as the real in-call screen (Add Call/Speaker,
+                            // Hold/Keypad, Message/Mute) instead of fake call's own different
+                            // arrangement, so the two controls trays look identical.
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                CallControlButton(
-                                    icon = Icons.Default.Dialpad,
-                                    label = stringResource(R.string.keypad),
-                                    active = showKeypad,
-                                    onClick = { showKeypad = true }
-                                )
-                                CallControlButton(
-                                    icon = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
-                                    label = stringResource(R.string.mute),
-                                    active = isMuted,
-                                    onClick = {
-                                        isMuted = !isMuted
-                                        audioManager?.isMicrophoneMute = isMuted
-                                    }
-                                )
-                                CallControlButton(
-                                    icon = Icons.Default.VolumeUp,
-                                    label = stringResource(R.string.speaker),
-                                    active = isSpeakerOn,
-                                    onClick = {
-                                        isSpeakerOn = !isSpeakerOn
-                                        audioManager?.isSpeakerphoneOn = isSpeakerOn
-                                    }
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                CallControlButton(
-                                    icon = Icons.Default.Pause,
-                                    label = stringResource(R.string.hold),
-                                    active = isFakeOnHold,
-                                    onClick = { isFakeOnHold = !isFakeOnHold }
-                                )
-                                CallControlButton(
-                                    icon = Icons.Default.PersonAdd,
-                                    label = stringResource(R.string.add_call),
-                                    active = false,
-                                    enabled = fakeSecondaryCallerName == null,
-                                    onClick = { showAddCallDialog = true }
-                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    CallControlButton(
+                                        // Purely decorative — looks like a normal, tappable button (full
+                                        // opacity, not dimmed like a genuinely disabled one) but does nothing,
+                                        // since there's no real second caller to add on a fake call.
+                                        icon = Icons.Default.PersonAdd,
+                                        label = stringResource(R.string.add_call),
+                                        active = false,
+                                        onClick = {}
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    CallControlButton(
+                                        // Only Bluetooth gets its own icon/highlight — Earpiece falls back to
+                                        // the plain Speaker icon/label, and only Speaker itself gets the
+                                        // "active" highlighted background (matching the reference app;
+                                        // Bluetooth being the current route is shown via the icon alone).
+                                        icon = if (audioRoute == AudioRouteOption.BLUETOOTH) Icons.Default.Bluetooth else Icons.AutoMirrored.Filled.VolumeUp,
+                                        label = if (audioRoute == AudioRouteOption.BLUETOOTH) stringResource(R.string.bluetooth) else stringResource(R.string.speaker),
+                                        active = audioRoute == AudioRouteOption.SPEAKER,
+                                        onClick = {
+                                            if (hasBluetoothDeviceConnected()) {
+                                                showAudioRouteSheet = true
+                                            } else {
+                                                applyAudioRoute(if (audioRoute == AudioRouteOption.SPEAKER) AudioRouteOption.EARPIECE else AudioRouteOption.SPEAKER)
+                                            }
+                                        }
+                                    )
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    CallControlButton(
+                                        icon = Icons.Default.Pause,
+                                        label = stringResource(R.string.hold),
+                                        active = isFakeOnHold,
+                                        onClick = { isFakeOnHold = !isFakeOnHold }
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    CallControlButton(
+                                        icon = Icons.Default.Dialpad,
+                                        label = stringResource(R.string.keypad),
+                                        active = showKeypad,
+                                        onClick = { showKeypad = true }
+                                    )
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    CallControlButton(
+                                        // Purely decorative too — same reasoning as Add Call above.
+                                        icon = Icons.AutoMirrored.Filled.Chat,
+                                        label = stringResource(R.string.message),
+                                        active = false,
+                                        onClick = {}
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    CallControlButton(
+                                        icon = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                                        label = stringResource(R.string.mute),
+                                        active = isMuted,
+                                        onClick = {
+                                            isMuted = !isMuted
+                                            audioManager?.isMicrophoneMute = isMuted
+                                        }
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            CallActionButton(
+                            CallActionButtons(
                                 icon = Icons.Default.CallEnd,
                                 color = Color(0xFFD32F2F),
                                 shape = theme.buttonShape.toComposeShape(),
-                                onClick = { FakeCallManager.endFromUi() }
+                                onClick = { FakeCallManager.endFromUi() },
+                                label = stringResource(R.string.end_call)
                             )
                         }
                     }
@@ -562,6 +673,24 @@ fun FakeCallContent(
             onDigit = {},
             onDigitReleased = {},
             onDismiss = { showKeypad = false }
+        )
+    }
+
+    if (showAudioRouteSheet) {
+        // Earpiece always listed last, matching the reference app's own ordering.
+        val availableRoutes = buildList {
+            if (hasBluetoothDeviceConnected()) add(AudioRouteOption.BLUETOOTH)
+            add(AudioRouteOption.SPEAKER)
+            add(AudioRouteOption.EARPIECE)
+        }
+        AudioRouteSheet(
+            availableRoutes = availableRoutes,
+            selectedRoute = audioRoute,
+            onSelect = { option ->
+                showAudioRouteSheet = false
+                applyAudioRoute(option)
+            },
+            onDismiss = { showAudioRouteSheet = false }
         )
     }
 
@@ -593,37 +722,6 @@ fun FakeCallContent(
                 }
             }
         )
-    }
-}
-
-@Composable
-fun CallActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
-    onClick: () -> Unit,
-    shape: Shape = CircleShape
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .size(72.dp)
-            .shadow(elevation = 10.dp, shape = shape, ambientColor = color, spotColor = color),
-        shape = shape,
-        color = Color.Transparent
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(color.lightened(), color))),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
-            )
-        }
     }
 }
 

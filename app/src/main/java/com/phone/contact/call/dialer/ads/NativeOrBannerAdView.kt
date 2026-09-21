@@ -22,7 +22,11 @@ import androidx.compose.ui.Modifier
 fun NativeOrBannerAdView(
     nativeAdUnitId: String?,
     bannerAdUnitId: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Non-null only for a placement that must survive being unmounted and remounted without
+    // reloading (e.g. the bottom nav bar's ad, torn down/rebuilt every time the user leaves/
+    // returns to a top-level tab) — see NativeAdView's own cacheKey doc for how this works.
+    cacheKey: String? = null
 ) {
     var nativeFailed by remember(nativeAdUnitId) { mutableStateOf(false) }
 
@@ -31,6 +35,7 @@ fun NativeOrBannerAdView(
             adUnitId = nativeAdUnitId,
             template = NativeAdTemplate.SMALL,
             modifier = modifier,
+            cacheKey = cacheKey,
             onFailed = { nativeFailed = true }
         )
     } else if (bannerAdUnitId != null) {

@@ -164,7 +164,7 @@ fun HistoryScreen(
             )
             Column(modifier = Modifier.navigationBarsPadding()) {
                 if (nativeAdUnitId != null || bannerAdUnitId != null) {
-                    NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+                    NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId, cacheKey = "history_ad")
                 }
                 CommonBottomBar(items = footerItems, windowInsets = WindowInsets(0.dp))
             }

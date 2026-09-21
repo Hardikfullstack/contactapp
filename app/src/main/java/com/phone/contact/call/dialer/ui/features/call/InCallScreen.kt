@@ -41,6 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phone.contact.call.dialer.R
+import com.phone.contact.call.dialer.ui.components.AudioRouteOption
+import com.phone.contact.call.dialer.ui.components.AudioRouteSheet
 import com.phone.contact.call.dialer.ui.components.CallWallpaperBackground
 import com.phone.contact.call.dialer.ui.components.ContactAvatarImage
 import com.phone.contact.call.dialer.ui.components.SwipeUpCallButton
@@ -85,6 +87,7 @@ fun InCallScreen(
     audioState: CallAudioState? = null,
     onToggleMute: () -> Unit = {},
     onToggleSpeaker: () -> Unit = {},
+    onSelectAudioRoute: (Int) -> Unit = {},
     canHold: Boolean = false,
     onToggleHold: () -> Unit = {},
     onPlayDtmf: (Char) -> Unit = {},
@@ -127,6 +130,11 @@ fun InCallScreen(
     var showQuickReplySheet by remember { mutableStateOf(false) }
     var showKeypad by remember { mutableStateOf(false) }
     var showManageCallSheet by remember { mutableStateOf(false) }
+    var showAudioRouteSheet by remember { mutableStateOf(false) }
+    // Once a Bluetooth device is connected, the Speaker button switches to a Bluetooth button
+    // that opens a "Continue with" picker (matching the reference app) instead of a plain toggle —
+    // without a connected device there's nothing to pick between, so the old direct toggle stays.
+    val hasBluetoothRoute = (audioState?.supportedRouteMask ?: 0) and CallAudioState.ROUTE_BLUETOOTH != 0
     var showConferenceListSheet by remember { mutableStateOf(false) }
     // A conference has no single handle/number of its own (secondaryCallNumber stays null for
     // it), so the chip's visibility can't rely on the number alone — secondaryCallContactName is
@@ -463,10 +471,24 @@ fun InCallScreen(
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     CallControlButton(
-                                        icon = Icons.AutoMirrored.Filled.VolumeUp,
-                                        label = stringResource(R.string.speaker),
+                                        // Only Bluetooth gets its own icon/highlight — Earpiece and Wired
+                                        // Headset both fall back to the plain Speaker icon/label (matching
+                                        // the reference app), and only Speaker itself gets the "active"
+                                        // highlighted background. Bluetooth being the current route is
+                                        // shown via the icon alone, not the highlight, since Bluetooth is
+                                        // the normal/expected state, not a "boosted" mode like Speaker.
+                                        icon = if (audioState?.route == CallAudioState.ROUTE_BLUETOOTH) {
+                                            Icons.Default.Bluetooth
+                                        } else {
+                                            Icons.AutoMirrored.Filled.VolumeUp
+                                        },
+                                        label = if (hasBluetoothRoute && audioState?.route == CallAudioState.ROUTE_BLUETOOTH) {
+                                            stringResource(R.string.bluetooth)
+                                        } else {
+                                            stringResource(R.string.speaker)
+                                        },
                                         active = audioState?.route == CallAudioState.ROUTE_SPEAKER,
-                                        onClick = onToggleSpeaker
+                                        onClick = { if (hasBluetoothRoute) showAudioRouteSheet = true else onToggleSpeaker() }
                                     )
                                 }
                                 Column(
@@ -539,6 +561,18 @@ fun InCallScreen(
             onDigit = onPlayDtmf,
             onDigitReleased = onStopDtmf,
             onDismiss = { showKeypad = false }
+        )
+    }
+
+    if (showAudioRouteSheet) {
+        AudioRouteSheet(
+            availableRoutes = audioRouteOptionsFromMask(audioState?.supportedRouteMask ?: 0),
+            selectedRoute = audioRouteOptionFromRoute(audioState?.route),
+            onSelect = { option ->
+                showAudioRouteSheet = false
+                onSelectAudioRoute(option.toCallAudioRoute())
+            },
+            onDismiss = { showAudioRouteSheet = false }
         )
     }
 
@@ -1031,7 +1065,14 @@ fun CallControlButton(
             }
         }
         Spacer(modifier = Modifier.height(6.dp))
-        Text(text = label, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.85f),
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
 
@@ -1147,14 +1188,41 @@ fun CallActionButtons(
     }
 }
 
+/** Maps Telecom's CallAudioState route bitmask to the routes the "Continue with" sheet can offer —
+ * only ones actually available right now (e.g. a wired headset row only while one is connected).
+ * Earpiece always listed last, matching the reference app's own ordering. */
+private fun audioRouteOptionsFromMask(mask: Int): List<AudioRouteOption> = buildList {
+    if (mask and CallAudioState.ROUTE_BLUETOOTH != 0) add(AudioRouteOption.BLUETOOTH)
+    if (mask and CallAudioState.ROUTE_WIRED_HEADSET != 0) add(AudioRouteOption.WIRED_HEADSET)
+    if (mask and CallAudioState.ROUTE_SPEAKER != 0) add(AudioRouteOption.SPEAKER)
+    if (mask and CallAudioState.ROUTE_EARPIECE != 0) add(AudioRouteOption.EARPIECE)
+}
+
+private fun audioRouteOptionFromRoute(route: Int?): AudioRouteOption? = when (route) {
+    CallAudioState.ROUTE_EARPIECE -> AudioRouteOption.EARPIECE
+    CallAudioState.ROUTE_BLUETOOTH -> AudioRouteOption.BLUETOOTH
+    CallAudioState.ROUTE_WIRED_HEADSET -> AudioRouteOption.WIRED_HEADSET
+    CallAudioState.ROUTE_SPEAKER -> AudioRouteOption.SPEAKER
+    else -> null
+}
+
+private fun AudioRouteOption.toCallAudioRoute(): Int = when (this) {
+    AudioRouteOption.EARPIECE -> CallAudioState.ROUTE_EARPIECE
+    AudioRouteOption.BLUETOOTH -> CallAudioState.ROUTE_BLUETOOTH
+    AudioRouteOption.WIRED_HEADSET -> CallAudioState.ROUTE_WIRED_HEADSET
+    AudioRouteOption.SPEAKER -> CallAudioState.ROUTE_SPEAKER
+}
+
 private fun formatTimer(seconds: Int): String {
     val m = seconds / 60
     val s = seconds % 60
     return String.format("%02d:%02d", m, s)
 }
 
+/** Not private — reused by FakeCallActivity so its status line matches the real in-call screen's
+ * wording exactly (both model call state with the same Call.STATE_* constants). */
 @Composable
-private fun getCallStateText(state: Int): String {
+fun getCallStateText(state: Int): String {
     return when (state) {
         Call.STATE_ACTIVE -> stringResource(R.string.ongoing_call)
         Call.STATE_DIALING -> stringResource(R.string.dialing)

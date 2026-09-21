@@ -19,11 +19,19 @@ import com.phone.contact.call.dialer.util.AnalyticsManager
  * another's.
  */
 object InterstitialAdManager {
+    // Same staleness issue AppOpenAdManager has: Google recommends not showing an interstitial
+    // that's sat loaded-but-unshown too long — calling show() past that point risks neither
+    // onAdDismissedFullScreenContent nor onAdFailedToShowFullScreenContent ever firing, which
+    // would hang any caller (like Splash) waiting on the onDismissed callback forever. 1 hour is
+    // Google's own recommended window for interstitials (shorter than App Open's 4 hours).
+    private const val EXPIRY_MS = 60 * 60 * 1000L
+
     private val ads = mutableMapOf<String, InterstitialAd>()
+    private val loadTimesMs = mutableMapOf<String, Long>()
     private val loadingIds = mutableSetOf<String>()
 
     fun preload(context: Context, adUnitId: String) {
-        if (adUnitId in loadingIds || ads.containsKey(adUnitId)) return
+        if (adUnitId in loadingIds || isReady(adUnitId)) return
         loadingIds += adUnitId
         AnalyticsManager.logAdEvent("interstitial", adUnitId, "request")
         InterstitialAd.load(
@@ -33,6 +41,7 @@ object InterstitialAdManager {
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
                     ads[adUnitId] = ad
+                    loadTimesMs[adUnitId] = System.currentTimeMillis()
                     loadingIds -= adUnitId
                     AnalyticsManager.logAdEvent("interstitial", adUnitId, "loaded")
                 }
@@ -45,7 +54,16 @@ object InterstitialAdManager {
         )
     }
 
-    fun isReady(adUnitId: String): Boolean = ads.containsKey(adUnitId)
+    /** Self-clears an expired entry so the next [preload] call actually fires instead of being
+     * blocked by a stale reference forever. */
+    fun isReady(adUnitId: String): Boolean {
+        val loadedAt = loadTimesMs[adUnitId]
+        if (ads.containsKey(adUnitId) && loadedAt != null && System.currentTimeMillis() - loadedAt > EXPIRY_MS) {
+            ads.remove(adUnitId)
+            loadTimesMs.remove(adUnitId)
+        }
+        return ads.containsKey(adUnitId)
+    }
 
     /**
      * Shows the preloaded ad for [adUnitId] if one is ready. [onDismissed] always fires exactly
@@ -63,6 +81,7 @@ object InterstitialAdManager {
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 ads.remove(adUnitId)
+                loadTimesMs.remove(adUnitId)
                 AnalyticsManager.logAdEvent("interstitial", adUnitId, "dismissed")
                 preload(activity.applicationContext, adUnitId)
                 onDismissed()
@@ -70,6 +89,7 @@ object InterstitialAdManager {
 
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
                 ads.remove(adUnitId)
+                loadTimesMs.remove(adUnitId)
                 AnalyticsManager.logAdEvent("interstitial", adUnitId, "failed_to_show")
                 preload(activity.applicationContext, adUnitId)
                 onDismissed()

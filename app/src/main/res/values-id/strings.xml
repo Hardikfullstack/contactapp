@@ -292,6 +292,7 @@
     <string name="avg_duration">Durasi Rata-rata</string>
     <string name="block">Blokir</string>
     <string name="block_confirmation">Panggilan dan pesan dari kontak ini akan diblokir.</string>
+    <string name="bluetooth">Bluetooth</string>
     <string name="button_shape">Bentuk Tombol</string>
     <string name="call_breakdown">Rincian Panggilan</string>
     <string name="call_history_entry">- %1$s: %2$s</string>
@@ -324,6 +325,7 @@
     <string name="color_picker_title">Pilih Warna Latar</string>
     <string name="connecting">Menghubungkan...</string>
     <string name="custom_image">Galeri</string>
+    <string name="continue_with">Lanjutkan Dengan</string>
     <string name="custom_time">Waktu Khusus</string>
     <string name="decline_call">Tolak</string>
     <string name="decline_call_short">Tolak</string>
@@ -334,6 +336,7 @@
     <string name="delete_call_title">Hapus Panggilan Ini?</string>
     <string name="dialing">Memanggil...</string>
     <string name="disconnected">Terputus</string>
+    <string name="ear_piece_normal_call">Earpiece (Panggilan Normal)</string>
     <string name="enable_auto_reply">Aktifkan Balasan Otomatis</string>
     <string name="enable_caller_id_spam_protection">Aktifkan ID Penelepon &amp; Perlindungan Spam</string>
     <string name="enable_shake_trigger">Aktifkan Pemicu Guncangan</string>
@@ -458,6 +461,7 @@
     <string name="view_day">Hari</string>
     <string name="view_hour">Jam</string>
     <string name="view_month">Bulan</string>
+    <string name="wired_headset">Headset Berkabel</string>
     <string name="write_settings_permission_desc">Untuk mengatur nada dering ponsel Anda, izinkan Connect untuk mengubah pengaturan sistem.</string>
     <string name="write_settings_permission_title">Izinkan Perubahan Nada Dering</string>
 </resources>

@@ -53,6 +53,7 @@ import com.phone.contact.call.dialer.ads.ColdStartAdType
 import com.phone.contact.call.dialer.ads.InterstitialAdManager
 import com.phone.contact.call.dialer.ads.NativeAdCache
 import com.phone.contact.call.dialer.ads.waitUntilAdReady
+import com.phone.contact.call.dialer.ui.theme.DarkBackground
 import com.phone.contact.call.dialer.ui.theme.LocalIsDarkTheme
 import com.phone.contact.call.dialer.ui.theme.PrimaryGreen
 import com.phone.contact.call.dialer.viewmodel.AppConfigViewModel
@@ -72,23 +73,19 @@ fun SplashScreen(
     val context = LocalContext.current
     var showAdLoader by remember { mutableStateOf(false) }
 
-    // The branding-animation state below forces a white background regardless of theme
-    // (deliberate — see that Box's own background comment), so status bar icons must stay dark
-    // there to stay visible against it — MainActivity's own theme-based rule (light icons
-    // whenever dark mode is on) would otherwise make them just as light as that white background
-    // and functionally invisible. Once showAdLoader switches to the theme's own background color,
-    // follow the theme normally like MainActivity does everywhere else in the app. MainActivity
-    // skips setting this itself while this screen is showing, so this is the only thing driving
-    // it for as long as Splash is on screen.
+    // The branding-animation background now follows the theme too (white in light mode, the
+    // app's own dark background in dark mode — see the Box below), so status bar icons can just
+    // follow the theme uniformly for the whole screen. MainActivity skips setting this itself
+    // while this screen is showing, so this is the only thing driving it for as long as Splash
+    // is on screen.
     val isDarkTheme = LocalIsDarkTheme.current
     val view = LocalView.current
     SideEffect {
         val window = (context as? Activity)?.window
         if (window != null) {
             val insetsController = WindowCompat.getInsetsController(window, view)
-            val lightIcons = if (showAdLoader) !isDarkTheme else true
-            insetsController.isAppearanceLightStatusBars = lightIcons
-            insetsController.isAppearanceLightNavigationBars = lightIcons
+            insetsController.isAppearanceLightStatusBars = !isDarkTheme
+            insetsController.isAppearanceLightNavigationBars = !isDarkTheme
         }
     }
 
@@ -210,13 +207,14 @@ fun SplashScreen(
         onTimeout()
     }
 
-    // White background during the branding animation, with the logo/app-name in brand green
-    // instead of white-on-green. The ad-loading state isn't part of that branded handoff moment,
-    // so it keeps using the app's normal light/dark background instead of forcing white.
+    // White in light mode, the app's own dark background in dark mode, during the branding
+    // animation — logo/app-name stay in brand green either way. DarkBackground is used directly
+    // (rather than MaterialTheme.colorScheme.background) to keep light mode's exact pure white,
+    // unaffected by the theme's slightly off-white BackgroundLight.
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (showAdLoader) MaterialTheme.colorScheme.background else Color.White),
+            .background(if (showAdLoader) MaterialTheme.colorScheme.background else if (isDarkTheme) DarkBackground else Color.White),
         contentAlignment = Alignment.Center
     ) {
         if (showAdLoader) {

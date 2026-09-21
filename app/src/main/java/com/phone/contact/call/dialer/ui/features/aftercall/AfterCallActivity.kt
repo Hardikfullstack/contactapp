@@ -20,6 +20,7 @@ import com.phone.contact.call.dialer.MainActivity
 import com.phone.contact.call.dialer.ads.AppOpenBackgroundReturnTrigger
 import com.phone.contact.call.dialer.ui.theme.ContactAppTheme
 import com.phone.contact.call.dialer.util.AfterCallNotificationHelper
+import com.phone.contact.call.dialer.util.CallReliabilityUtils
 import com.phone.contact.call.dialer.util.PreferenceManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -96,8 +97,13 @@ class AfterCallActivity : AppCompatActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-        insetsController.hide(WindowInsetsCompat.Type.navigationBars())
-        insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        // See MainActivity's own comment on this same pattern — fully hiding the nav bar has
+        // been observed to also disable the OS's edge-swipe back gesture on some gesture-nav OEM
+        // skins, so only do it on button-navigation devices.
+        if (!CallReliabilityUtils.isGestureNavigationEnabled(this)) {
+            insetsController.hide(WindowInsetsCompat.Type.navigationBars())
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
 
         if (!updateFromIntent(intent)) return
 
@@ -163,7 +169,7 @@ class AfterCallActivity : AppCompatActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
+        if (hasFocus && !CallReliabilityUtils.isGestureNavigationEnabled(this)) {
             WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.navigationBars())
         }
     }

@@ -42,15 +42,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.phone.contact.call.dialer.R
 import com.phone.contact.call.dialer.ads.AppOpenBackgroundReturnTrigger
 import com.phone.contact.call.dialer.ads.AppOpenCounter
-import com.phone.contact.call.dialer.ads.NativeAdCache
 import com.phone.contact.call.dialer.ads.NativeAdTemplate
 import com.phone.contact.call.dialer.ads.NativeAdView
-import com.phone.contact.call.dialer.ads.SmallNativeAdSkeleton
-import com.google.android.gms.ads.AdListener
-import com.google.android.gms.ads.AdLoader
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.nativead.NativeAd
 import com.phone.contact.call.dialer.ui.components.*
 import com.phone.contact.call.dialer.ui.components.dialogs.RateUsDialog
 import com.phone.contact.call.dialer.ui.components.dialogs.UpdateAppDialog
@@ -551,20 +544,12 @@ fun RecentsScreen(
                     }
                 }
 
-                val inlineNativeAds = remember { mutableStateMapOf<String, NativeAd?>() }
-                // Tracks a slot that genuinely failed (primary AND fallback both) — distinct from
-                // "not in inlineNativeAds yet" (still loading), so a failed slot can collapse to
-                // nothing instead of showing a shimmer skeleton forever like it's still loading.
+                // Tracks a slot that genuinely failed (primary AND fallback both) so it can
+                // collapse to nothing instead of showing a shimmer skeleton forever. The ads
+                // themselves live in ListAdCache (keyed by row.id below) — not any state hoisted
+                // here — so they survive scrolling a slot off-screen and back, and even navigating
+                // away from Recents and back, instead of reloading fresh every time.
                 val failedInlineAdRowIds = remember { mutableStateMapOf<String, Boolean>() }
-
-                // Cleanup only — runs once when this composable instance leaves composition for
-                // good (e.g. navigating away from Recents), not on every rows/filter change.
-                DisposableEffect(Unit) {
-                    onDispose {
-                        inlineNativeAds.values.forEach { it?.destroy() }
-                        inlineNativeAds.clear()
-                    }
-                }
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -613,62 +598,18 @@ fun RecentsScreen(
                                         tonalElevation = 0.dp
                                     ) {
                                         Column {
-                                            // Fires once when this specific slot's row is first
-                                            // composed (naturally lazy — LazyColumn only composes
-                                            // a row once it's about to be shown, not the whole list
-                                            // upfront) and is a no-op on any later recomposition of
-                                            // the same row (e.g. scrolled away and back), since the
-                                            // hoisted map above already has this slot's id by then.
-                                            LaunchedEffect(row.id, inlineListNativeAdUnitId, inlineListFallbackAdUnitId) {
-                                                if (!inlineNativeAds.containsKey(row.id)) {
-                                                    // The very first slot to reach this point (in
-                                                    // practice, the one right after call #1, since
-                                                    // it composes as soon as Recents opens) grabs
-                                                    // whatever SplashScreen already preloaded for
-                                                    // this ad unit — a real network load only for
-                                                    // every slot after that one.
-                                                    val cachedAd = NativeAdCache.take(inlineListNativeAdUnitId)
-                                                    if (cachedAd != null) {
-                                                        inlineNativeAds[row.id] = cachedAd
-                                                    } else {
-                                                        fun loadAd(adUnitId: String, isFallback: Boolean) {
-                                                            val adLoader = AdLoader.Builder(context, adUnitId)
-                                                                .forNativeAd { ad ->
-                                                                    inlineNativeAds[row.id] = ad
-                                                                    AnalyticsManager.logAdEvent("native", adUnitId, "loaded")
-                                                                }
-                                                                .withAdListener(object : AdListener() {
-                                                                    override fun onAdFailedToLoad(error: LoadAdError) {
-                                                                        AnalyticsManager.logAdEvent("native", adUnitId, "failed_to_load")
-                                                                        if (!isFallback && inlineListFallbackAdUnitId != null) {
-                                                                            loadAd(inlineListFallbackAdUnitId, isFallback = true)
-                                                                        } else {
-                                                                            failedInlineAdRowIds[row.id] = true
-                                                                        }
-                                                                    }
-                                                                })
-                                                                .build()
-                                                            AnalyticsManager.logAdEvent("native", adUnitId, "request")
-                                                            adLoader.loadAd(AdRequest.Builder().build())
-                                                        }
-                                                        loadAd(inlineListNativeAdUnitId, isFallback = false)
-                                                    }
-                                                }
-                                            }
-
-                                            val loadedAd = inlineNativeAds[row.id]
-                                            if (loadedAd != null) {
-                                                NativeAdView(
-                                                    ad = loadedAd,
-                                                    template = NativeAdTemplate.SMALL,
-                                                    modifier = Modifier.fillMaxWidth()
-                                                )
-                                            } else {
-                                                SmallNativeAdSkeleton(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    isDarkTheme = LocalIsDarkTheme.current
-                                                )
-                                            }
+                                            // cacheKey = row.id is what makes this slot's ad
+                                            // survive scrolling off-screen and back (and even
+                                            // navigating away from Recents and back) instead of
+                                            // reloading fresh every time — see ListAdCache.
+                                            NativeAdView(
+                                                adUnitId = inlineListNativeAdUnitId,
+                                                template = NativeAdTemplate.SMALL,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                cacheKey = row.id,
+                                                fallbackAdUnitId = inlineListFallbackAdUnitId,
+                                                onFailed = { failedInlineAdRowIds[row.id] = true }
+                                            )
                                             HorizontalDivider(
                                                 modifier = Modifier.padding(start = 78.dp),
                                                 thickness = 0.5.dp,

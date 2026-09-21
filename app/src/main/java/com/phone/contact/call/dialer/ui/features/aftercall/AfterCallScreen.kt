@@ -112,6 +112,7 @@ fun AfterCallScreen(
                     modifier = Modifier
                         .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
+                    cacheKey = "after_call_native_ad",
                     onFailed = { primaryNativeAdFailed = true }
                 )
             } else if (primaryNativeAdFailed && fallbackNativeAdUnitId != null) {
@@ -120,7 +121,8 @@ fun AfterCallScreen(
                     template = NativeAdTemplate.MEDIUM,
                     modifier = Modifier
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    cacheKey = "after_call_fallback_ad"
                 )
             }
         }

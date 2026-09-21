@@ -147,7 +147,17 @@ class InCallActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
 
-        enableEdgeToEdge()
+        // enableEdgeToEdge()'s no-arg default picks a light or dark scrim for each system bar
+        // based on the DEVICE's own day/night setting — not this screen's own theme, which is
+        // "always dark" regardless (see the ContactAppTheme call below). On a device in light mode
+        // that mismatch left the nav bar rendered with a translucent WHITE scrim, standing out as
+        // a visible light strip against the dark call screen. Forcing both bars fully transparent
+        // here removes that scrim outright; isAppearanceLightNavigationBars in the SideEffect below
+        // still separately controls icon color based on the actual wallpaper's brightness.
+        enableEdgeToEdge(
+            statusBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
 
         setContent {
             val callState by CallManager.callState.collectAsState()
@@ -405,6 +415,7 @@ class InCallActivity : ComponentActivity() {
                     audioState = audioState,
                     onToggleMute = { CallManager.toggleMute() },
                     onToggleSpeaker = { CallManager.toggleSpeaker() },
+                    onSelectAudioRoute = { route -> CallManager.setAudioRoute(route) },
                     canHold = canHold,
                     onToggleHold = { frontCall?.let { CallManager.toggleHoldForCall(it) } },
                     onPlayDtmf = { digit -> CallManager.playDtmfTone(digit) },

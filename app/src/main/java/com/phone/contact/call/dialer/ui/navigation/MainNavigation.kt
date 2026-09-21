@@ -257,7 +257,15 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
                 Column(modifier = Modifier.navigationBarsPadding()) {
                     CommonBottomBar(items = items, windowInsets = WindowInsets(0.dp), enabled = isDefaultDialerState)
                     if (bottomNativeAdUnitId != null || bannerAdUnitId != null) {
-                        NativeOrBannerAdView(nativeAdUnitId = bottomNativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+                        NativeOrBannerAdView(
+                            nativeAdUnitId = bottomNativeAdUnitId,
+                            bannerAdUnitId = bannerAdUnitId,
+                            // Survives the bottom bar being torn down/rebuilt every time the user
+                            // leaves a top-level tab for a sub-screen and comes back — same
+                            // ListAdCache-backed mechanism Recents' inline list ad uses, keyed by a
+                            // fixed id since there's only ever one of these on screen at a time.
+                            cacheKey = "bottom_nav_ad"
+                        )
                     }
                 }
             }

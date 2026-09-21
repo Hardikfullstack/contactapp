@@ -382,6 +382,9 @@ fun FakeCallSetupScreen(
                         onClick = {
                             viewModel.saveShakeProfile(shakeCallerName, shakeCallerNumber, shakeEnabled)
                             Toast.makeText(context, context.getString(R.string.shake_profile_saved), Toast.LENGTH_SHORT).show()
+                            // Matches the Schedule button below — returns straight to Tools instead
+                            // of leaving the user sitting on this screen after saving.
+                            onBack()
                         },
                         enabled = !isShakeProfileInvalid,
                         modifier = Modifier
@@ -431,7 +434,7 @@ fun FakeCallSetupScreen(
             }
 
             if (!WindowInsets.isImeVisible && (nativeAdUnitId != null || bannerAdUnitId != null)) {
-                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId, cacheKey = "fake_call_setup_ad")
             }
         }
     }

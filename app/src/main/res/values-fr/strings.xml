@@ -292,6 +292,7 @@
     <string name="avg_duration">Durée moyenne</string>
     <string name="block">Bloquer</string>
     <string name="block_confirmation">Les appels et messages de ce contact seront bloqués.</string>
+    <string name="bluetooth">Bluetooth</string>
     <string name="button_shape">Forme du bouton</string>
     <string name="call_breakdown">Répartition des appels</string>
     <string name="call_history_entry">- %1$s : %2$s</string>
@@ -324,6 +325,7 @@
     <string name="color_picker_title">Choisir la couleur de fond</string>
     <string name="connecting">Connexion en cours...</string>
     <string name="custom_image">Galerie</string>
+    <string name="continue_with">Continuer avec</string>
     <string name="custom_time">Durée personnalisée</string>
     <string name="decline_call">Refuser</string>
     <string name="decline_call_short">Refuser</string>
@@ -334,6 +336,7 @@
     <string name="delete_call_title">Supprimer cet appel ?</string>
     <string name="dialing">Composition...</string>
     <string name="disconnected">Déconnecté</string>
+    <string name="ear_piece_normal_call">Écouteur (appel normal)</string>
     <string name="enable_auto_reply">Activer la réponse automatique</string>
     <string name="enable_caller_id_spam_protection">Activer l\'identification de l\'appelant et la protection anti-spam</string>
     <string name="enable_shake_trigger">Activer le déclenchement par secousse</string>
@@ -458,6 +461,7 @@
     <string name="view_day">Jour</string>
     <string name="view_hour">Heure</string>
     <string name="view_month">Mois</string>
+    <string name="wired_headset">Casque filaire</string>
     <string name="write_settings_permission_desc">Pour définir la sonnerie de votre téléphone, autorisez Connect à modifier les paramètres système.</string>
     <string name="write_settings_permission_title">Autoriser les modifications de sonnerie</string>
 </resources>

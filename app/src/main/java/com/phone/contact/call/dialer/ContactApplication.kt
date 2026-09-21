@@ -6,6 +6,7 @@ import com.phone.contact.call.dialer.service.FakeCallConnectionService
 import com.phone.contact.call.dialer.util.AfterCallState
 import com.phone.contact.call.dialer.util.AnalyticsManager
 import com.phone.contact.call.dialer.util.CrashlyticsManager
+import com.phone.contact.call.dialer.util.DefaultDialerState
 import com.phone.contact.call.dialer.util.PreferenceManager
 import com.google.android.gms.ads.MobileAds
 import dagger.hilt.android.HiltAndroidApp
@@ -28,6 +29,14 @@ class ContactApplication : Application() {
         // run ContactAppTheme moments later.
         preferenceManager.applyNightMode()
         AdConnectivityRetry.start(this)
+        // As early as possible too — DefaultDialerState.isDefault starts out optimistically true
+        // (no Context available at its own declaration to check for real), so without this, the
+        // very first frame of Recents/MainNavigation after this app lost the default-dialer role
+        // (e.g. the user set another app as default) briefly renders as if it still held it —
+        // call log button enabled, bottom bar unlocked — before the screen's own LaunchedEffect
+        // catches up and flips it to the locked "Set Default" state a moment later. A local
+        // RoleManager check is fast/synchronous, safe to do here on the main thread.
+        DefaultDialerState.refresh(this)
 
         // Off the main thread — MobileAds.initialize() does blocking I/O internally.
         Thread { MobileAds.initialize(this) }.start()

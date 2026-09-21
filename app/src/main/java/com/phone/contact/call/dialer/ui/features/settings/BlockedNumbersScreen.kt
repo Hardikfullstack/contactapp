@@ -57,7 +57,7 @@ fun BlockedNumbersScreen(
     Scaffold(
         bottomBar = {
             if (nativeAdUnitId != null || bannerAdUnitId != null) {
-                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId, cacheKey = "blocked_numbers_ad")
             }
         },
         topBar = {

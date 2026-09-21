@@ -76,7 +76,7 @@ fun RingtoneScreen(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (nativeAdUnitId != null || bannerAdUnitId != null) {
-                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId)
+                NativeOrBannerAdView(nativeAdUnitId = nativeAdUnitId, bannerAdUnitId = bannerAdUnitId, cacheKey = "ringtone_ad")
             }
         }
     ) { innerPadding ->

@@ -11,6 +11,8 @@ import com.google.firebase.analytics.analytics
  */
 object AnalyticsManager {
     private var firebaseAnalytics: FirebaseAnalytics? = null
+    // See AndroidManifest.xml's firebase_analytics_collection_enabled for the companion switch
+    // that also gates Firebase's own automatic (non-custom-event) collection.
     private const val enabled = true
 
     /** Initializes Firebase Analytics. Should be called once at app startup. */

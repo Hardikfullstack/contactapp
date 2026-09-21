@@ -341,7 +341,11 @@
     <!-- In-Call Screen -->
     <string name="mute">Mute</string>
     <string name="speaker">Speaker</string>
+    <string name="bluetooth">Bluetooth</string>
     <string name="hold">Hold</string>
+    <string name="continue_with">Continue with</string>
+    <string name="ear_piece_normal_call">Ear Piece (normal call)</string>
+    <string name="wired_headset">Wired Headset</string>
     <string name="reply_with_message">Reply with message</string>
     <string name="quick_reply_1">Can\'t talk right now, I\'ll call you later.</string>
     <string name="quick_reply_2">I\'ll call you back.</string>

@@ -341,6 +341,7 @@
     <string name="auto_reply_message_label">Mensaje de respuesta</string>
     <string name="auto_reply_permission_note">Se requiere el permiso de SMS para que funcione la respuesta automática.</string>
     <string name="avg_duration">Duración Media</string>
+    <string name="bluetooth">Bluetooth</string>
     <string name="button_shape">Forma del Botón</string>
     <string name="call_breakdown">Resumen de Llamadas</string>
     <string name="call_history_entry">- %1$s: %2$s</string>
@@ -369,6 +370,7 @@
     <string name="color_category_purples">MORADOS</string>
     <string name="color_category_reds_pinks">ROJOS Y ROSAS</string>
     <string name="color_category_warm">CÁLIDOS Y NARANJAS</string>
+    <string name="continue_with">Continuar con</string>
     <string name="custom_time">Tiempo Personalizado</string>
     <string name="decline_call">Rechazar</string>
     <string name="decline_call_short">Rechazar</string>
@@ -377,6 +379,7 @@
     <string name="default_ringtone">Predeterminado</string>
     <string name="delete_call_text">Esta entrada de llamada se eliminará del historial.</string>
     <string name="delete_call_title">¿Eliminar esta Llamada?</string>
+    <string name="ear_piece_normal_call">Auricular (Llamada Normal)</string>
     <string name="enable_auto_reply">Activar Respuesta Automática</string>
     <string name="enable_caller_id_spam_protection">Activar Identificador de Llamadas y Protección contra Spam</string>
     <string name="enable_shake_trigger">Activar Activación por Agitación</string>
@@ -468,6 +471,7 @@
     <string name="view_day">Día</string>
     <string name="view_hour">Hora</string>
     <string name="view_month">Mes</string>
+    <string name="wired_headset">Auriculares con Cable</string>
     <string name="write_settings_permission_desc">Para establecer el tono de llamada de tu teléfono, permite que Connect modifique la configuración del sistema.</string>
     <string name="write_settings_permission_title">Permitir Cambios de Tono de Llamada</string>
 </resources>

@@ -11,8 +11,18 @@
          that same brief frame flashes AppCompat's own light color instead of ours, which is just as
          visible a mismatch as the white-in-dark-mode flash this was added to fix (see
          values-night/themes.xml for the dark counterpart). -->
+    <!-- windowLightStatusBar/windowLightNavigationBar declared HERE, not only via the runtime
+         WindowInsetsControllerCompat calls in code — some OEM skins (OxygenOS/ColorOS observed)
+         don't reliably apply a runtime-only change early enough, leaving dark status bar icons
+         stuck on a dark background. A static theme declaration is resolved by Android at window
+         creation itself, independent of any OEM-specific runtime timing. This is light mode's
+         value (dark icons on the light background here); see values-night for the dark
+         counterpart. The runtime calls in code still exist on top of this — e.g. to react to the
+         in-app theme toggle disagreeing with the system's own night mode. -->
     <style name="Theme.ContactApp" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">#FFF7F7F7</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
     <!-- InCallActivity/FakeCallActivity force ContactAppTheme(darkTheme = true) unconditionally —
@@ -26,6 +36,12 @@
          system mode) matches this app's own DarkBackground (see Color.kt) unconditionally. -->
     <style name="Theme.ContactApp.CallScreen" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">#FF1A1A1B</item>
+        <!-- Static baseline (light icons for this always-dark screen) — the runtime code in
+             InCallActivity/FakeCallActivity still overrides this per-call for a light wallpaper
+             background, but this static declaration is what's actually in effect the moment the
+             window is first created, before that runtime call gets a chance to run. -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
     <!-- Android 12+ always shows a system splash screen on cold start, before the first frame is

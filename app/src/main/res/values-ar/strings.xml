@@ -341,6 +341,7 @@
     <string name="auto_reply_message_label">رسالة الرد</string>
     <string name="auto_reply_permission_note">إذن الرسائل القصيرة مطلوب لعمل الرد التلقائي.</string>
     <string name="avg_duration">متوسط المدة</string>
+    <string name="bluetooth">بلوتوث</string>
     <string name="button_shape">شكل الزر</string>
     <string name="call_breakdown">تفصيل المكالمات</string>
     <string name="call_now">اتصل الآن</string>
@@ -364,6 +365,7 @@
     <string name="color_category_purples">البنفسجي</string>
     <string name="color_category_reds_pinks">الأحمر والوردي</string>
     <string name="color_category_warm">الدافئة والبرتقالية</string>
+    <string name="continue_with">المتابعة باستخدام</string>
     <string name="custom_time">وقت مخصص</string>
     <string name="decline_call">رفض</string>
     <string name="decline_call_short">رفض</string>
@@ -372,6 +374,7 @@
     <string name="default_ringtone">افتراضي</string>
     <string name="delete_call_text">سيتم إزالة إدخال المكالمة هذا من السجل.</string>
     <string name="delete_call_title">حذف هذه المكالمة؟</string>
+    <string name="ear_piece_normal_call">سماعة الأذن (مكالمة عادية)</string>
     <string name="enable_auto_reply">تفعيل الرد التلقائي</string>
     <string name="enable_caller_id_spam_protection">تفعيل معرف المتصل والحماية من المكالمات المزعجة</string>
     <string name="enable_shake_trigger">تفعيل التشغيل بالهز</string>
@@ -466,6 +469,7 @@
     <string name="view_day">يوم</string>
     <string name="view_hour">ساعة</string>
     <string name="view_month">شهر</string>
+    <string name="wired_headset">سماعة رأس سلكية</string>
     <string name="write_settings_permission_desc">لتعيين نغمة رنين هاتفك، اسمح لتطبيق Connect بتعديل إعدادات النظام.</string>
     <string name="write_settings_permission_title">السماح بتغيير نغمة الرنين</string>
 </resources>

@@ -264,7 +264,8 @@ fun LanguageSelectionScreen(
             NativeAdView(
                 adUnitId = bigNativeAdUnitId,
                 template = NativeAdTemplate.MEDIUM,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                cacheKey = "language_selection_ad"
             )
         }
     }
