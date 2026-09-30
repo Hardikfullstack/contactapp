@@ -11,7 +11,12 @@ object CallLogRepository {
 
     suspend fun fetchCallLogs(context: Context): List<CallLogItem> = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
-        val rawEntries = queryRawCallLogs(resolver)
+        // One bulk query for every saved number, reused for every row below — this is what the
+        // reference app does too (resolve against an already-loaded contacts list, not a live
+        // lookup per number): a query per distinct number here was correct but made every screen
+        // resume noticeably slower the more distinct numbers were in the call history.
+        val contactIndex = buildContactNameIndex(resolver)
+        val rawEntries = queryRawCallLogs(resolver, contactIndex)
         groupConsecutiveCalls(rawEntries)
     }
 
@@ -36,6 +41,9 @@ object CallLogRepository {
         val entries = mutableListOf<CallLogItem>()
         val target = normalizeNumber(number)
         if (target.isEmpty()) return@withContext entries
+        // Resolve this number's current contact name once up front instead of trusting each row's
+        // own CACHED_NAME (see buildContactNameIndex's doc).
+        val liveName = buildContactNameIndex(context.contentResolver)[target]
         val projection = arrayOf(
             CallLog.Calls._ID,
             CallLog.Calls.CACHED_NAME,
@@ -64,7 +72,7 @@ object CallLogRepository {
                     entries.add(
                         CallLogItem(
                             id = cursor.getLong(idIndex),
-                            name = cursor.getString(nameIndex),
+                            name = liveName ?: cursor.getString(nameIndex),
                             number = rowNumber,
                             type = mapCallType(cursor.getInt(typeIndex)),
                             timestamp = cursor.getLong(dateIndex),
@@ -121,7 +129,7 @@ object CallLogRepository {
         val timestamp: Long
     )
 
-    private fun queryRawCallLogs(resolver: ContentResolver): List<RawEntry> {
+    private fun queryRawCallLogs(resolver: ContentResolver, contactIndex: Map<String, String>): List<RawEntry> {
         val entries = mutableListOf<RawEntry>()
         val projection = arrayOf(
             CallLog.Calls._ID,
@@ -130,8 +138,6 @@ object CallLogRepository {
             CallLog.Calls.TYPE,
             CallLog.Calls.DATE
         )
-        val contactIndex = buildContactNameIndex(resolver)
-
         try {
             resolver.query(
                 CallLog.Calls.CONTENT_URI,
@@ -198,6 +204,12 @@ object CallLogRepository {
         return grouped
     }
 
+    /** One query for every saved phone number, keyed by normalized number — matches the reference
+     * app's own approach (resolve call-log names against an already-loaded contacts list) and how
+     * this app's own Contacts screen already reads names, so a post-edit name change shows up here
+     * the same way it does there. A single bulk query, reused for every row, instead of a live
+     * lookup per number — the per-number version was correct but made every screen resume visibly
+     * slower on a call history with many distinct numbers. */
     private fun buildContactNameIndex(resolver: ContentResolver): Map<String, String> {
         val index = mutableMapOf<String, String>()
         val projection = arrayOf(

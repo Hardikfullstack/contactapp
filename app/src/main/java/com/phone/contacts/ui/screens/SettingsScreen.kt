@@ -32,26 +32,18 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneCallback
 import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.StarRate
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wallpaper
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -65,22 +57,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phone.contacts.ui.components.CustomSwitch
 import com.phone.contacts.ui.components.ScreenTitleBar
-import com.phone.contacts.util.AppThemePreferences
-import com.phone.contacts.util.ThemeMode
 
 /** Matches the reference app's Settings screen structure: Personalization (App language,
  * Application theme, Call back screen, Blocking, Recycle bin), Appearance (Call button styles,
  * Wallpaper), General (Ringtone, Import/Export, Emergency contacts, Display options), Advance
  * settings (Speed dial, Quick response, Sound and vibration, Keypad tone), About us (Privacy
  * policy, Rate us, Share app, Feedback) — every row uses the reference app's colorful icon-badge
- * style. Only App language, Application theme, Rate us and Share app are wired to real behavior
- * right now; the rest mirror the reference app's list but stay disabled since those features
- * don't exist in this app yet. */
+ * style. App language, Application theme, Rate us, Share app, Recycle bin, Import/Export and
+ * Blocking are wired to real behavior; the rest mirror the reference app's list but stay disabled
+ * since those features don't exist in this app yet. */
 @Composable
-fun SettingsScreen(onLanguageClick: () -> Unit, onRecycleBinClick: () -> Unit) {
+fun SettingsScreen(
+    onLanguageClick: () -> Unit,
+    onRecycleBinClick: () -> Unit,
+    onImportExportClick: () -> Unit,
+    onThemeClick: () -> Unit,
+    onBlockingClick: () -> Unit
+) {
     val context = LocalContext.current
-    val themeMode by AppThemePreferences.themeMode
-    var showThemeDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -109,7 +103,7 @@ fun SettingsScreen(onLanguageClick: () -> Unit, onRecycleBinClick: () -> Unit) {
                     icon = Icons.Filled.Palette,
                     iconBackgroundColor = Color(0xFF9C27B0),
                     title = "Application theme",
-                    onClick = { showThemeDialog = true }
+                    onClick = onThemeClick
                 )
                 SettingsDivider()
                 SettingsRow(
@@ -124,7 +118,7 @@ fun SettingsScreen(onLanguageClick: () -> Unit, onRecycleBinClick: () -> Unit) {
                     icon = Icons.Filled.Block,
                     iconBackgroundColor = Color(0xFFE0413B),
                     title = "Blocking",
-                    enabled = false
+                    onClick = onBlockingClick
                 )
                 SettingsDivider()
                 SettingsRow(
@@ -165,7 +159,7 @@ fun SettingsScreen(onLanguageClick: () -> Unit, onRecycleBinClick: () -> Unit) {
                     icon = Icons.Filled.ImportExport,
                     iconBackgroundColor = Color(0xFF009688),
                     title = "Import/Export",
-                    enabled = false
+                    onClick = onImportExportClick
                 )
                 SettingsDivider()
                 SettingsRow(
@@ -247,51 +241,6 @@ fun SettingsScreen(onLanguageClick: () -> Unit, onRecycleBinClick: () -> Unit) {
         }
     }
 
-    if (showThemeDialog) {
-        ThemeChooserDialog(
-            current = themeMode,
-            onSelect = { mode ->
-                AppThemePreferences.setThemeMode(context, mode)
-                showThemeDialog = false
-            },
-            onDismiss = { showThemeDialog = false }
-        )
-    }
-}
-
-@Composable
-private fun ThemeChooserDialog(current: ThemeMode, onSelect: (ThemeMode) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Application theme") },
-        text = {
-            Column {
-                ThemeMode.entries.forEach { mode ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(mode) }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = if (mode == current) Icons.Filled.RadioButtonChecked else Icons.Filled.RadioButtonUnchecked,
-                            contentDescription = null,
-                            tint = if (mode == current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = mode.label,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }
 
 private fun openPlayStoreListing(context: Context) {

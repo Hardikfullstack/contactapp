@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -43,13 +44,17 @@ import com.phone.contacts.ui.components.BottomBarActionItem
 import com.phone.contacts.ui.components.CommonBottomBar
 import com.phone.contacts.ui.features.onboarding.LanguageSelectionScreen
 import com.phone.contacts.ui.screens.AddContactScreen
+import com.phone.contacts.ui.screens.BlockingScreen
 import com.phone.contacts.ui.screens.ContactDetailScreen
 import com.phone.contacts.ui.screens.ContactsScreen
 import com.phone.contacts.ui.screens.FavoritesScreen
+import com.phone.contacts.ui.screens.ImportExportScreen
 import com.phone.contacts.ui.screens.KeypadScreen
+import com.phone.contacts.ui.screens.ManageBlockListScreen
 import com.phone.contacts.ui.screens.RecentsScreen
 import com.phone.contacts.ui.screens.RecycleBinScreen
 import com.phone.contacts.ui.screens.SettingsScreen
+import com.phone.contacts.ui.screens.ThemeScreen
 import com.phone.contacts.util.DefaultDialerState
 
 sealed class MainScreen(
@@ -65,8 +70,13 @@ sealed class MainScreen(
     object Settings : MainScreen("settings", R.string.settings, Icons.Outlined.Settings, Icons.Filled.Settings)
     object Language : MainScreen("language_settings")
     object RecycleBin : MainScreen("recycle_bin")
-    object AddContact : MainScreen("add_contact?phone={phone}") {
+    object ImportExport : MainScreen("import_export")
+    object Theme : MainScreen("theme_settings")
+    object Blocking : MainScreen("blocking")
+    object ManageBlockList : MainScreen("manage_block_list")
+    object AddContact : MainScreen("add_contact?phone={phone}&editId={editId}") {
         fun routeWithPhone(phone: String) = "add_contact?phone=${Uri.encode(phone)}"
+        fun routeForEdit(contactId: String) = "add_contact?phone=&editId=${Uri.encode(contactId)}"
     }
     object ContactDetail : MainScreen("contact_detail?id={id}&name={name}&number={number}&photoUri={photoUri}&starred={starred}") {
         fun routeFor(contact: Contact) =
@@ -159,6 +169,9 @@ fun MainNavigation() {
                 RecentsScreen(
                     onContactClick = { name, number ->
                         navController.navigate(MainScreen.ContactDetail.routeFor(id = null, name = name, number = number))
+                    },
+                    onAddToContact = { number ->
+                        navController.navigate(MainScreen.AddContact.routeWithPhone(number))
                     }
                 )
             }
@@ -179,25 +192,50 @@ fun MainNavigation() {
                 )
             ) { backStackEntry ->
                 val args = backStackEntry.arguments
+                // AddContactScreen sets this on our own entry (via previousBackStackEntry) right
+                // before popping back after a real save — survives our composable being torn down
+                // and recreated while AddContact is on top (a plain `remember` flag doesn't).
+                val contactUpdated by backStackEntry.savedStateHandle
+                    .getStateFlow("contact_updated", false)
+                    .collectAsState()
                 ContactDetailScreen(
                     contactId = args?.getString("id").orEmpty().ifBlank { null },
                     name = args?.getString("name").orEmpty(),
                     number = args?.getString("number").orEmpty(),
                     photoUri = args?.getString("photoUri").orEmpty().ifBlank { null },
                     isStarred = args?.getBoolean("starred") ?: false,
+                    contactUpdated = contactUpdated,
+                    onContactUpdatedConsumed = { backStackEntry.savedStateHandle["contact_updated"] = false },
                     onBack = { navController.popBackStack() },
-                    onDeleted = { navController.popBackStack() }
+                    onDeleted = { navController.popBackStack() },
+                    onEditClick = { id -> navController.navigate(MainScreen.AddContact.routeForEdit(id)) }
                 )
             }
             composable(
                 route = MainScreen.AddContact.route,
-                arguments = listOf(navArgument("phone") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                })
+                arguments = listOf(
+                    navArgument("phone") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                    navArgument("editId") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }
+                )
             ) { backStackEntry ->
                 val initialPhone = backStackEntry.arguments?.getString("phone").orEmpty()
-                AddContactScreen(onClose = { navController.popBackStack() }, initialPhone = initialPhone)
+                val editId = backStackEntry.arguments?.getString("editId").orEmpty().ifBlank { null }
+                AddContactScreen(
+                    onClose = { saved ->
+                        if (saved) {
+                            navController.previousBackStackEntry?.savedStateHandle?.set("contact_updated", true)
+                        }
+                        navController.popBackStack()
+                    },
+                    initialPhone = initialPhone,
+                    editContactId = editId
+                )
             }
             composable(MainScreen.Favorites.route) {
                 FavoritesScreen(
@@ -221,7 +259,10 @@ fun MainNavigation() {
             composable(MainScreen.Settings.route) {
                 SettingsScreen(
                     onLanguageClick = { navController.navigate(MainScreen.Language.route) },
-                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) }
+                    onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) },
+                    onImportExportClick = { navController.navigate(MainScreen.ImportExport.route) },
+                    onThemeClick = { navController.navigate(MainScreen.Theme.route) },
+                    onBlockingClick = { navController.navigate(MainScreen.Blocking.route) }
                 )
             }
             composable(MainScreen.Language.route) {
@@ -232,6 +273,21 @@ fun MainNavigation() {
             }
             composable(MainScreen.RecycleBin.route) {
                 RecycleBinScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.ImportExport.route) {
+                ImportExportScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.Theme.route) {
+                ThemeScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.Blocking.route) {
+                BlockingScreen(
+                    onBack = { navController.popBackStack() },
+                    onManageBlockList = { navController.navigate(MainScreen.ManageBlockList.route) }
+                )
+            }
+            composable(MainScreen.ManageBlockList.route) {
+                ManageBlockListScreen(onBack = { navController.popBackStack() })
             }
         }
     }

@@ -1,13 +1,17 @@
 package com.phone.contacts.ui.screens
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +41,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -86,7 +91,11 @@ import com.phone.contacts.ui.components.ScreenTitleBar
 import com.phone.contacts.ui.components.verticalScrollIndicator
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.util.DefaultDialerState
+import com.phone.contacts.util.RecentlyAddedContacts
 import com.phone.contacts.util.RecentlyViewedContacts
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -164,23 +173,28 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
         }
     }
 
-    // "All" shows the alphabet index, sorted A-Z/Z-A. "Recent added" is newest-contact-id-first —
-    // the contacts provider doesn't expose a real "date added" column, so contact id (which is
-    // assigned in insertion order) is the closest available proxy. "Recent viewed" is driven by
-    // RecentlyViewedContacts — recorded whenever the contact detail screen is actually opened —
-    // matching the reference app's own tracked "recently viewed" list instead of Android's
-    // system "last contacted" timestamp (which only reflects real calls/texts, not profile views).
+    // "All" shows the alphabet index, sorted A-Z/Z-A. "Recent added" and "Recent viewed" are each
+    // driven by their own SharedPreferences-backed tracker ([RecentlyAddedContacts] recorded when
+    // a contact is created through this app's own Add Contact screen; [RecentlyViewedContacts]
+    // recorded whenever the contact detail screen is actually opened) — matching the reference
+    // app's own tracked lists (each with a real per-contact timestamp, date-grouped, with its own
+    // "Clear" action) instead of Android's system "last contacted" timestamp or contact-id order.
+    val addedTimestamps = remember(selectedFilter, viewedRefreshTrigger) {
+        if (selectedFilter == ContactFilter.RECENT_ADDED) RecentlyAddedContacts.addedTimestamps(context) else emptyMap()
+    }
     val viewedTimestamps = remember(selectedFilter, viewedRefreshTrigger) {
         if (selectedFilter == ContactFilter.RECENT_VIEWED) RecentlyViewedContacts.viewedTimestamps(context) else emptyMap()
     }
-    val orderedContacts = remember(filtered, selectedFilter, sortDescending, viewedTimestamps) {
+    val orderedContacts = remember(filtered, selectedFilter, sortDescending, addedTimestamps, viewedTimestamps) {
         when (selectedFilter) {
             ContactFilter.ALL -> if (sortDescending) {
                 filtered.sortedByDescending { it.name.lowercase() }
             } else {
                 filtered.sortedBy { it.name.lowercase() }
             }
-            ContactFilter.RECENT_ADDED -> filtered.sortedByDescending { it.id.toLongOrNull() ?: 0L }
+            ContactFilter.RECENT_ADDED -> filtered
+                .filter { addedTimestamps.containsKey(it.number) }
+                .sortedByDescending { addedTimestamps[it.number] }
             ContactFilter.RECENT_VIEWED -> filtered
                 .filter { viewedTimestamps.containsKey(it.number) }
                 .sortedByDescending { viewedTimestamps[it.number] }
@@ -191,8 +205,15 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
         if (!showLetterIndex) {
             emptyMap()
         } else {
-            val map = orderedContacts.groupBy { it.name.firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() } ?: '#' }
+            val map = orderedContacts.groupBy { it.name.lowercase().firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() } ?: '#' }
             if (sortDescending) map.toSortedMap(compareByDescending { it }) else map.toSortedMap()
+        }
+    }
+    val groupedByAddedDate = remember(orderedContacts, selectedFilter, addedTimestamps) {
+        if (selectedFilter != ContactFilter.RECENT_ADDED) {
+            emptyList()
+        } else {
+            groupContactsByDate(orderedContacts, addedTimestamps)
         }
     }
 
@@ -211,7 +232,19 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                         selectionMode = false
                         selectedIds = emptySet()
                     },
-                    onDelete = { showDeleteConfirm = true }
+                    onShare = {
+                        val ids = selectedIds.toList()
+                        coroutineScope.launch { shareContactsAsVcf(context, ids) }
+                    },
+                    onDelete = { showDeleteConfirm = true },
+                    allSelected = selectedIds.isNotEmpty() && selectedIds.size == orderedContacts.size,
+                    onToggleSelectAll = {
+                        selectedIds = if (selectedIds.size == orderedContacts.size) {
+                            emptySet()
+                        } else {
+                            orderedContacts.map { it.id }.toSet()
+                        }
+                    }
                 )
             } else {
                 ScreenTitleBar(
@@ -252,6 +285,16 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                         sortDescending = !sortDescending
                                     }
                                 )
+                                if (selectedFilter == ContactFilter.RECENT_ADDED) {
+                                    DropdownMenuItem(
+                                        text = { Text("Clear Recently Added") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            RecentlyAddedContacts.clear(context)
+                                            viewedRefreshTrigger++
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -296,10 +339,10 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (selectedFilter == ContactFilter.RECENT_VIEWED) {
-                            "No recently contacted numbers"
-                        } else {
-                            "No contacts found"
+                        text = when (selectedFilter) {
+                            ContactFilter.RECENT_VIEWED -> "No recently contacted numbers"
+                            ContactFilter.RECENT_ADDED -> "No recently added contacts"
+                            ContactFilter.ALL -> "No contacts found"
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -338,6 +381,25 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                 var filterRowHeightPx by remember { mutableStateOf(0) }
                 val density = LocalDensity.current
                 val headerHeight = with(density) { (searchFieldHeightPx + filterRowHeightPx).toDp() }
+                // How much of the search field + filter row has scrolled past, in px — matches the
+                // reference app's collapsing-header behavior, where the current-letter pill slides
+                // up together with the header as it scrolls away, then sticks right below the fixed
+                // title bar once fully scrolled past, instead of staying pinned at the header's
+                // unscrolled height (which would float in empty space above the list once scrolled).
+                val headerScrolledPx by remember {
+                    derivedStateOf {
+                        val idx = listState.firstVisibleItemIndex
+                        val offset = listState.firstVisibleItemScrollOffset
+                        when {
+                            idx <= 0 -> offset
+                            idx == 1 -> searchFieldHeightPx + offset
+                            else -> searchFieldHeightPx + filterRowHeightPx
+                        }.coerceAtMost(searchFieldHeightPx + filterRowHeightPx)
+                    }
+                }
+                val pillTopPadding = with(density) {
+                    (searchFieldHeightPx + filterRowHeightPx - headerScrolledPx).coerceAtLeast(0).toDp()
+                } + 8.dp
                 // How far down the list is scrolled, as a 0..1 fraction — drives the alphabet
                 // thumb's vertical position on the right edge when the user isn't dragging it.
                 val scrollFraction by remember {
@@ -433,7 +495,49 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                                 } else {
                                                     selectedIds + contact.id
                                                 }
+                                            },
+                                            onLongPress = {
+                                                selectionMode = true
+                                                selectedIds = selectedIds + contact.id
                                             }
+                                        )
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(start = 74.dp),
+                                            thickness = 1.dp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                        )
+                                    }
+                                }
+                            }
+                        } else if (selectedFilter == ContactFilter.RECENT_ADDED) {
+                            groupedByAddedDate.forEach { (dateLabel, contactsInGroup) ->
+                                item(key = "added_header_$dateLabel") {
+                                    Text(
+                                        text = dateLabel,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                    )
+                                }
+                                items(contactsInGroup, key = { it.id }) { contact ->
+                                    Column {
+                                        ContactRow(
+                                            contact = contact,
+                                            selectionMode = selectionMode,
+                                            isSelected = selectedIds.contains(contact.id),
+                                            onClick = { onContactClick(contact) },
+                                            onToggleSelect = {
+                                                selectedIds = if (selectedIds.contains(contact.id)) {
+                                                    selectedIds - contact.id
+                                                } else {
+                                                    selectedIds + contact.id
+                                                }
+                                            },
+                                            onLongPress = {
+                                                selectionMode = true
+                                                selectedIds = selectedIds + contact.id
+                                            },
+                                            trailingTime = addedTimestamps[contact.number]?.let { formatAddedTime(it) }
                                         )
                                         HorizontalDivider(
                                             modifier = Modifier.padding(start = 74.dp),
@@ -457,6 +561,10 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                             } else {
                                                 selectedIds + contact.id
                                             }
+                                        },
+                                        onLongPress = {
+                                            selectionMode = true
+                                            selectedIds = selectedIds + contact.id
                                         }
                                     )
                                     HorizontalDivider(
@@ -632,7 +740,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                 tonalElevation = 2.dp,
                                 modifier = Modifier
                                     .align(Alignment.TopCenter)
-                                    .padding(top = headerHeight + 8.dp)
+                                    .padding(top = pillTopPadding)
                                     .alpha(topPillAlpha)
                             ) {
                                 Text(
@@ -701,8 +809,8 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text(if (count == 1) "Delete contact?" else "Delete $count contacts?") },
-            text = { Text("They'll be moved to Recycle bin.") },
+            title = { Text(if (count == 1) "Move to Bin?" else "Move $count contacts to Bin?") },
+            text = { Text(if (count == 1) "This contact will be removed from all your synced devices." else "These contacts will be removed from all your synced devices.") },
             confirmButton = {
                 TextButton(onClick = {
                     val toDelete = allContacts.filter { it.id in selectedIds }
@@ -712,13 +820,35 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                         selectionMode = false
                         selectedIds = emptySet()
                     }
-                }) { Text("Delete") }
+                }) { Text("Move to Bin") }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             }
         )
     }
+
+}
+
+/** Shares one or more contacts as real .vcf files via the system share sheet — matching the
+ * reference app's own selection-mode Share action exactly (it shares a genuine "Name.vcf", not
+ * plain text), using Android's built-in `CONTENT_VCARD_URI` instead of hand-building vCard text. */
+private suspend fun shareContactsAsVcf(context: android.content.Context, ids: List<String>) {
+    val uris = ContactRepository.getVcardUris(context, ids)
+    if (uris.isEmpty()) return
+    val intent = if (uris.size == 1) {
+        Intent(Intent.ACTION_SEND).apply {
+            type = "text/x-vcard"
+            putExtra(Intent.EXTRA_STREAM, uris.first())
+        }
+    } else {
+        Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "text/x-vcard"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList<Uri>(uris))
+        }
+    }
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    context.startActivity(Intent.createChooser(intent, "Share contact"))
 }
 
 private enum class ContactFilter(val label: String) {
@@ -727,8 +857,46 @@ private enum class ContactFilter(val label: String) {
     RECENT_VIEWED("Recent viewed")
 }
 
+private fun formatAddedTime(timestamp: Long): String =
+    SimpleDateFormat("h:mm a", Locale.getDefault()).format(timestamp)
+
+/** Groups contacts by the date they were added (via [RecentlyAddedContacts]'s timestamps),
+ * newest group first — mirrors RecentsScreen's own "Today"/"Yesterday"/date call-log grouping. */
+private fun groupContactsByDate(contacts: List<Contact>, timestamps: Map<String, Long>): List<Pair<String, List<Contact>>> {
+    val today = Calendar.getInstance()
+    val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+    val cal = Calendar.getInstance()
+
+    fun isSameDay(a: Calendar, b: Calendar) =
+        a.get(Calendar.YEAR) == b.get(Calendar.YEAR) && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
+
+    fun labelFor(timestamp: Long): String {
+        cal.timeInMillis = timestamp
+        return when {
+            isSameDay(cal, today) -> "Today"
+            isSameDay(cal, yesterday) -> "Yesterday"
+            else -> SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(timestamp)
+        }
+    }
+
+    val result = LinkedHashMap<String, MutableList<Contact>>()
+    contacts.forEach { contact ->
+        val timestamp = timestamps[contact.number] ?: return@forEach
+        result.getOrPut(labelFor(timestamp)) { mutableListOf() }.add(contact)
+    }
+    return result.map { it.key to it.value }
+}
+
 @Composable
-private fun SelectionTitleBar(count: Int, onClose: () -> Unit, onDelete: () -> Unit) {
+private fun SelectionTitleBar(
+    count: Int,
+    onClose: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit,
+    allSelected: Boolean,
+    onToggleSelectAll: () -> Unit
+) {
+    var moreMenuExpanded by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -743,20 +911,49 @@ private fun SelectionTitleBar(count: Int, onClose: () -> Unit, onDelete: () -> U
             )
         }
         Text(
-            text = "$count selected",
-            style = MaterialTheme.typography.titleMedium,
+            text = "$count",
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 4.dp)
         )
+        IconButton(onClick = onShare, enabled = count > 0) {
+            Icon(
+                imageVector = Icons.Filled.Share,
+                contentDescription = "Share selected",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
         IconButton(onClick = onDelete, enabled = count > 0) {
             Icon(
                 imageVector = Icons.Filled.Delete,
                 contentDescription = "Delete selected",
                 tint = MaterialTheme.colorScheme.onBackground
             )
+        }
+        Box {
+            IconButton(onClick = { moreMenuExpanded = true }) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            DropdownMenu(
+                expanded = moreMenuExpanded,
+                onDismissRequest = { moreMenuExpanded = false },
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(if (allSelected) "Deselect all" else "Select all") },
+                    onClick = {
+                        moreMenuExpanded = false
+                        onToggleSelectAll()
+                    }
+                )
+            }
         }
     }
 }
@@ -778,18 +975,25 @@ private fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ContactRow(
     contact: Contact,
     selectionMode: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onToggleSelect: () -> Unit
+    onToggleSelect: () -> Unit,
+    onLongPress: () -> Unit,
+    trailingTime: String? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = if (selectionMode) onToggleSelect else onClick)
+            .background(if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background)
+            .combinedClickable(
+                onClick = if (selectionMode) onToggleSelect else onClick,
+                onLongClick = { if (!selectionMode) onLongPress() }
+            )
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -825,8 +1029,16 @@ private fun ContactRow(
         Text(
             text = contact.name,
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
         )
+        if (trailingTime != null) {
+            Text(
+                text = trailingTime,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -847,21 +1059,20 @@ fun ContactAvatar(name: String, photoUri: String?, size: Dp) {
             .background(avatarColorFor(name)),
         contentAlignment = Alignment.Center
     ) {
+        Text(
+            text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "#",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            // Scales with the avatar itself — a 40dp row avatar and a 120dp call-screen
+            // avatar shouldn't show the same fixed-size letter.
+            fontSize = (size.value * 0.4f).sp
+        )
         if (photoUri != null) {
             AsyncImage(
                 model = photoUri,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Text(
-                text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "#",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                // Scales with the avatar itself — a 40dp row avatar and a 120dp call-screen
-                // avatar shouldn't show the same fixed-size letter.
-                fontSize = (size.value * 0.4f).sp
             )
         }
     }

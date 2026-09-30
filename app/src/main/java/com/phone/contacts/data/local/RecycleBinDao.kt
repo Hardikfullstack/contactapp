@@ -19,4 +19,7 @@ interface RecycleBinDao {
 
     @Query("DELETE FROM deleted_contacts")
     suspend fun clearAll()
+
+    @Query("DELETE FROM deleted_contacts WHERE deletedAt < :threshold")
+    suspend fun deleteOlderThan(threshold: Long)
 }

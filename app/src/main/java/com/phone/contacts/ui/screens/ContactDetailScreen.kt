@@ -1,10 +1,8 @@
 package com.phone.contacts.ui.screens
 
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Intent
 import android.media.RingtoneManager
-import android.provider.BlockedNumberContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -31,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Message
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallMissed
@@ -66,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
 import com.phone.contacts.R
+import com.phone.contacts.data.BlockRepository
 import com.phone.contacts.data.CallLogItem
 import com.phone.contacts.data.CallLogRepository
 import com.phone.contacts.data.CallType
@@ -86,12 +87,21 @@ import com.phone.contacts.util.MessageUtils
 import com.phone.contacts.util.RecentlyViewedContacts
 import com.phone.contacts.util.WhatsAppUtils
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 private val WHATSAPP_GREEN = Color(0xFF25D366)
+
+/** Distinct from Missed/Declined's shared red — a blocked call never even rang, so it gets its
+ * own color instead of blending into "you missed something" red. Red in light mode; a lighter
+ * pink in dark mode, since a dark red is too close to the dark background to actually read. */
+@Composable
+private fun blockedCallColor(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFF6B9D) else Color(0xFFD32F2F)
+
+/** Last-10-digits comparison — CallLog's own NUMBER and BlockedNumberContract's stored number can
+ * differ in formatting (spaces, +country code) for what's really the same number. */
+private fun normalizeForBlockMatch(number: String): String = number.filter { it.isDigit() }.takeLast(10)
 
 /** Matches the reference app's contact detail screen (back arrow, avatar, name, Call/Text/
  * WhatsApp/Video-call row, number card, WhatsApp quick actions, "Call history", bottom
@@ -108,20 +118,45 @@ fun ContactDetailScreen(
     number: String,
     photoUri: String?,
     isStarred: Boolean,
+    contactUpdated: Boolean = false,
+    onContactUpdatedConsumed: () -> Unit = {},
     onBack: () -> Unit,
-    onDeleted: () -> Unit
+    onDeleted: () -> Unit,
+    onEditClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var resolvedContactId by remember(contactId) { mutableStateOf(contactId) }
     var starred by remember(contactId) { mutableStateOf(isStarred) }
+    // Both start from the nav arguments and show instantly (no lag, matching the Contacts list) —
+    // only re-fetched when [contactUpdated] says Edit actually just saved (see getContactSummary's
+    // doc), not on every plain resume/first-open, which just re-showed the same value anyway at
+    // the cost of a visible delay.
+    var currentName by remember(name) { mutableStateOf(name) }
+    var currentPhotoUri by remember(photoUri) { mutableStateOf(photoUri) }
     LaunchedEffect(contactId, number) {
         if (contactId == null && number.isNotBlank()) {
             val resolved = ContactRepository.findContactByNumber(context, number)
             if (resolved != null) {
                 resolvedContactId = resolved.id
                 starred = resolved.isStarred
+                // Opened from Recents, which only ever has a name/number, not the contact's photo
+                // — this lookup is the only place that ever learns it, so it has to be applied here,
+                // not just used to resolve the id.
+                currentName = resolved.name
+                currentPhotoUri = resolved.photoUri
             }
+        }
+    }
+    LaunchedEffect(contactUpdated) {
+        if (contactUpdated) {
+            resolvedContactId?.let { id ->
+                ContactRepository.getContactSummary(context, id)?.let { summary ->
+                    summary.name?.let { currentName = it }
+                    currentPhotoUri = summary.photoUri
+                }
+            }
+            onContactUpdatedConsumed()
         }
     }
     var showCallHistory by remember { mutableStateOf(false) }
@@ -129,6 +164,15 @@ fun ContactDetailScreen(
     var moreMenuExpanded by remember { mutableStateOf(false) }
     val whatsAppInstalled = remember { WhatsAppUtils.isInstalled(context) }
     val whatsAppIcon = ImageVector.vectorResource(id = R.drawable.ic_whatsapp)
+
+    // Reactive — updates immediately if the number is blocked/unblocked from anywhere (this
+    // screen's own menu, or the Blocking settings screen), not just on first composition.
+    var isNumberBlocked by remember { mutableStateOf(false) }
+    LaunchedEffect(number) {
+        BlockRepository.blockedNumbersFlow(context).collect { entries ->
+            isNumberBlocked = entries.any { normalizeForBlockMatch(it.number) == normalizeForBlockMatch(number) }
+        }
+    }
 
     val ringtonePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -152,6 +196,21 @@ fun ContactDetailScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
+        // Fixed, outside the scrolling content below — matches every other screen's back button
+        // (Blocking/ManageBlockList/ImportExport/RecycleBin/Theme all use this same Row+padding),
+        // instead of scrolling away with the rest of the page.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+        }
         // Everything above the Favorites/Edit/Delete/More bar scrolls in its own weighted
         // Column, so that bar always stays pinned to the bottom of the screen instead of just
         // trailing along after whatever content happens to fit.
@@ -161,22 +220,15 @@ fun ContactDetailScreen(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-        IconButton(onClick = onBack, modifier = Modifier.padding(4.dp)) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onBackground
-            )
-        }
 
         Column(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ContactAvatar(name = name, photoUri = photoUri, size = 96.dp)
+            ContactAvatar(name = currentName, photoUri = currentPhotoUri, size = 96.dp)
             Spacer(modifier = Modifier.size(16.dp))
             Text(
-                text = name,
+                text = currentName,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -300,7 +352,8 @@ fun ContactDetailScreen(
             BottomBarAction(
                 icon = Icons.Filled.Edit,
                 label = "Edit",
-                onClick = { Toast.makeText(context, "Editing coming soon", Toast.LENGTH_SHORT).show() }
+                enabled = resolvedContactId != null,
+                onClick = { resolvedContactId?.let(onEditClick) }
             )
             BottomBarAction(
                 icon = Icons.Filled.Delete,
@@ -320,28 +373,21 @@ fun ContactDetailScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Block") },
+                        text = { Text(if (isNumberBlocked) "Unblock" else "Block") },
                         onClick = {
                             moreMenuExpanded = false
                             coroutineScope.launch {
-                                val blocked = withContext(Dispatchers.IO) {
-                                    if (BlockedNumberContract.canCurrentUserBlockNumbers(context)) {
-                                        val values = ContentValues().apply {
-                                            put(BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER, number)
-                                        }
-                                        context.contentResolver.insert(
-                                            BlockedNumberContract.BlockedNumbers.CONTENT_URI,
-                                            values
-                                        ) != null
-                                    } else {
-                                        false
-                                    }
+                                val success = if (isNumberBlocked) {
+                                    BlockRepository.unblockByNumber(context, number)
+                                } else {
+                                    BlockRepository.blockNumber(context, number)
                                 }
-                                Toast.makeText(
-                                    context,
-                                    if (blocked) "$name blocked" else "Set this app as default phone app to block numbers",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                val message = when {
+                                    success && isNumberBlocked -> "$currentName unblocked"
+                                    success -> "$currentName blocked"
+                                    else -> "Set this app as default phone app to block numbers"
+                                }
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -365,7 +411,7 @@ fun ContactDetailScreen(
                             moreMenuExpanded = false
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, "$name\n$number")
+                                putExtra(Intent.EXTRA_TEXT, "$currentName\n$number")
                             }
                             context.startActivity(Intent.createChooser(intent, "Share contact"))
                         }
@@ -377,7 +423,7 @@ fun ContactDetailScreen(
 
     if (showCallHistory) {
         CallHistoryFullScreen(
-            name = name,
+            name = currentName,
             number = number,
             onBack = { showCallHistory = false }
         )
@@ -387,19 +433,19 @@ fun ContactDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Delete contact?") },
-            text = { Text("$name will be moved to Recycle bin.") },
+            title = { Text("Move to Bin?") },
+            text = { Text("This contact will be removed from all your synced devices.") },
             confirmButton = {
                 TextButton(onClick = {
                     val id = resolvedContactId
                     showDeleteConfirm = false
                     if (id != null) {
                         coroutineScope.launch {
-                            ContactRepository.moveToRecycleBin(context, listOf(Contact(id = id, name = name, number = number, photoUri = photoUri)))
+                            ContactRepository.moveToRecycleBin(context, listOf(Contact(id = id, name = currentName, number = number, photoUri = currentPhotoUri)))
                             onDeleted()
                         }
                     }
-                }) { Text("Delete") }
+                }) { Text("Move to Bin") }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
@@ -414,9 +460,16 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
     val coroutineScope = rememberCoroutineScope()
     var calls by remember { mutableStateOf<List<CallLogItem>>(emptyList()) }
     var showClearDialog by remember { mutableStateOf(false) }
+    var isNumberBlocked by remember { mutableStateOf(false) }
 
     LaunchedEffect(number) {
         calls = CallLogRepository.fetchCallHistoryForNumber(context, number)
+    }
+    // Reactive — same reasoning as the main screen's own "Block"/"Unblock" menu item above.
+    LaunchedEffect(number) {
+        BlockRepository.blockedNumbersFlow(context).collect { entries ->
+            isNumberBlocked = entries.any { normalizeForBlockMatch(it.number) == normalizeForBlockMatch(number) }
+        }
     }
     val grouped = remember(calls) { groupCallsByDate(calls) }
     val listState = rememberLazyListState()
@@ -428,7 +481,7 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
     ) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
@@ -438,13 +491,30 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.weight(1f).padding(start = 4.dp)
-                )
+                Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    if (isNumberBlocked) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Block,
+                                contentDescription = null,
+                                tint = blockedCallColor(),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "Blocked",
+                                color = blockedCallColor(),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+                    }
+                }
                 IconButton(onClick = { showClearDialog = true }, enabled = calls.isNotEmpty()) {
                     Icon(
                         imageVector = Icons.Filled.Delete,
@@ -479,7 +549,7 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
                         }
                         items(callsInGroup, key = { it.id }) { call ->
                             Column {
-                                CallHistoryDetailRow(call)
+                                CallHistoryDetailRow(call, isBlocked = isNumberBlocked)
                                 HorizontalDivider(
                                     modifier = Modifier.padding(start = 68.dp),
                                     thickness = 1.dp,
@@ -632,25 +702,30 @@ private fun BottomBarAction(
 }
 
 @Composable
-private fun CallHistoryDetailRow(call: CallLogItem) {
-    val badgeColor = when (call.type) {
+private fun CallHistoryDetailRow(call: CallLogItem, isBlocked: Boolean = false) {
+    // A number currently on the block list always reads as "Blocked" here, regardless of what
+    // CallLog itself recorded for this specific call — see CallLogRow's identical reasoning.
+    val displayType = if (isBlocked) CallType.BLOCKED else call.type
+    val badgeColor = when (displayType) {
         CallType.INCOMING -> MaterialTheme.colorScheme.primary
         CallType.OUTGOING -> Color(0xFF1DA463)
-        CallType.MISSED, CallType.REJECTED, CallType.BLOCKED -> Color(0xFFE0413B)
+        CallType.MISSED, CallType.REJECTED -> Color(0xFFE0413B)
+        CallType.BLOCKED -> blockedCallColor()
         CallType.OTHER -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val directionIcon = when (call.type) {
+    val directionIcon = when (displayType) {
         CallType.INCOMING -> Icons.Filled.CallReceived
         CallType.OUTGOING -> Icons.Filled.CallMade
-        CallType.MISSED, CallType.REJECTED, CallType.BLOCKED -> Icons.Filled.CallMissed
+        CallType.MISSED, CallType.REJECTED -> Icons.Filled.CallMissed
+        CallType.BLOCKED -> Icons.Filled.Block
         CallType.OTHER -> null
     }
-    val subtitle = when (call.type) {
+    val subtitle = when (displayType) {
         CallType.INCOMING -> listOfNotNull("Incoming", formatCallDuration(call.durationSeconds).ifEmpty { null }).joinToString(" ")
         CallType.OUTGOING -> listOfNotNull("Outgoing", formatCallDuration(call.durationSeconds).ifEmpty { null }).joinToString(" ")
         CallType.MISSED -> "Missed call"
         CallType.REJECTED -> "Declined call"
-        CallType.BLOCKED -> "Blocked call"
+        CallType.BLOCKED -> "Blocked"
         CallType.OTHER -> "Call"
     }
 
@@ -659,7 +734,7 @@ private fun CallHistoryDetailRow(call: CallLogItem) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(34.dp), contentAlignment = Alignment.Center) {
-            if (call.type == CallType.OTHER) {
+            if (displayType == CallType.OTHER) {
                 Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = badgeColor, modifier = Modifier.size(20.dp))
             } else {
                 Icon(
@@ -691,7 +766,7 @@ private fun CallHistoryDetailRow(call: CallLogItem) {
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (displayType == CallType.BLOCKED) badgeColor else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

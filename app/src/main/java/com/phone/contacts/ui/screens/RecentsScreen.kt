@@ -1,7 +1,11 @@
 package com.phone.contacts.ui.screens
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
@@ -10,8 +14,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,22 +42,30 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallMissed
 import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.ViewCompat
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -60,6 +74,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -76,6 +91,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -85,19 +101,24 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.phone.contacts.data.BlockRepository
 import com.phone.contacts.data.CallLogItem
 import com.phone.contacts.data.CallLogRepository
 import com.phone.contacts.data.CallType
+import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.DefaultDialerState
+import com.phone.contacts.util.MessageUtils
+import com.phone.contacts.util.WhatsAppUtils
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
 @Composable
-fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit) {
+fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAddToContact: (String) -> Unit) {
     val context = LocalContext.current
     // Runs synchronously during composition (RoleManager.isRoleHeld is a fast local binder call,
     // not async) so isDefaultDialer below reads the real value on the very first frame — deferring
@@ -142,11 +163,26 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit) {
     }
 
     var allCalls by remember { mutableStateOf<List<CallLogItem>>(emptyList()) }
+    var blockedNumbers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var isLoadingCalls by remember { mutableStateOf(true) }
     var refreshTrigger by remember { mutableStateOf(0) }
+    // Matches the reference app: a call from a number currently sitting in the Recycle Bin is
+    // hidden from Recents (not deleted from the real call log) — restoring the contact brings it
+    // straight back, since this is just a filter applied on every refresh, not a real delete.
     LaunchedEffect(hasCallLogPermission, refreshTrigger) {
-        allCalls = CallLogRepository.fetchCallLogs(context)
+        val binNumbers = ContactRepository.recycleBinFlow(context).first().map { it.number }.toSet()
+        allCalls = CallLogRepository.fetchCallLogs(context).filterNot { it.number in binNumbers }
         isLoadingCalls = false
+    }
+    // Reactive (not tied to refreshTrigger/resume) — a number blocked or unblocked anywhere in the
+    // app (e.g. Contact Detail's "Block" action) updates every matching row here immediately,
+    // without needing to leave and come back to this screen. Matched by normalized digits, not
+    // CallLog's own per-call BLOCKED_TYPE — many OEMs never set it, and a call logged before the
+    // number was blocked never has it either.
+    LaunchedEffect(Unit) {
+        BlockRepository.blockedNumbersFlow(context).collect { entries ->
+            blockedNumbers = entries.map { normalizeForBlockMatch(it.number) }.toSet()
+        }
     }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -252,6 +288,25 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit) {
             var filterRowHeightPx by remember { mutableStateOf(0) }
             val density = LocalDensity.current
             val headerHeight = with(density) { (searchFieldHeightPx + filterRowHeightPx).toDp() }
+            // How much of the search field + filter row has scrolled past, in px — matches the
+            // reference app's collapsing-header behavior, where the current-date pill slides up
+            // together with the header as it scrolls away, then sticks right below the fixed title
+            // bar once fully scrolled past, instead of staying pinned at the header's unscrolled
+            // height (which would float in empty space above the list once scrolled).
+            val headerScrolledPx by remember {
+                derivedStateOf {
+                    val idx = listState.firstVisibleItemIndex
+                    val offset = listState.firstVisibleItemScrollOffset
+                    when {
+                        idx <= 0 -> offset
+                        idx == 1 -> searchFieldHeightPx + offset
+                        else -> searchFieldHeightPx + filterRowHeightPx
+                    }.coerceAtMost(searchFieldHeightPx + filterRowHeightPx)
+                }
+            }
+            val pillTopPadding = with(density) {
+                (searchFieldHeightPx + filterRowHeightPx - headerScrolledPx).coerceAtLeast(0).toDp()
+            } + 8.dp
             // How far down the list is scrolled, as a 0..1 fraction — drives the date thumb's
             // vertical position on the right edge when the user isn't dragging it.
             val scrollFraction by remember {
@@ -319,8 +374,11 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit) {
                                 // )
                                 CallLogRow(
                                     call = call,
+                                    isBlocked = normalizeForBlockMatch(call.number) in blockedNumbers,
                                     onClick = { CallUtils.placeCall(context, call.number) },
-                                    onInfoClick = { onContactClick(call.name, call.number) }
+                                    onInfoClick = { onContactClick(call.name, call.number) },
+                                    onDeleted = { refreshTrigger++ },
+                                    onAddToContact = { onAddToContact(call.number) }
                                 )
                                 HorizontalDivider(
                                     modifier = Modifier.padding(start = 74.dp),
@@ -473,7 +531,7 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit) {
                         tonalElevation = 2.dp,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .padding(top = headerHeight + 8.dp)
+                            .padding(top = pillTopPadding)
                             .alpha(pillAlpha)
                     ) {
                         Text(
@@ -644,6 +702,18 @@ private fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** Distinct from Missed/Declined's shared red — a blocked call never even rang, so it gets its
+ * own color instead of blending into "you missed something" red. Red in light mode; a lighter
+ * pink in dark mode, since a dark red is too close to the dark background to actually read.
+ * Same shades ContactDetailScreen uses for the same call type, in its own call-history rows. */
+@Composable
+private fun blockedCallColor(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFF6B9D) else Color(0xFFD32F2F)
+
+/** Last-10-digits comparison — CallLog's own NUMBER and BlockedNumberContract's stored number can
+ * differ in formatting (spaces, +country code) for what's really the same number. */
+private fun normalizeForBlockMatch(number: String): String = number.filter { it.isDigit() }.takeLast(10)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableCallLogRow(
@@ -688,35 +758,51 @@ private fun SwipeableCallLogRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CallLogRow(
     call: CallLogItem,
+    isBlocked: Boolean = false,
     onClick: () -> Unit,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    onDeleted: () -> Unit = {},
+    onAddToContact: () -> Unit = {}
 ) {
-    val badgeColor = when (call.type) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    // A number currently on the block list always reads as "Blocked" here, regardless of what
+    // CallLog itself recorded for this specific call — many OEMs never set BLOCKED_TYPE, and a
+    // call logged before the number was blocked never has it either.
+    val displayType = if (isBlocked) CallType.BLOCKED else call.type
+    val badgeColor = when (displayType) {
         CallType.INCOMING -> MaterialTheme.colorScheme.primary
         CallType.OUTGOING -> Color(0xFF1DA463)
-        CallType.MISSED, CallType.REJECTED, CallType.BLOCKED -> Color(0xFFE0413B)
+        CallType.MISSED, CallType.REJECTED -> Color(0xFFE0413B)
+        CallType.BLOCKED -> blockedCallColor()
         CallType.OTHER -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val directionIcon = when (call.type) {
+    val directionIcon = when (displayType) {
         CallType.INCOMING -> Icons.Filled.CallReceived
         CallType.OUTGOING -> Icons.Filled.CallMade
-        CallType.MISSED, CallType.REJECTED, CallType.BLOCKED -> Icons.Filled.CallMissed
+        CallType.MISSED, CallType.REJECTED -> Icons.Filled.CallMissed
+        CallType.BLOCKED -> Icons.Filled.Block
         CallType.OTHER -> null
     }
 
+    Box {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = { showMenu = true })
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-            if (call.type == CallType.OTHER) {
+            if (displayType == CallType.OTHER) {
                 Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = badgeColor, modifier = Modifier.size(22.dp))
             } else {
                 // Phone icon as the base — neutral color, like the reference app — with the
@@ -748,13 +834,13 @@ private fun CallLogRow(
                     append(call.name ?: call.number)
                     if (call.callCount > 1) append(" (${call.callCount})")
                 },
-                color = if (call.type == CallType.MISSED) badgeColor else MaterialTheme.colorScheme.onBackground,
+                color = if (displayType == CallType.MISSED) badgeColor else MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = formatTime(call.timestamp),
+                text = if (displayType == CallType.BLOCKED) "Blocked" else formatTime(call.timestamp),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (displayType == CallType.BLOCKED) badgeColor else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -767,6 +853,101 @@ private fun CallLogRow(
         ) {
             Text(text = "i", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
         }
+    }
+
+    // A dedicated zero-size anchor pinned to the row's right edge — DropdownMenu's own `modifier`
+    // parameter applies to its popup content, not to where it anchors, so aligning it directly
+    // didn't move the menu; wrapping it in a normal Box that itself respects `.align()` does.
+    Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+    DropdownMenu(
+        expanded = showMenu,
+        onDismissRequest = { showMenu = false },
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Text(
+            text = call.number,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+        // Only for numbers that aren't already a saved contact — CACHED_NAME is null/absent for
+        // those, matching the reference app's own "Add to contact" being unknown-number-only.
+        if (call.name == null) {
+            DropdownMenuItem(
+                text = { Text("Add to contact") },
+                leadingIcon = { Icon(Icons.Filled.PersonAdd, contentDescription = null) },
+                onClick = {
+                    showMenu = false
+                    onAddToContact()
+                }
+            )
+        }
+        DropdownMenuItem(
+            text = { Text("Copy number") },
+            leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+            onClick = {
+                showMenu = false
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Phone number", call.number))
+                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+        )
+        DropdownMenuItem(
+            text = { Text("Call") },
+            leadingIcon = { Icon(Icons.Filled.Call, contentDescription = null) },
+            onClick = {
+                showMenu = false
+                CallUtils.placeCall(context, call.number)
+            }
+        )
+        DropdownMenuItem(
+            text = { Text("Message") },
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
+            onClick = {
+                showMenu = false
+                MessageUtils.sendMessage(context, call.number)
+            }
+        )
+        DropdownMenuItem(
+            text = { Text("Delete") },
+            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+            onClick = {
+                showMenu = false
+                showDeleteConfirm = true
+            }
+        )
+        DropdownMenuItem(
+            text = { Text("Video call") },
+            leadingIcon = { Icon(Icons.Filled.Videocam, contentDescription = null) },
+            onClick = {
+                showMenu = false
+                WhatsAppUtils.openChat(context, call.number)
+            }
+        )
+    }
+    }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            title = { Text("Clear Call History") },
+            text = { Text("Clear all ${call.number}'s history?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    coroutineScope.launch {
+                        CallLogRepository.deleteAllForNumber(context, call.number)
+                        onDeleted()
+                    }
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
