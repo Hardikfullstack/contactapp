@@ -72,7 +72,8 @@ fun SettingsScreen(
     onRecycleBinClick: () -> Unit,
     onImportExportClick: () -> Unit,
     onThemeClick: () -> Unit,
-    onBlockingClick: () -> Unit
+    onBlockingClick: () -> Unit,
+    onCallButtonStylesClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -135,7 +136,7 @@ fun SettingsScreen(
                     icon = Icons.Filled.TouchApp,
                     iconBackgroundColor = Color(0xFFFF9800),
                     title = "Call button styles",
-                    enabled = false
+                    onClick = onCallButtonStylesClick
                 )
                 SettingsDivider()
                 SettingsRow(

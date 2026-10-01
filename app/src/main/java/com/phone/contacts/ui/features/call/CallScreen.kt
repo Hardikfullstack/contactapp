@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -100,7 +101,9 @@ fun CallScreen(
     onAnswerSecondary: () -> Unit = {},
     onRejectSecondary: () -> Unit = {},
     onSwap: () -> Unit = {},
-    onMerge: () -> Unit = {}
+    onMerge: () -> Unit = {},
+    callButtonStyle: CallButtonStyle = CallButtonStyle.SLIDER,
+    swapCallButtons: Boolean = false
 ) {
     val context = LocalContext.current
     var contact by remember(number) { mutableStateOf<Contact?>(null) }
@@ -238,23 +241,62 @@ fun CallScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             if (isRinging) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 32.dp, vertical = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    SlideToAnswer(onAnswer = onAnswer)
-                    Spacer(modifier = Modifier.size(20.dp))
-                    Text(
-                        text = "Decline",
-                        color = Color(0xFFFF6B6B),
-                        fontWeight = FontWeight.Medium,
+                if (callButtonStyle.isSlider) {
+                    Column(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable(onClick = onDecline)
-                            .padding(horizontal = 20.dp, vertical = 10.dp)
-                    )
+                            .fillMaxWidth()
+                            .padding(start = 32.dp, end = 32.dp, top = 32.dp, bottom = 56.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        SlideToAnswer(onAnswer = onAnswer)
+                        Spacer(modifier = Modifier.size(20.dp))
+                        Text(
+                            text = "Decline",
+                            color = Color(0xFFFF6B6B),
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable(onClick = onDecline)
+                                .padding(horizontal = 20.dp, vertical = 10.dp)
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 48.dp, end = 48.dp, top = 32.dp, bottom = 56.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        val declineButton = @Composable {
+                            callButtonStyle.decline?.let { face ->
+                                IncomingCallButton(
+                                    face = face,
+                                    icon = Icons.Filled.CallEnd,
+                                    contentDescription = "Decline",
+                                    enableSwipeGesture = callButtonStyle.hasSwipeGesture,
+                                    onClick = onDecline
+                                )
+                            }
+                        }
+                        val acceptButton = @Composable {
+                            callButtonStyle.accept?.let { face ->
+                                IncomingCallButton(
+                                    face = face,
+                                    icon = Icons.Filled.Call,
+                                    contentDescription = "Answer",
+                                    enableSwipeGesture = callButtonStyle.hasSwipeGesture,
+                                    onClick = onAnswer
+                                )
+                            }
+                        }
+                        if (swapCallButtons) {
+                            acceptButton()
+                            declineButton()
+                        } else {
+                            declineButton()
+                            acceptButton()
+                        }
+                    }
                 }
             } else {
                 val hasBluetoothRoute = (audioState?.supportedRouteMask ?: 0) and CallAudioState.ROUTE_BLUETOOTH != 0
@@ -268,7 +310,7 @@ fun CallScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 28.dp)
                         .clip(RoundedCornerShape(32.dp))
                         .background(
                             Brush.verticalGradient(
@@ -419,11 +461,87 @@ private fun CallControlButton(
     }
 }
 
+/** One accept/decline circle for the non-slider [CallButtonStyle]s — solid color when
+ * [ButtonFace.background] has one entry, a top-to-bottom gradient when it has two, matching how
+ * the reference app's own icon assets are built. When [enableSwipeGesture] is true (only
+ * [CallButtonStyle.STYLE_6]), it also shows the animated up-chevron hint and lets dragging it up
+ * past ~40% of [maxTravel] trigger [onClick], matching the reference app's own drag-to-answer
+ * touch handling for that one style. Every other style is plain tap-only, no chevron. */
+@Composable
+internal fun IncomingCallButton(
+    face: ButtonFace,
+    icon: ImageVector,
+    contentDescription: String,
+    enableSwipeGesture: Boolean,
+    onClick: () -> Unit
+) {
+    val brush = if (face.background.size > 1) {
+        Brush.verticalGradient(face.background)
+    } else {
+        Brush.verticalGradient(listOf(face.background[0], face.background[0]))
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (enableSwipeGesture) {
+            SwipeUpChevrons(color = face.background.last())
+            Spacer(modifier = Modifier.size(4.dp))
+            val maxTravel = with(LocalDensity.current) { 80.dp.toPx() }
+            val offsetY = remember { Animatable(0f) }
+            val scope = rememberCoroutineScope()
+            var triggered by remember { mutableStateOf(false) }
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(0, offsetY.value.toInt()) }
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(brush)
+                    .pointerInput(triggered) {
+                        if (triggered) return@pointerInput
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                scope.launch {
+                                    if (offsetY.value <= -maxTravel * 0.4f) {
+                                        triggered = true
+                                        onClick()
+                                    } else {
+                                        offsetY.animateTo(0f)
+                                    }
+                                }
+                            },
+                            onDragCancel = { scope.launch { offsetY.animateTo(0f) } },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                scope.launch {
+                                    offsetY.snapTo((offsetY.value + dragAmount).coerceIn(-maxTravel, 0f))
+                                }
+                            }
+                        )
+                    }
+                    .clickable(onClick = onClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = contentDescription, tint = face.iconColor, modifier = Modifier.size(28.dp))
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(brush)
+                    .clickable(onClick = onClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = contentDescription, tint = face.iconColor, modifier = Modifier.size(28.dp))
+            }
+        }
+    }
+}
+
 /** A single horizontal slide track — dragging the thumb past ~75% of the track width answers the
  * call, matching the reference app's own "Slide to answer" (rather than contactapp's dual
  * swipe-up-button pattern). Releasing before the threshold springs the thumb back to the start. */
 @Composable
-private fun SlideToAnswer(onAnswer: () -> Unit) {
+internal fun SlideToAnswer(onAnswer: () -> Unit) {
     val thumbSizeDp = 56.dp
     val thumbSizePx = with(LocalDensity.current) { thumbSizeDp.toPx() }
     var trackWidthPx by remember { mutableFloatStateOf(0f) }

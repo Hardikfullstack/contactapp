@@ -1,9 +1,16 @@
 package com.phone.contacts.ui.screens
 
+import android.app.Activity
 import android.app.DatePickerDialog
 import android.net.Uri
+import android.view.ContextThemeWrapper
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import com.phone.contacts.R
+import com.yalantis.ucrop.UCrop
+import java.io.File
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -39,6 +46,7 @@ import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -49,6 +57,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,9 +91,17 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+// Matches Color.kt's BrandPrimary (0xFF0E51E3) — duplicated as a plain Int here since the uCrop
+// screen is a classic Activity/View, not Compose, so it can't read the MaterialTheme color scheme.
+private const val BRAND_PRIMARY_ARGB = 0xFF0E51E3.toInt()
+
 private val PHONE_TYPES = listOf("Mobile", "Home", "Work", "Other", "Custom")
 private val GENERIC_TYPES = listOf("Home", "Work", "Other", "Custom")
 private val DATE_TYPES = listOf("Birthday", "Anniversary", "Other", "Custom")
+private val RELATION_TYPES = listOf(
+    "Assistant", "Brother", "Child", "Domestic Partner", "Father", "Friend", "Manager", "Mother",
+    "Parent", "Partner", "Referred by", "Relative", "Sister", "Spouse", "Custom"
+)
 
 /** Common shape for every entry-list item below, so a single generic [replaceWith] can update any
  * of them — separate non-generic overloads per concrete type all erase to the same JVM signature
@@ -110,10 +127,6 @@ private data class DateEntryState(
     val customLabel: String = ""
 ) : HasId
 
-/** A plain (untyped) multi-value entry — used for Relation, which has no Home/Work/Other picker
- * in the reference app. */
-private data class MultiEntry(override val id: Long, val value: String) : HasId
-
 @Composable
 fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "", editContactId: String? = null) {
     val context = LocalContext.current
@@ -124,8 +137,44 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
     // The contact's photo as it already exists, before any new pick — shown as the preview until
     // (and unless) the user picks a replacement, which is what [photoUri] then holds instead.
     var existingPhotoUri by remember { mutableStateOf<String?>(null) }
-    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) photoUri = uri
+    // Square crop + circular dimmed overlay — matches the reference app's own contact-photo crop
+    // step (com.isseiaoki.simplecropview's CIRCLE_SQUARE mode), instead of leaving cropping to
+    // whatever the device's gallery app happens to show (a generic rectangular grid, or nothing).
+    val cropLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.let { UCrop.getOutput(it) }?.let { photoUri = it }
+        }
+    }
+    // PickVisualMedia (the system Photo Picker), not GetContent — matches the reference app's own
+    // AddContactActivity. GetContent()'s returned Uri only grants read access scoped to the exact
+    // call that received it, so handing it to a separate Activity (UCropActivity) to open threw a
+    // SecurityException there and crashed. The Photo Picker's Uris don't have that restriction.
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            val destDir = File(context.cacheDir, "cropped_photos").apply { mkdirs() }
+            val destFile = File(destDir, "contact_photo_${System.currentTimeMillis()}.jpg")
+            val destUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", destFile)
+            val cropIntent = UCrop.of(uri, destUri)
+                .withAspectRatio(1f, 1f)
+                .withOptions(
+                    UCrop.Options().apply {
+                        setCircleDimmedLayer(true)
+                        setShowCropFrame(false)
+                        setShowCropGrid(false)
+                        setToolbarTitle("Crop photo")
+                        setToolbarColor(android.graphics.Color.BLACK)
+                        // 2.2.11 dropped setStatusBarColor(int) in favor of this edge-to-edge
+                        // light/dark toggle — false keeps light (white) status bar icons, matching
+                        // the black toolbar/background here.
+                        setStatusBarLight(false)
+                        setToolbarWidgetColor(android.graphics.Color.WHITE)
+                        setActiveControlsWidgetColor(BRAND_PRIMARY_ARGB)
+                        setRootViewBackgroundColor(android.graphics.Color.BLACK)
+                    }
+                )
+                .getIntent(context)
+            cropLauncher.launch(cropIntent)
+        }
     }
 
     // Defaults collapsed (single "Name" field) for both a fresh Add and an Edit prefill — matches
@@ -148,7 +197,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
     val websites = remember { mutableStateListOf<TypedEntry>() }
     val addresses = remember { mutableStateListOf<AddressEntryState>() }
     val importantDates = remember { mutableStateListOf<DateEntryState>() }
-    val relations = remember { mutableStateListOf<MultiEntry>() }
+    val relations = remember { mutableStateListOf<TypedEntry>() }
 
     var workExpanded by remember { mutableStateOf(false) }
     var jobTitle by remember { mutableStateOf("") }
@@ -183,7 +232,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
         importantDates.clear()
         importantDates.addAll(existing.importantDates.map { DateEntryState(newId(), it.type, it.dateMillis, it.customLabel) })
         relations.clear()
-        relations.addAll(existing.relations.map { MultiEntry(newId(), it) })
+        relations.addAll(existing.relations.map { TypedEntry(newId(), it.value, it.type, it.customLabel) })
         workExpanded = existing.workExpanded
         jobTitle = existing.jobTitle
         department = existing.department
@@ -245,7 +294,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                                 entry.dateMillis?.let { DateValue(entry.type, it, entry.customLabel) }
                             },
                             websites = websites.map { TypedValue(it.value, it.type, it.customLabel) },
-                            relations = relations.map { it.value },
+                            relations = relations.map { TypedValue(it.value, it.type, it.customLabel) },
                             workExpanded = workExpanded,
                             jobTitle = jobTitle,
                             department = department,
@@ -288,7 +337,9 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                             .size(96.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                            .clickable { photoPicker.launch("image/*") },
+                            .clickable {
+                                photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         val previewPhoto = photoUri ?: existingPhotoUri
@@ -317,7 +368,9 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                         fontSize = 17.sp,
                         modifier = Modifier
                             .padding(top = 12.dp)
-                            .clickable { photoPicker.launch("image/*") }
+                            .clickable {
+                                photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }
                     )
                 }
             }
@@ -453,13 +506,16 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                     emptyLabel = "Relation",
                     addMoreLabel = "Add Relation",
                     entries = relations,
-                    onAdd = { relations.add(MultiEntry(newId(), "")) }
+                    onAdd = { relations.add(TypedEntry(newId(), "", "Assistant")) }
                 ) { entry ->
-                    PlainEntryRow(
+                    TypedEntryRow(
                         icon = Icons.Outlined.FavoriteBorder,
-                        valueHint = "Relation",
-                        value = entry.value,
+                        valueHint = "Person name",
+                        entry = entry,
+                        typeOptions = RELATION_TYPES,
                         onValueChange = { relations.replaceWith(entry.id) { e -> e.copy(value = it) } },
+                        onTypeChange = { relations.replaceWith(entry.id) { e -> e.copy(type = it) } },
+                        onCustomLabelChange = { relations.replaceWith(entry.id) { e -> e.copy(customLabel = it) } },
                         onRemove = { relations.removeAll { it.id == entry.id } }
                     )
                 }
@@ -519,8 +575,9 @@ private fun RemoveButton(onClick: () -> Unit) {
 }
 
 /** The type picker shown on every typed entry — a "Home ▾" label that opens a dropdown of
- * [options]. Selecting "Custom" (matching the reference app's own picker) swaps the label for an
- * inline editable text field with a pencil icon, since "Custom" has no fixed name of its own. */
+ * [options]. Selecting "Custom" (matching the reference app's own picker) opens a "Rename custom
+ * field" dialog to name it, rather than editing inline — re-selecting "Custom" on an
+ * already-custom field reopens that same dialog, pre-filled, to rename it. */
 @Composable
 private fun TypeLabel(
     type: String,
@@ -530,57 +587,24 @@ private fun TypeLabel(
     onCustomLabelChange: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
     Box {
-        if (type == "Custom") {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.weight(1f, fill = false)) {
-                    if (customLabel.isEmpty()) {
-                        Text(
-                            text = "Custom",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    BasicTextField(
-                        value = customLabel,
-                        onValueChange = onCustomLabelChange,
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        ),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
-                    )
-                }
-                IconButton(onClick = { expanded = true }, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = "Change type",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        } else {
-            Row(
-                modifier = Modifier.clickable { expanded = true },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = type,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Icon(
-                    imageVector = Icons.Filled.ArrowDropDown,
-                    contentDescription = "Change type",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
+        Row(
+            modifier = Modifier.clickable { expanded = true },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (type == "Custom") customLabel.ifBlank { "Custom" } else type,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Icon(
+                imageVector = Icons.Filled.ArrowDropDown,
+                contentDescription = "Change type",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
         }
         DropdownMenu(
             expanded = expanded,
@@ -595,12 +619,60 @@ private fun TypeLabel(
                     } else null,
                     onClick = {
                         expanded = false
-                        onTypeChange(option)
+                        if (option == "Custom") showRenameDialog = true else onTypeChange(option)
                     }
                 )
             }
         }
     }
+    if (showRenameDialog) {
+        RenameCustomFieldDialog(
+            initialLabel = if (type == "Custom") customLabel else "",
+            onDismiss = { showRenameDialog = false },
+            onRename = { label ->
+                showRenameDialog = false
+                onTypeChange("Custom")
+                onCustomLabelChange(label)
+            }
+        )
+    }
+}
+
+/** Matches the reference app's own modal for naming a "Custom" type — a dialog, not inline
+ * editing, for every typed field (phone/email/website/date/relation type). */
+@Composable
+private fun RenameCustomFieldDialog(
+    initialLabel: String,
+    onDismiss: () -> Unit,
+    onRename: (String) -> Unit
+) {
+    var label by remember { mutableStateOf(initialLabel) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        title = { Text("Rename custom field") },
+        text = {
+            Column {
+                BasicTextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    singleLine = true,
+                    textStyle = TextStyle(fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                )
+                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onRename(label) }) { Text("Rename") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -648,9 +720,7 @@ private fun ExpandableNameSection(
             }
             IconButton(
                 onClick = onExpandToggle,
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .size(24.dp)
+                modifier = Modifier.size(24.dp)
             ) {
                 Icon(
                     imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
@@ -707,9 +777,7 @@ private fun ExpandableWorkSection(
             }
             IconButton(
                 onClick = onExpandToggle,
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .size(24.dp)
+                modifier = Modifier.size(24.dp)
             ) {
                 Icon(
                     imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
@@ -812,29 +880,6 @@ private fun TypedEntryRow(
     }
 }
 
-/** Relation's row — same shape as [TypedEntryRow] but without a type picker, since the reference
- * app's Add Contact screen has no Home/Work/Other choice for Relation. */
-@Composable
-private fun PlainEntryRow(
-    icon: ImageVector,
-    valueHint: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    onRemove: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        FieldIcon(icon = icon, active = true)
-        Spacer(modifier = Modifier.size(14.dp))
-        PlainInlineField(placeholder = valueHint, value = value, onValueChange = onValueChange, modifier = Modifier.weight(1f))
-        RemoveButton(onClick = onRemove)
-    }
-}
-
 /** Address's row — the reference app splits an address into five structured fields (Street/
  * City/State/Postcode/Country) rather than one free-text line. */
 @Composable
@@ -903,8 +948,13 @@ private fun DateEntryRow(
                 .padding(start = 36.dp, top = 4.dp, bottom = 4.dp)
                 .clickable {
                     val cal = Calendar.getInstance().apply { entry.dateMillis?.let { timeInMillis = it } }
+                    // Always the light-styled picker — the header/body background always matches
+                    // light mode regardless of the app's own theme (see Theme.Contacts.DatePicker's
+                    // doc in themes.xml); the classic DatePickerDialog otherwise reads its style
+                    // from the Activity's own Theme.Contacts, not this app's in-app theme toggle.
+                    val themedContext = ContextThemeWrapper(context, R.style.Theme_Contacts_DatePicker_Light)
                     DatePickerDialog(
-                        context,
+                        themedContext,
                         { _, year, month, day ->
                             val picked = Calendar.getInstance().apply { set(year, month, day, 0, 0, 0) }.timeInMillis
                             onDateChange(picked)

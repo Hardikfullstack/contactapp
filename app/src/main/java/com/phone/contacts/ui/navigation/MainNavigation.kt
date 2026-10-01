@@ -45,6 +45,7 @@ import com.phone.contacts.ui.components.CommonBottomBar
 import com.phone.contacts.ui.features.onboarding.LanguageSelectionScreen
 import com.phone.contacts.ui.screens.AddContactScreen
 import com.phone.contacts.ui.screens.BlockingScreen
+import com.phone.contacts.ui.screens.CallButtonStylesScreen
 import com.phone.contacts.ui.screens.ContactDetailScreen
 import com.phone.contacts.ui.screens.ContactsScreen
 import com.phone.contacts.ui.screens.FavoritesScreen
@@ -72,6 +73,7 @@ sealed class MainScreen(
     object RecycleBin : MainScreen("recycle_bin")
     object ImportExport : MainScreen("import_export")
     object Theme : MainScreen("theme_settings")
+    object CallButtonStyles : MainScreen("call_button_styles")
     object Blocking : MainScreen("blocking")
     object ManageBlockList : MainScreen("manage_block_list")
     object AddContact : MainScreen("add_contact?phone={phone}&editId={editId}") {
@@ -262,7 +264,8 @@ fun MainNavigation() {
                     onRecycleBinClick = { navController.navigate(MainScreen.RecycleBin.route) },
                     onImportExportClick = { navController.navigate(MainScreen.ImportExport.route) },
                     onThemeClick = { navController.navigate(MainScreen.Theme.route) },
-                    onBlockingClick = { navController.navigate(MainScreen.Blocking.route) }
+                    onBlockingClick = { navController.navigate(MainScreen.Blocking.route) },
+                    onCallButtonStylesClick = { navController.navigate(MainScreen.CallButtonStyles.route) }
                 )
             }
             composable(MainScreen.Language.route) {
@@ -279,6 +282,9 @@ fun MainNavigation() {
             }
             composable(MainScreen.Theme.route) {
                 ThemeScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.CallButtonStyles.route) {
+                CallButtonStylesScreen(onBack = { navController.popBackStack() })
             }
             composable(MainScreen.Blocking.route) {
                 BlockingScreen(

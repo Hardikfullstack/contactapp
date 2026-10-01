@@ -85,6 +85,12 @@
             android:showOnLockScreen="true"
             android:theme="@style/Theme.Contacts" />
 
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Contacts.Crop" />
+
         <service
             android:name=".service.ContactsCallService"
             android:exported="true"

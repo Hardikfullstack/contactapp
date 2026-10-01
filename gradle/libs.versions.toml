@@ -13,6 +13,8 @@ appcompat = "1.7.1"
 coil = "2.7.0"
 ksp = "2.0.21-1.0.28"
 room = "2.8.4"
+ucrop = "2.2.11"
+transition = "1.7.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,6 +38,8 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+ucrop = { group = "com.github.yalantis", name = "ucrop", version.ref = "ucrop" }
+androidx-transition = { group = "androidx.transition", name = "transition", version.ref = "transition" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

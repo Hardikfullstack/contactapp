@@ -41,8 +41,8 @@ data class DateValue(val type: String, val dateMillis: Long, val customLabel: St
 
 /** Everything the Add Contact screen can collect, matching the reference app's field set:
  * structured-or-plain name, any number of typed phones/emails/websites, structured addresses,
- * important dates, free-text relations, an optional structured work info, notes, and an optional
- * picked photo. */
+ * important dates, typed relations (person name + a relation-kind picker), an optional structured
+ * work info, notes, and an optional picked photo. */
 data class NewContactInput(
     val nameExpanded: Boolean,
     val singleName: String,
@@ -54,7 +54,7 @@ data class NewContactInput(
     val addresses: List<AddressValue>,
     val importantDates: List<DateValue>,
     val websites: List<TypedValue>,
-    val relations: List<String>,
+    val relations: List<TypedValue>,
     val workExpanded: Boolean,
     val jobTitle: String,
     val department: String,
@@ -93,7 +93,7 @@ data class FullContactData(
     val addresses: List<AddressValue>,
     val importantDates: List<DateValue>,
     val websites: List<TypedValue>,
-    val relations: List<String>,
+    val relations: List<TypedValue>,
     val workExpanded: Boolean,
     val jobTitle: String,
     val department: String,
@@ -155,6 +155,27 @@ private fun eventTypeLabel(type: Int, label: String): Pair<String, String> = whe
     else -> "Other" to ""
 }
 
+/** Relation has no TYPE_OTHER fallback (unlike Phone/Email/Website/Event) — every non-custom
+ * value is one of these named constants, matching the reference app's own full relation-type list. */
+private fun relationTypeLabel(type: Int, label: String): Pair<String, String> = when (type) {
+    ContactsContract.CommonDataKinds.Relation.TYPE_ASSISTANT -> "Assistant" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_BROTHER -> "Brother" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_CHILD -> "Child" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_DOMESTIC_PARTNER -> "Domestic Partner" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_FATHER -> "Father" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_FRIEND -> "Friend" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_MANAGER -> "Manager" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_MOTHER -> "Mother" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_PARENT -> "Parent" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_PARTNER -> "Partner" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_REFERRED_BY -> "Referred by" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_RELATIVE -> "Relative" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_SISTER -> "Sister" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_SPOUSE -> "Spouse" to ""
+    ContactsContract.CommonDataKinds.Relation.TYPE_CUSTOM -> "Custom" to label
+    else -> "Assistant" to ""
+}
+
 private fun phoneTypeConstant(type: String): Int = when (type) {
     "Mobile" -> ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE
     "Home" -> ContactsContract.CommonDataKinds.Phone.TYPE_HOME
@@ -184,6 +205,24 @@ private fun eventTypeConstant(type: String): Int = when (type) {
     "Birthday" -> ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY
     "Anniversary" -> ContactsContract.CommonDataKinds.Event.TYPE_ANNIVERSARY
     else -> ContactsContract.CommonDataKinds.Event.TYPE_OTHER
+}
+
+private fun relationTypeConstant(type: String): Int = when (type) {
+    "Assistant" -> ContactsContract.CommonDataKinds.Relation.TYPE_ASSISTANT
+    "Brother" -> ContactsContract.CommonDataKinds.Relation.TYPE_BROTHER
+    "Child" -> ContactsContract.CommonDataKinds.Relation.TYPE_CHILD
+    "Domestic Partner" -> ContactsContract.CommonDataKinds.Relation.TYPE_DOMESTIC_PARTNER
+    "Father" -> ContactsContract.CommonDataKinds.Relation.TYPE_FATHER
+    "Friend" -> ContactsContract.CommonDataKinds.Relation.TYPE_FRIEND
+    "Manager" -> ContactsContract.CommonDataKinds.Relation.TYPE_MANAGER
+    "Mother" -> ContactsContract.CommonDataKinds.Relation.TYPE_MOTHER
+    "Parent" -> ContactsContract.CommonDataKinds.Relation.TYPE_PARENT
+    "Partner" -> ContactsContract.CommonDataKinds.Relation.TYPE_PARTNER
+    "Referred by" -> ContactsContract.CommonDataKinds.Relation.TYPE_REFERRED_BY
+    "Relative" -> ContactsContract.CommonDataKinds.Relation.TYPE_RELATIVE
+    "Sister" -> ContactsContract.CommonDataKinds.Relation.TYPE_SISTER
+    "Spouse" -> ContactsContract.CommonDataKinds.Relation.TYPE_SPOUSE
+    else -> ContactsContract.CommonDataKinds.Relation.TYPE_ASSISTANT
 }
 
 /** [ContactsContract.CommonDataKinds.Event.START_DATE] must be "yyyy-MM-dd" for the system
@@ -439,18 +478,16 @@ object ContactRepository {
                 )
             ops.add(websiteOp.build())
         }
-        input.relations.filter { it.isNotBlank() }.forEach { relation ->
-            ops.add(
-                ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                    .attachRawContact()
-                    .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Relation.CONTENT_ITEM_TYPE)
-                    .withValue(ContactsContract.CommonDataKinds.Relation.NAME, relation)
-                    // Relation has no TYPE_OTHER (unlike Event/Website) — TYPE_CUSTOM is its only
-                    // generic type, and it requires a LABEL alongside it.
-                    .withValue(ContactsContract.CommonDataKinds.Relation.TYPE, ContactsContract.CommonDataKinds.Relation.TYPE_CUSTOM)
-                    .withValue(ContactsContract.CommonDataKinds.Relation.LABEL, "Relation")
-                    .build()
-            )
+        input.relations.filter { it.value.isNotBlank() }.forEach { relation ->
+            val relationOp = ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                .attachRawContact()
+                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Relation.CONTENT_ITEM_TYPE)
+                .withValue(ContactsContract.CommonDataKinds.Relation.NAME, relation.value)
+                .applyType(
+                    ContactsContract.CommonDataKinds.Relation.TYPE, ContactsContract.CommonDataKinds.Relation.LABEL,
+                    relation.type, relation.customLabel, ContactsContract.CommonDataKinds.Relation.TYPE_CUSTOM, ::relationTypeConstant
+                )
+            ops.add(relationOp.build())
         }
         if (input.workExpanded && (input.jobTitle.isNotBlank() || input.department.isNotBlank() || input.company.isNotBlank())) {
             val orgOp = ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
@@ -502,7 +539,7 @@ object ContactRepository {
         val addresses = mutableListOf<AddressValue>()
         val dates = mutableListOf<DateValue>()
         val websites = mutableListOf<TypedValue>()
-        val relations = mutableListOf<String>()
+        val relations = mutableListOf<TypedValue>()
         var jobTitle = ""
         var department = ""
         var company = ""
@@ -583,7 +620,13 @@ object ContactRepository {
                     }
                     ContactsContract.CommonDataKinds.Relation.CONTENT_ITEM_TYPE -> {
                         val relationName = cursor.stringOf(ContactsContract.CommonDataKinds.Relation.NAME)
-                        if (relationName.isNotBlank()) relations.add(relationName)
+                        if (relationName.isNotBlank()) {
+                            val (typeLabel, customLabel) = relationTypeLabel(
+                                cursor.intOf(ContactsContract.CommonDataKinds.Relation.TYPE),
+                                cursor.stringOf(ContactsContract.CommonDataKinds.Relation.LABEL)
+                            )
+                            relations.add(TypedValue(relationName, typeLabel, customLabel))
+                        }
                     }
                     ContactsContract.CommonDataKinds.Organization.CONTENT_ITEM_TYPE -> {
                         company = cursor.stringOf(ContactsContract.CommonDataKinds.Organization.COMPANY)

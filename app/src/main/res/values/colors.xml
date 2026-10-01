@@ -7,4 +7,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Matches Compose's BrandPrimary (ui/theme/Color.kt) — used by uCrop's active-controls tint
+         and the classic date-picker dialog theme, neither of which can read the Compose color
+         scheme. -->
+    <color name="brand_primary">#FF0E51E3</color>
 </resources>

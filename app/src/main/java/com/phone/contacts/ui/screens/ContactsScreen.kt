@@ -580,13 +580,21 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                     if (showLetterIndex) {
                         var isDragging by remember { mutableStateOf(false) }
                         var dragFraction by remember { mutableStateOf(0f) }
+                        var dragTargetIndex by remember { mutableStateOf<Int?>(null) }
 
-                        fun jumpTo(fraction: Float) {
-                            dragFraction = fraction
+                        fun indexForFraction(fraction: Float): Int {
                             val lastIndex = (groupedEntries.size - 1).coerceAtLeast(0)
                             val targetSection = (fraction * lastIndex).toInt().coerceIn(0, lastIndex)
-                            val targetIndex = sectionStarts.getOrElse(targetSection) { 0 }
-                            coroutineScope.launch { listState.scrollToItem(targetIndex) }
+                            return sectionStarts.getOrElse(targetSection) { 0 }
+                        }
+
+                        // A single reactive effect instead of launching a new coroutine per drag
+                        // event — detectDragGestures' onDrag fires dozens of times a second, and each
+                        // one racing independently for the list's scroll mutex is what made this feel
+                        // janky. LaunchedEffect cancels the in-flight scroll and starts the new one
+                        // through Compose's own mechanism instead of piling up competing launches.
+                        LaunchedEffect(dragTargetIndex) {
+                            dragTargetIndex?.let { listState.scrollToItem(it) }
                         }
 
                         val thumbHeight = 72.dp
@@ -637,13 +645,17 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                     detectDragGestures(
                                         onDragStart = { offset ->
                                             isDragging = true
-                                            jumpTo((offset.y / size.height.toFloat()).coerceIn(0f, 1f))
+                                            val fraction = (offset.y / size.height.toFloat()).coerceIn(0f, 1f)
+                                            dragFraction = fraction
+                                            dragTargetIndex = indexForFraction(fraction)
                                         },
                                         onDragEnd = { isDragging = false },
                                         onDragCancel = { isDragging = false }
                                     ) { change, _ ->
                                         change.consume()
-                                        jumpTo((change.position.y / size.height.toFloat()).coerceIn(0f, 1f))
+                                        val fraction = (change.position.y / size.height.toFloat()).coerceIn(0f, 1f)
+                                        dragFraction = fraction
+                                        dragTargetIndex = indexForFraction(fraction)
                                     }
                                 }
                         )

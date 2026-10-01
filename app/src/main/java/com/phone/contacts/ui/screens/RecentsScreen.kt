@@ -394,6 +394,7 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                 // instead of letters, and has no popup bubble (dates aren't a single character).
                 var isDragging by remember { mutableStateOf(false) }
                 var dragFraction by remember { mutableStateOf(0f) }
+                var dragTargetIndex by remember { mutableStateOf<Int?>(null) }
                 // The reference app's fast-scroller (a RecyclerViewFastScroller/BubbleTextGetter
                 // widget, confirmed used on its call-log screen too) maps drag position to the
                 // underlying adapter's item index directly — not to date-group boundaries, which
@@ -401,9 +402,8 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                 // of the drag track was dead space). Resolve per-call instead, same as Contacts.
                 val totalCalls = remember(grouped) { grouped.sumOf { it.second.size } }
 
-                fun jumpTo(fraction: Float) {
-                    dragFraction = fraction
-                    if (totalCalls == 0) return
+                fun indexForFraction(fraction: Float): Int? {
+                    if (totalCalls == 0) return null
                     val targetCallIndex = (fraction * (totalCalls - 1)).toInt().coerceIn(0, totalCalls - 1)
                     var remaining = targetCallIndex
                     var groupIndex = 0
@@ -411,8 +411,16 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                         remaining -= grouped[groupIndex].second.size
                         groupIndex++
                     }
-                    val targetIndex = sectionStarts.getOrElse(groupIndex) { 0 } + 1 + remaining
-                    coroutineScope.launch { listState.scrollToItem(targetIndex) }
+                    return sectionStarts.getOrElse(groupIndex) { 0 } + 1 + remaining
+                }
+
+                // A single reactive effect instead of launching a new coroutine per drag event —
+                // detectDragGestures' onDrag fires dozens of times a second, and each one racing
+                // independently for the list's scroll mutex is what made this feel broken on a long
+                // call history. LaunchedEffect cancels the in-flight scroll and starts the new one
+                // through Compose's own mechanism instead of piling up competing launches.
+                LaunchedEffect(dragTargetIndex) {
+                    dragTargetIndex?.let { listState.scrollToItem(it) }
                 }
 
                 val thumbHeight = 72.dp
@@ -429,9 +437,9 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                 )
 
                 // Invisible drag strip, hugging the very edge (CallLogRow's own "i" button sits
-                // 20dp+ in from the edge, so this needs to stay clear of that — it can't be made
-                // wider without covering it, the way ContactsScreen's can). Being this close to
-                // the edge would normally lose the touch to the OS's edge-swipe back gesture, so
+                // 20dp+ in from the edge — its Row has 20dp horizontal padding — so this uses that
+                // whole safe margin, right up to the edge, without covering it). Being this close
+                // to the edge would normally lose the touch to the OS's edge-swipe back gesture, so
                 // this rect is registered as a system-gesture exclusion zone below instead of
                 // relying on inset alone — the reference app's own fast-scroller (which sits in
                 // this same strip, per its layout resources) has the identical edge-adjacency
@@ -440,8 +448,8 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
-                        .padding(top = headerHeight, end = 2.dp)
-                        .width(16.dp)
+                        .padding(top = headerHeight)
+                        .width(20.dp)
                         .onGloballyPositioned { coordinates ->
                             val bounds = coordinates.boundsInRoot()
                             ViewCompat.setSystemGestureExclusionRects(
@@ -465,13 +473,17 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                             detectDragGestures(
                                 onDragStart = { offset ->
                                     isDragging = true
-                                    jumpTo((offset.y / size.height.toFloat()).coerceIn(0f, 1f))
+                                    val fraction = (offset.y / size.height.toFloat()).coerceIn(0f, 1f)
+                                    dragFraction = fraction
+                                    dragTargetIndex = indexForFraction(fraction)
                                 },
                                 onDragEnd = { isDragging = false },
                                 onDragCancel = { isDragging = false }
                             ) { change, _ ->
                                 change.consume()
-                                jumpTo((change.position.y / size.height.toFloat()).coerceIn(0f, 1f))
+                                val fraction = (change.position.y / size.height.toFloat()).coerceIn(0f, 1f)
+                                dragFraction = fraction
+                                dragTargetIndex = indexForFraction(fraction)
                             }
                         }
                 )

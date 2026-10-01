@@ -19,3 +19,13 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Room, Coil, AndroidX Navigation Compose and androidx.transition all ship their own consumer
+# ProGuard rules bundled in their AARs — nothing extra is needed for those here.
+
+# --- uCrop ---
+# uCrop's own README explicitly recommends these (https://github.com/Yalantis/uCrop) rather than
+# relying solely on its bundled consumer rules.
+-dontwarn com.yalantis.ucrop**
+-keep class com.yalantis.ucrop** { *; }
+-keep interface com.yalantis.ucrop** { *; }

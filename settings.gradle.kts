@@ -16,6 +16,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // uCrop (com.github.yalantis:ucrop) is only published here, not on Maven Central.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

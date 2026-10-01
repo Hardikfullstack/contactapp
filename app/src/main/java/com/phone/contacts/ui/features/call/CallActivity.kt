@@ -12,12 +12,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.phone.contacts.service.CallManager
 import com.phone.contacts.ui.theme.ContactsTheme
+import com.phone.contacts.util.CallButtonStylePreferences
 import com.phone.contacts.util.DeviceUtils
 
 /** Shows over the lock screen for whichever call [com.phone.contacts.service.ContactsCallService]
@@ -43,6 +45,9 @@ class CallActivity : ComponentActivity() {
         setContent {
             ContactsTheme(darkTheme = true) { // Always dark for the call UI, like the reference app
                 val context = LocalContext.current
+                remember { CallButtonStylePreferences.initialize(context) }
+                val callButtonStyle by CallButtonStylePreferences.style
+                val swapCallButtons by CallButtonStylePreferences.swapButtons
                 val insetsController = WindowCompat.getInsetsController(window, window.decorView)
                 if (!DeviceUtils.isGestureNavigationEnabled(context)) {
                     insetsController.hide(WindowInsetsCompat.Type.navigationBars())
@@ -96,7 +101,9 @@ class CallActivity : ComponentActivity() {
                         onAnswerSecondary = { CallManager.answerSecondaryCall() },
                         onRejectSecondary = { CallManager.rejectSecondaryCall() },
                         onSwap = { CallManager.swapCalls() },
-                        onMerge = { CallManager.mergeCalls() }
+                        onMerge = { CallManager.mergeCalls() },
+                        callButtonStyle = callButtonStyle,
+                        swapCallButtons = swapCallButtons
                     )
                 }
             }
