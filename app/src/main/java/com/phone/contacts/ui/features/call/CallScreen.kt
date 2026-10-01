@@ -2,6 +2,8 @@ package com.phone.contacts.ui.features.call
 
 import android.telecom.Call
 import android.telecom.CallAudioState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,6 +41,7 @@ import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SwapCalls
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -73,8 +76,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.ui.components.CallWallpaperBackground
 import com.phone.contacts.ui.screens.ContactAvatar
 import com.phone.contacts.util.MessageUtils
+import com.phone.contacts.util.QuickResponsePreferences
+import com.phone.contacts.util.QuickResponseTemplate
+import com.phone.contacts.util.WallpaperPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -130,12 +137,25 @@ fun CallScreen(
 
     var showKeypad by remember { mutableStateOf(false) }
     var showAudioRouteSheet by remember { mutableStateOf(false) }
+    var showQuickResponseSheet by remember { mutableStateOf(false) }
+
+    remember { QuickResponsePreferences.initialize(context) }
+    val quickResponseTemplates by QuickResponsePreferences.templates
+    val smsPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) showQuickResponseSheet = true }
+
+    remember { WallpaperPreferences.initialize(context) }
+    val wallpaperSelection by WallpaperPreferences.selection
+    val wallpaperBlur by WallpaperPreferences.blurEnabled
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF121212))
     ) {
+        CallWallpaperBackground(selection = wallpaperSelection, blurEnabled = wallpaperBlur, modifier = Modifier.fillMaxSize())
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -229,6 +249,7 @@ fun CallScreen(
                 Text(
                     text = when {
                         isActive -> formatDuration(elapsedSeconds)
+                        isOnHold -> "On hold"
                         isRinging -> "Incoming call"
                         isDialing -> "Dialing…"
                         else -> "Call Ended"
@@ -241,6 +262,29 @@ fun CallScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             if (isRinging) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable {
+                            if (MessageUtils.hasSendSmsPermission(context)) {
+                                showQuickResponseSheet = true
+                            } else {
+                                smsPermissionLauncher.launch(android.Manifest.permission.SEND_SMS)
+                            }
+                        }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Message,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(text = "Message", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                }
+
                 if (callButtonStyle.isSlider) {
                     Column(
                         modifier = Modifier
@@ -350,10 +394,14 @@ fun CallScreen(
                                 onClick = onAddCallClick
                             )
                             CallControlButton(
-                                icon = Icons.Filled.Pause,
+                                icon = if (isOnHold) Icons.Filled.PlayArrow else Icons.Filled.Pause,
                                 label = "Hold call",
                                 active = isOnHold,
-                                enabled = isActive,
+                                // Must stay enabled while on hold too — otherwise, once the call
+                                // is actually held (callState flips to STATE_HOLDING, so isActive
+                                // becomes false), this button disables itself right when it's
+                                // needed to resume the call.
+                                enabled = isActive || isOnHold,
                                 onClick = onToggleHold
                             )
                         }
@@ -427,6 +475,19 @@ fun CallScreen(
             onDismiss = { showAudioRouteSheet = false }
         )
     }
+
+    if (showQuickResponseSheet) {
+        QuickResponseSheet(
+            templates = quickResponseTemplates,
+            onSelect = { template ->
+                showQuickResponseSheet = false
+                if (MessageUtils.sendSmsDirectly(context, number, template.text)) {
+                    onDecline()
+                }
+            },
+            onDismiss = { showQuickResponseSheet = false }
+        )
+    }
 }
 
 /** No individual background of its own — these sit directly on the shared panel background that
@@ -442,16 +503,30 @@ private fun CallControlButton(
 ) {
     Column(
         modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
             .clickable(enabled = enabled, onClick = onClick)
-            .alpha(if (enabled) 1f else 0.35f),
+            .alpha(if (enabled) 1f else 0.35f)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (active) MaterialTheme.colorScheme.primary else Color.White,
-            modifier = Modifier.size(30.dp)
-        )
+        // A plain color-tinted icon on this same translucent-glass panel read as washed out —
+        // matching how a real phone call screen highlights an engaged toggle, active state gets
+        // a solid filled circle behind the icon instead, with the icon flipping to a contrasting
+        // color on top of it.
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(if (active) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
         Spacer(modifier = Modifier.size(8.dp))
         Text(
             text = label,
@@ -755,6 +830,45 @@ private fun AudioRouteSheet(
                         Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
+            }
+            Spacer(modifier = Modifier.size(8.dp))
+        }
+    }
+}
+
+/** The templates managed in Settings > Quick response — picking one here sends it as an SMS
+ * straight to the ringing caller (no further confirmation) and declines the call, matching the
+ * reference app's own "decline with a text" flow. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickResponseSheet(
+    templates: List<QuickResponseTemplate>,
+    onSelect: (QuickResponseTemplate) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "Quick response", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Close",
+                    modifier = Modifier.clickable(onClick = onDismiss)
+                )
+            }
+            templates.forEach { template ->
+                Text(
+                    text = template.text,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(template) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                )
             }
             Spacer(modifier = Modifier.size(8.dp))
         }

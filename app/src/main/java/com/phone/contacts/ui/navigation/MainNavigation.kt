@@ -46,6 +46,15 @@ import com.phone.contacts.ui.features.onboarding.LanguageSelectionScreen
 import com.phone.contacts.ui.screens.AddContactScreen
 import com.phone.contacts.ui.screens.BlockingScreen
 import com.phone.contacts.ui.screens.CallButtonStylesScreen
+import com.phone.contacts.ui.screens.CallWallpaperScreen
+import com.phone.contacts.ui.screens.DisplayOptionsScreen
+import com.phone.contacts.ui.screens.EmergencyContactsScreen
+import com.phone.contacts.ui.screens.SelectEmergencyContactScreen
+import com.phone.contacts.ui.screens.QuickResponseScreen
+import com.phone.contacts.ui.screens.SelectSpeedDialContactScreen
+import com.phone.contacts.ui.screens.SpeedDialListScreen
+import com.phone.contacts.ui.screens.SpeedDialScreen
+import com.phone.contacts.ui.screens.RingtoneScreen
 import com.phone.contacts.ui.screens.ContactDetailScreen
 import com.phone.contacts.ui.screens.ContactsScreen
 import com.phone.contacts.ui.screens.FavoritesScreen
@@ -74,6 +83,23 @@ sealed class MainScreen(
     object ImportExport : MainScreen("import_export")
     object Theme : MainScreen("theme_settings")
     object CallButtonStyles : MainScreen("call_button_styles")
+    object CallWallpaper : MainScreen("call_wallpaper")
+    object DisplayOptions : MainScreen("display_options")
+    object EmergencyContacts : MainScreen("emergency_contacts")
+    object SelectEmergencyContact : MainScreen("select_emergency_contact")
+    object SpeedDial : MainScreen("speed_dial")
+    object SpeedDialList : MainScreen("speed_dial_list")
+    object QuickResponse : MainScreen("quick_response")
+    object SelectSpeedDialContact : MainScreen("select_speed_dial_contact?dialKey={dialKey}") {
+        // Query param (not a path segment) since the key can be "*" or "#" — safer to Uri.encode
+        // than to trust those characters inside a path segment.
+        fun routeFor(dialKey: String) = "select_speed_dial_contact?dialKey=${Uri.encode(dialKey)}"
+    }
+    object Ringtone : MainScreen("ringtone?contactId={contactId}&contactName={contactName}") {
+        fun routeForGlobal() = "ringtone?contactId=&contactName="
+        fun routeForContact(contactId: String, contactName: String) =
+            "ringtone?contactId=${Uri.encode(contactId)}&contactName=${Uri.encode(contactName)}"
+    }
     object Blocking : MainScreen("blocking")
     object ManageBlockList : MainScreen("manage_block_list")
     object AddContact : MainScreen("add_contact?phone={phone}&editId={editId}") {
@@ -210,7 +236,10 @@ fun MainNavigation() {
                     onContactUpdatedConsumed = { backStackEntry.savedStateHandle["contact_updated"] = false },
                     onBack = { navController.popBackStack() },
                     onDeleted = { navController.popBackStack() },
-                    onEditClick = { id -> navController.navigate(MainScreen.AddContact.routeForEdit(id)) }
+                    onEditClick = { id -> navController.navigate(MainScreen.AddContact.routeForEdit(id)) },
+                    onSetRingtoneClick = { id ->
+                        navController.navigate(MainScreen.Ringtone.routeForContact(id, args?.getString("name").orEmpty()))
+                    }
                 )
             }
             composable(
@@ -265,7 +294,13 @@ fun MainNavigation() {
                     onImportExportClick = { navController.navigate(MainScreen.ImportExport.route) },
                     onThemeClick = { navController.navigate(MainScreen.Theme.route) },
                     onBlockingClick = { navController.navigate(MainScreen.Blocking.route) },
-                    onCallButtonStylesClick = { navController.navigate(MainScreen.CallButtonStyles.route) }
+                    onCallButtonStylesClick = { navController.navigate(MainScreen.CallButtonStyles.route) },
+                    onWallpaperClick = { navController.navigate(MainScreen.CallWallpaper.route) },
+                    onDisplayOptionsClick = { navController.navigate(MainScreen.DisplayOptions.route) },
+                    onRingtoneClick = { navController.navigate(MainScreen.Ringtone.routeForGlobal()) },
+                    onEmergencyContactsClick = { navController.navigate(MainScreen.EmergencyContacts.route) },
+                    onSpeedDialClick = { navController.navigate(MainScreen.SpeedDial.route) },
+                    onQuickResponseClick = { navController.navigate(MainScreen.QuickResponse.route) }
                 )
             }
             composable(MainScreen.Language.route) {
@@ -285,6 +320,62 @@ fun MainNavigation() {
             }
             composable(MainScreen.CallButtonStyles.route) {
                 CallButtonStylesScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.CallWallpaper.route) {
+                CallWallpaperScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.DisplayOptions.route) {
+                DisplayOptionsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.EmergencyContacts.route) {
+                EmergencyContactsScreen(
+                    onBack = { navController.popBackStack() },
+                    onAddClick = { navController.navigate(MainScreen.SelectEmergencyContact.route) }
+                )
+            }
+            composable(MainScreen.SelectEmergencyContact.route) {
+                SelectEmergencyContactScreen(
+                    onBack = { navController.popBackStack() },
+                    onDone = { navController.popBackStack() }
+                )
+            }
+            composable(MainScreen.SpeedDial.route) {
+                SpeedDialScreen(
+                    onBack = { navController.popBackStack() },
+                    onAssignClick = { dialKey -> navController.navigate(MainScreen.SelectSpeedDialContact.routeFor(dialKey)) },
+                    onListClick = { navController.navigate(MainScreen.SpeedDialList.route) }
+                )
+            }
+            composable(MainScreen.SpeedDialList.route) {
+                SpeedDialListScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.QuickResponse.route) {
+                QuickResponseScreen(onBack = { navController.popBackStack() })
+            }
+            composable(
+                route = MainScreen.SelectSpeedDialContact.route,
+                arguments = listOf(navArgument("dialKey") { type = NavType.StringType; defaultValue = "" })
+            ) { backStackEntry ->
+                val dialKey = backStackEntry.arguments?.getString("dialKey").orEmpty()
+                SelectSpeedDialContactScreen(
+                    dialKey = dialKey,
+                    onBack = { navController.popBackStack() },
+                    onAssigned = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = MainScreen.Ringtone.route,
+                arguments = listOf(
+                    navArgument("contactId") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("contactName") { type = NavType.StringType; defaultValue = "" }
+                )
+            ) { backStackEntry ->
+                val args = backStackEntry.arguments
+                RingtoneScreen(
+                    contactId = args?.getString("contactId").orEmpty().ifBlank { null },
+                    contactName = args?.getString("contactName").orEmpty().ifBlank { null },
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(MainScreen.Blocking.route) {
                 BlockingScreen(

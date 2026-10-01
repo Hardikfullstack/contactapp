@@ -1,10 +1,6 @@
 package com.phone.contacts.ui.screens
 
-import android.app.Activity
 import android.content.Intent
-import android.media.RingtoneManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -122,7 +118,8 @@ fun ContactDetailScreen(
     onContactUpdatedConsumed: () -> Unit = {},
     onBack: () -> Unit,
     onDeleted: () -> Unit,
-    onEditClick: (String) -> Unit = {}
+    onEditClick: (String) -> Unit = {},
+    onSetRingtoneClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -171,18 +168,6 @@ fun ContactDetailScreen(
     LaunchedEffect(number) {
         BlockRepository.blockedNumbersFlow(context).collect { entries ->
             isNumberBlocked = entries.any { normalizeForBlockMatch(it.number) == normalizeForBlockMatch(number) }
-        }
-    }
-
-    val ringtonePickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val id = resolvedContactId ?: return@rememberLauncherForActivityResult
-            val uri = result.data?.getParcelableExtra<android.net.Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
-            coroutineScope.launch {
-                ContactRepository.setCustomRingtone(context, id, uri)
-            }
         }
     }
 
@@ -396,13 +381,7 @@ fun ContactDetailScreen(
                         enabled = resolvedContactId != null,
                         onClick = {
                             moreMenuExpanded = false
-                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_RINGTONE)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select ringtone")
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
-                            }
-                            ringtonePickerLauncher.launch(intent)
+                            resolvedContactId?.let { onSetRingtoneClick(it) }
                         }
                     )
                     DropdownMenuItem(

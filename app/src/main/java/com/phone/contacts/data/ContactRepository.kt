@@ -924,6 +924,39 @@ object ContactRepository {
             }
         }
 
+    /** Reads a contact's custom ringtone. Three distinct results, matching what [setCustomRingtone]
+     * writes: null = no override (column is NULL, falls back to the system default), [android.net.Uri.EMPTY]
+     * = the contact was explicitly set to ring silently (column is an empty string, not NULL — the
+     * two must stay distinguishable or a never-touched contact looks identical to one deliberately
+     * silenced), otherwise the stored ringtone Uri. Used by the Set Ringtone screen to preselect
+     * the currently active choice. */
+    suspend fun getCustomRingtone(context: Context, contactId: String): android.net.Uri? =
+        withContext(Dispatchers.IO) {
+            try {
+                val uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId.toLong())
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(ContactsContract.Contacts.CUSTOM_RINGTONE),
+                    null,
+                    null,
+                    null
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val raw = cursor.getString(0)
+                        when {
+                            raw == null -> null
+                            raw.isEmpty() -> android.net.Uri.EMPTY
+                            else -> android.net.Uri.parse(raw)
+                        }
+                    } else {
+                        null
+                    }
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
     /** Resolves a raw phone number (as Telecom hands it over — no guaranteed formatting) to a
      * matching contact's name/photo, for the call screen. Uses PhoneLookup, which does its own
      * number-normalization matching internally, so exact string formatting doesn't need to match. */

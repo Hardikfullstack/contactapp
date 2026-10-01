@@ -91,8 +91,11 @@ import com.phone.contacts.ui.components.ScreenTitleBar
 import com.phone.contacts.ui.components.verticalScrollIndicator
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.util.DefaultDialerState
+import com.phone.contacts.util.DisplayOptionsPreferences
 import com.phone.contacts.util.RecentlyAddedContacts
 import com.phone.contacts.util.RecentlyViewedContacts
+import com.phone.contacts.util.formattedForDisplay
+import com.phone.contacts.util.sortKey
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -155,6 +158,9 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    remember { DisplayOptionsPreferences.initialize(context) }
+    val sortOrderPref by DisplayOptionsPreferences.sortOrder
+
     var query by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(ContactFilter.ALL) }
     var sortDescending by remember { mutableStateOf(false) }
@@ -185,12 +191,12 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
     val viewedTimestamps = remember(selectedFilter, viewedRefreshTrigger) {
         if (selectedFilter == ContactFilter.RECENT_VIEWED) RecentlyViewedContacts.viewedTimestamps(context) else emptyMap()
     }
-    val orderedContacts = remember(filtered, selectedFilter, sortDescending, addedTimestamps, viewedTimestamps) {
+    val orderedContacts = remember(filtered, selectedFilter, sortDescending, addedTimestamps, viewedTimestamps, sortOrderPref) {
         when (selectedFilter) {
             ContactFilter.ALL -> if (sortDescending) {
-                filtered.sortedByDescending { it.name.lowercase() }
+                filtered.sortedByDescending { it.sortKey(sortOrderPref) }
             } else {
-                filtered.sortedBy { it.name.lowercase() }
+                filtered.sortedBy { it.sortKey(sortOrderPref) }
             }
             ContactFilter.RECENT_ADDED -> filtered
                 .filter { addedTimestamps.containsKey(it.number) }
@@ -201,11 +207,11 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
         }
     }
     val showLetterIndex = selectedFilter == ContactFilter.ALL
-    val grouped = remember(orderedContacts, showLetterIndex, sortDescending) {
+    val grouped = remember(orderedContacts, showLetterIndex, sortDescending, sortOrderPref) {
         if (!showLetterIndex) {
             emptyMap()
         } else {
-            val map = orderedContacts.groupBy { it.name.lowercase().firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() } ?: '#' }
+            val map = orderedContacts.groupBy { it.sortKey(sortOrderPref).firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() } ?: '#' }
             if (sortDescending) map.toSortedMap(compareByDescending { it }) else map.toSortedMap()
         }
     }
@@ -1038,8 +1044,9 @@ private fun ContactRow(
             ContactAvatar(contact = contact, size = 40.dp)
         }
         Spacer(modifier = Modifier.size(14.dp))
+        val nameFormat by DisplayOptionsPreferences.nameFormat
         Text(
-            text = contact.name,
+            text = contact.name.formattedForDisplay(nameFormat),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)

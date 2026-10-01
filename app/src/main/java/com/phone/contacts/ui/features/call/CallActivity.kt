@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -21,6 +22,8 @@ import com.phone.contacts.service.CallManager
 import com.phone.contacts.ui.theme.ContactsTheme
 import com.phone.contacts.util.CallButtonStylePreferences
 import com.phone.contacts.util.DeviceUtils
+import com.phone.contacts.util.WallpaperPreferences
+import com.phone.contacts.util.isDarkOnCallScreen
 
 /** Shows over the lock screen for whichever call [com.phone.contacts.service.ContactsCallService]
  * just handed to [CallManager] — launched fresh from onCallAdded each time, but Telecom hands a
@@ -48,13 +51,20 @@ class CallActivity : ComponentActivity() {
                 remember { CallButtonStylePreferences.initialize(context) }
                 val callButtonStyle by CallButtonStylePreferences.style
                 val swapCallButtons by CallButtonStylePreferences.swapButtons
+                remember { WallpaperPreferences.initialize(context) }
+                val wallpaperSelection by WallpaperPreferences.selection
                 val insetsController = WindowCompat.getInsetsController(window, window.decorView)
                 if (!DeviceUtils.isGestureNavigationEnabled(context)) {
                     insetsController.hide(WindowInsetsCompat.Type.navigationBars())
                     insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 }
-                insetsController.isAppearanceLightStatusBars = false
-                insetsController.isAppearanceLightNavigationBars = false
+                // A light wallpaper needs dark status/nav bar icons, otherwise the default
+                // always-light icons (matching the always-dark fallback background) go invisible.
+                SideEffect {
+                    val isLightAppearance = !wallpaperSelection.isDarkOnCallScreen()
+                    insetsController.isAppearanceLightStatusBars = isLightAppearance
+                    insetsController.isAppearanceLightNavigationBars = isLightAppearance
+                }
 
                 val call by CallManager.currentCall.collectAsState()
                 val callState by CallManager.callState.collectAsState()
@@ -75,7 +85,14 @@ class CallActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(call) {
-                    if (call == null) finish()
+                    // Plain finish() leaves an empty task card behind in the system app-switcher,
+                    // since this Activity runs in its own task (taskAffinity ".incall" in the
+                    // manifest, needed for lock-screen visibility) — that's the "separate screen
+                    // stays around" bug. Removing the task outright instead both clears that card
+                    // and correctly hands focus back to whatever task the user was actually in
+                    // before the call (e.g. this app's own MainActivity), matching contactapp's
+                    // own InCallActivity fix for the identical setup.
+                    if (call == null) finishAndRemoveTask()
                 }
 
                 if (call != null) {

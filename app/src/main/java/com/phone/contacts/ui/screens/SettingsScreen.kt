@@ -3,6 +3,7 @@ package com.phone.contacts.ui.screens
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,6 +45,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -57,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phone.contacts.ui.components.CustomSwitch
 import com.phone.contacts.ui.components.ScreenTitleBar
+import com.phone.contacts.util.KeypadTonePreferences
 
 /** Matches the reference app's Settings screen structure: Personalization (App language,
  * Application theme, Call back screen, Blocking, Recycle bin), Appearance (Call button styles,
@@ -73,9 +79,17 @@ fun SettingsScreen(
     onImportExportClick: () -> Unit,
     onThemeClick: () -> Unit,
     onBlockingClick: () -> Unit,
-    onCallButtonStylesClick: () -> Unit
+    onCallButtonStylesClick: () -> Unit,
+    onWallpaperClick: () -> Unit,
+    onDisplayOptionsClick: () -> Unit,
+    onRingtoneClick: () -> Unit,
+    onEmergencyContactsClick: () -> Unit,
+    onSpeedDialClick: () -> Unit,
+    onQuickResponseClick: () -> Unit
 ) {
     val context = LocalContext.current
+    remember { KeypadTonePreferences.initialize(context) }
+    var keypadToneEnabled by remember { mutableStateOf(KeypadTonePreferences.enabled.value) }
 
     Column(
         modifier = Modifier
@@ -143,7 +157,7 @@ fun SettingsScreen(
                     icon = Icons.Filled.Wallpaper,
                     iconBackgroundColor = Color(0xFF1DA463),
                     title = "Wallpaper",
-                    enabled = false
+                    onClick = onWallpaperClick
                 )
             }
 
@@ -153,7 +167,7 @@ fun SettingsScreen(
                     icon = Icons.Filled.MusicNote,
                     iconBackgroundColor = Color(0xFF3F51B5),
                     title = "Ringtone",
-                    enabled = false
+                    onClick = onRingtoneClick
                 )
                 SettingsDivider()
                 SettingsRow(
@@ -167,14 +181,14 @@ fun SettingsScreen(
                     icon = Icons.Filled.Emergency,
                     iconBackgroundColor = Color(0xFFD32F2F),
                     title = "Emergency contacts",
-                    enabled = false
+                    onClick = onEmergencyContactsClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Tune,
                     iconBackgroundColor = Color(0xFF607D8B),
                     title = "Display options",
-                    enabled = false
+                    onClick = onDisplayOptionsClick
                 )
             }
 
@@ -184,28 +198,42 @@ fun SettingsScreen(
                     icon = Icons.Filled.Dialpad,
                     iconBackgroundColor = Color(0xFFFFC107),
                     title = "Speed dial",
-                    enabled = false
+                    onClick = onSpeedDialClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.AutoMirrored.Filled.Message,
                     iconBackgroundColor = Color(0xFF9575CD),
                     title = "Quick response",
-                    enabled = false
+                    onClick = onQuickResponseClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.MusicNote,
                     iconBackgroundColor = Color(0xFF009688),
                     title = "Sound and vibration",
-                    enabled = false
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Settings.ACTION_SOUND_SETTINGS))
+                        } catch (e: Exception) {
+                            // No such screen on this OEM's build — nothing reasonable to fall back to.
+                        }
+                    }
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.VolumeUp,
                     iconBackgroundColor = Color(0xFF673AB7),
                     title = "Keypad tone",
-                    enabled = false
+                    trailing = {
+                        CustomSwitch(
+                            checked = keypadToneEnabled,
+                            onCheckedChange = {
+                                keypadToneEnabled = it
+                                KeypadTonePreferences.setEnabled(context, it)
+                            }
+                        )
+                    }
                 )
             }
 
@@ -222,7 +250,7 @@ fun SettingsScreen(
                     icon = Icons.Filled.StarRate,
                     iconBackgroundColor = Color(0xFFFBC02D),
                     title = "Rate us",
-                    onClick = { openPlayStoreListing(context) }
+                    enabled = false
                 )
                 SettingsDivider()
                 SettingsRow(

@@ -13,8 +13,10 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -61,13 +64,23 @@ import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.verticalScrollIndicator
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.MessageUtils
+import com.phone.contacts.util.KeypadTonePreferences
+import com.phone.contacts.util.SpeedDialEntry
+import com.phone.contacts.util.SpeedDialPreferences
 
 @Composable
 fun KeypadScreen(onAddNumberClick: (String) -> Unit) {
     val context = LocalContext.current
+    remember { SpeedDialPreferences.initialize(context) }
+    val speedDialEntries by SpeedDialPreferences.entries
+    remember { KeypadTonePreferences.initialize(context) }
     var dialedNumber by remember { mutableStateOf("") }
 
-    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_DTMF, ToneGenerator.MAX_VOLUME / 3) }
+    // STREAM_DTMF is aliased to the Ring volume stream outside of an active call, so it goes
+    // silent under Silent/Vibrate mode or a low ring volume — matching the symptom reported (no
+    // sound despite the in-app toggle being on). STREAM_MUSIC follows the Media volume instead,
+    // which is what lets the reference app's own keypad tone stay audible in that exact case.
+    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_MUSIC, ToneGenerator.MAX_VOLUME * 4 / 5) }
     DisposableEffect(Unit) { onDispose { toneGenerator.release() } }
     val vibrator = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -203,9 +216,22 @@ fun KeypadScreen(onAddNumberClick: (String) -> Unit) {
 
             DialPad(
                 showBackspace = dialedNumber.isNotEmpty(),
+                speedDialEntries = speedDialEntries,
                 onDigit = { digit ->
                     playDialFeedback(toneGenerator, vibrator, digit)
                     dialedNumber += digit
+                },
+                onLongPressDigit = { digit ->
+                    // Classic speed dial only fires from a blank dial field — once the user is
+                    // already typing a different number, a long-press just acts as a normal digit
+                    // press instead of hijacking it into an unrelated call.
+                    val entry = if (dialedNumber.isEmpty()) speedDialEntries[digit] else null
+                    if (entry != null) {
+                        CallUtils.placeCall(context, entry.number)
+                    } else {
+                        playDialFeedback(toneGenerator, vibrator, digit)
+                        dialedNumber += digit
+                    }
                 },
                 onBackspace = { if (dialedNumber.isNotEmpty()) dialedNumber = dialedNumber.dropLast(1) },
                 onCall = { CallUtils.placeCall(context, dialedNumber) }
@@ -230,7 +256,9 @@ private fun playDialFeedback(toneGenerator: ToneGenerator, vibrator: Vibrator?, 
         "#" -> ToneGenerator.TONE_DTMF_P
         else -> ToneGenerator.TONE_DTMF_0
     }
-    toneGenerator.startTone(tone, 60)
+    if (KeypadTonePreferences.enabled.value) {
+        toneGenerator.startTone(tone, 150)
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         vibrator?.vibrate(VibrationEffect.createOneShot(15, 40))
     } else {
@@ -249,7 +277,9 @@ private val dialKeys = listOf(
 @Composable
 private fun DialPad(
     showBackspace: Boolean,
+    speedDialEntries: Map<String, SpeedDialEntry>,
     onDigit: (String) -> Unit,
+    onLongPressDigit: (String) -> Unit,
     onBackspace: () -> Unit,
     onCall: () -> Unit
 ) {
@@ -267,7 +297,13 @@ private fun DialPad(
             ) {
                 row.forEach { (digit, letters) ->
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        DialButton(digit = digit, letters = letters, onClick = { onDigit(digit) })
+                        DialButton(
+                            digit = digit,
+                            letters = letters,
+                            speedDialName = speedDialEntries[digit]?.name?.substringBefore(" "),
+                            onClick = { onDigit(digit) },
+                            onLongClick = { onLongPressDigit(digit) }
+                        )
                     }
                 }
             }
@@ -308,30 +344,40 @@ private fun DialPad(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DialButton(digit: String, letters: String, onClick: () -> Unit) {
+private fun DialButton(digit: String, letters: String, speedDialName: String?, onClick: () -> Unit, onLongClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(60.dp)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = digit,
-                fontSize = 23.sp,
+                // The asterisk glyph sits much smaller than a digit at the same font size in most
+                // fonts — bumped up so "*" doesn't look tiny next to its neighbors. Its ink also
+                // sits higher in the glyph's own box than a digit's does, so it needs a small
+                // downward nudge too or it reads as "not centered" even though the Text itself is.
+                fontSize = if (digit == "*") 30.sp else 23.sp,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = if (digit == "*") Modifier.offset(y = 4.dp) else Modifier
             )
-            // Always reserve the letters line (even blank) so every digit sits at the same
-            // height — otherwise a button with no letters (1, *, #) centers on one line while
-            // its neighbors center on two, making its digit look shifted down relative to them.
+            // Always reserve this line (even blank) so every digit sits at the same height —
+            // otherwise a button with no letters/assignment centers on one line while its
+            // neighbors center on two, making its digit look shifted down relative to them.
+            // A speed-dial assignment takes over this line (in the primary color) instead of the
+            // normal ABC/DEF hint, so there's a standing visual cue of what long-press does here.
             Text(
-                text = letters.ifEmpty { " " },
+                text = speedDialName ?: letters.ifEmpty { " " },
                 fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 1.5.sp
+                fontWeight = if (speedDialName != null) FontWeight.Bold else FontWeight.Normal,
+                color = if (speedDialName != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.5.sp,
+                maxLines = 1
             )
         }
     }

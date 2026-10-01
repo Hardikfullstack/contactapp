@@ -1,9 +1,13 @@
 package com.phone.contacts.util
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.telephony.SmsManager
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 
 object MessageUtils {
     /** Opens the default SMS app pre-filled with this number's conversation — used by the
@@ -18,6 +22,28 @@ object MessageUtils {
             context.startActivity(intent)
         } catch (e: Exception) {
             Toast.makeText(context, "Couldn't open messaging app", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun hasSendSmsPermission(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
+
+    /** Silently sends [text] to [number] with no further user interaction — used by the
+     * incoming-call "Message" quick-response sheet to decline-with-a-text in one tap. Caller must
+     * have already confirmed [hasSendSmsPermission]. Returns false if the number is blank or the
+     * platform SmsManager throws (no SIM, radio off, etc.). */
+    fun sendSmsDirectly(context: Context, number: String, text: String): Boolean {
+        if (number.isBlank() || text.isBlank()) return false
+        return try {
+            // SmsManager.getDefault() works back to minSdk — Context.getSystemService(SmsManager::
+            // class.java) is API 31+ only and would crash on older devices.
+            @Suppress("DEPRECATION")
+            val smsManager = SmsManager.getDefault()
+            smsManager.sendTextMessage(number, null, text, null, null)
+            true
+        } catch (e: Exception) {
+            Toast.makeText(context, "Couldn't send message", Toast.LENGTH_SHORT).show()
+            false
         }
     }
 }
