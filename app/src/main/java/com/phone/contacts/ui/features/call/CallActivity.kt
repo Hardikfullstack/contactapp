@@ -70,10 +70,12 @@ class CallActivity : ComponentActivity() {
                 val callState by CallManager.callState.collectAsState()
                 val audioState by CallManager.audioState.collectAsState()
                 val connectedAtElapsedRealtime by CallManager.connectedAtElapsedRealtime.collectAsState()
+                val secondaryConnectedAtElapsedRealtime by CallManager.secondaryConnectedAtElapsedRealtime.collectAsState()
                 val secondaryCall by CallManager.secondaryCall.collectAsState()
                 val secondaryCallState by CallManager.secondaryCallState.collectAsState()
                 val conferenceChildren by CallManager.conferenceChildren.collectAsState()
                 val canMerge by CallManager.canMerge.collectAsState()
+                val canAddCall by CallManager.canAddCall.collectAsState()
 
                 val addCallLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.StartActivityForResult()
@@ -95,21 +97,65 @@ class CallActivity : ComponentActivity() {
                     if (call == null) finishAndRemoveTask()
                 }
 
+                val secondaryIsFront = secondaryCall != null &&
+                    callState == android.telecom.Call.STATE_HOLDING &&
+                    secondaryCallState != android.telecom.Call.STATE_HOLDING &&
+                    secondaryCallState != android.telecom.Call.STATE_RINGING
+
+                val frontCall = if (secondaryIsFront) secondaryCall else call
+                val backCall = if (secondaryIsFront) call else secondaryCall
+                val frontCallState = if (secondaryIsFront) secondaryCallState else callState
+                val backCallState = if (secondaryIsFront) callState else secondaryCallState
+                val frontConnectedAtElapsedRealtime = if (secondaryIsFront) secondaryConnectedAtElapsedRealtime else connectedAtElapsedRealtime
+
+                val activeChildren = conferenceChildren.filter { it.state != android.telecom.Call.STATE_DISCONNECTED }
+                val isRealConference = activeChildren.size > 1
+                val lastRemainingChild = activeChildren.singleOrNull()
+                val frontIsConference = !secondaryIsFront && isRealConference
+                val backIsConference = secondaryIsFront && isRealConference
+
+                LaunchedEffect(isRealConference) {
+                    if (isRealConference) {
+                        android.widget.Toast.makeText(
+                            this@CallActivity,
+                            "Conference call connected",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
+                val frontNumber = if (!secondaryIsFront && lastRemainingChild != null) {
+                    lastRemainingChild.details?.handle?.schemeSpecificPart
+                } else {
+                    frontCall?.details?.handle?.schemeSpecificPart
+                }
+
+                val backNumber = if (secondaryIsFront && lastRemainingChild != null) {
+                    lastRemainingChild.details?.handle?.schemeSpecificPart
+                } else {
+                    backCall?.details?.handle?.schemeSpecificPart
+                }
+
                 if (call != null) {
                     CallScreen(
-                        number = call?.details?.handle?.schemeSpecificPart ?: "",
-                        callState = callState,
+                        number = frontNumber ?: "",
+                        callState = frontCallState,
                         audioState = audioState,
-                        connectedAtElapsedRealtime = connectedAtElapsedRealtime,
-                        secondaryNumber = secondaryCall?.details?.handle?.schemeSpecificPart ?: "",
-                        secondaryCallState = secondaryCallState,
-                        isConference = conferenceChildren.isNotEmpty(),
+                        connectedAtElapsedRealtime = frontConnectedAtElapsedRealtime,
+                        secondaryNumber = backNumber ?: "",
+                        secondaryCallState = backCallState,
+                        isConference = isRealConference,
+                        showConferenceInMainDisplay = frontIsConference,
                         canMerge = canMerge,
+                        canAddCall = canAddCall,
+                        conferenceChildren = activeChildren,
                         onAnswer = { CallManager.answer() },
                         onDecline = { CallManager.reject() },
-                        onHangup = { CallManager.disconnect() },
+                        onHangup = { frontCall?.disconnect() },
                         onToggleMute = { CallManager.toggleMute() },
-                        onToggleHold = { CallManager.toggleHold() },
+                        onToggleHold = {
+                            if (frontCallState == android.telecom.Call.STATE_HOLDING) frontCall?.unhold() else frontCall?.hold()
+                        },
                         onSelectAudioRoute = { route -> CallManager.setAudioRoute(route) },
                         onToggleSpeaker = { CallManager.toggleSpeaker() },
                         onPlayDtmf = { digit -> CallManager.playDtmfTone(digit) },
@@ -117,8 +163,11 @@ class CallActivity : ComponentActivity() {
                         onAddCallClick = { addCallLauncher.launch(Intent(context, AddCallPickerActivity::class.java)) },
                         onAnswerSecondary = { CallManager.answerSecondaryCall() },
                         onRejectSecondary = { CallManager.rejectSecondaryCall() },
+                        onAnswerAndEndOther = { CallManager.answerSecondaryAndEndOther() },
                         onSwap = { CallManager.swapCalls() },
                         onMerge = { CallManager.mergeCalls() },
+                        onEndSecondary = { backCall?.disconnect() },
+                        onDisconnectParticipant = { participantCall -> CallManager.disconnectConferenceParticipant(participantCall) },
                         callButtonStyle = callButtonStyle,
                         swapCallButtons = swapCallButtons
                     )

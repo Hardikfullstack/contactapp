@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,9 +44,18 @@ import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SwapCalls
+import androidx.compose.material.icons.filled.PhoneInTalk
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PhonePaused
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -82,6 +92,7 @@ import com.phone.contacts.util.MessageUtils
 import com.phone.contacts.util.QuickResponsePreferences
 import com.phone.contacts.util.QuickResponseTemplate
 import com.phone.contacts.util.WallpaperPreferences
+import com.phone.contacts.util.WallpaperSelection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -94,6 +105,7 @@ fun CallScreen(
     secondaryNumber: String = "",
     secondaryCallState: Int = Call.STATE_DISCONNECTED,
     isConference: Boolean = false,
+    showConferenceInMainDisplay: Boolean = false,
     canMerge: Boolean = false,
     onAnswer: () -> Unit,
     onDecline: () -> Unit,
@@ -107,24 +119,81 @@ fun CallScreen(
     onAddCallClick: () -> Unit = {},
     onAnswerSecondary: () -> Unit = {},
     onRejectSecondary: () -> Unit = {},
+    onAnswerAndEndOther: () -> Unit = {},
     onSwap: () -> Unit = {},
     onMerge: () -> Unit = {},
+    onEndSecondary: () -> Unit = {},
+    canAddCall: Boolean = false,
+    conferenceChildren: List<Call> = emptyList(),
+    onDisconnectParticipant: (Call) -> Unit = {},
     callButtonStyle: CallButtonStyle = CallButtonStyle.SLIDER,
     swapCallButtons: Boolean = false
 ) {
     val context = LocalContext.current
-    var contact by remember(number) { mutableStateOf<Contact?>(null) }
+    var contact by remember { mutableStateOf<Contact?>(null) }
+    var resolvedNumber by remember { mutableStateOf(number) }
     LaunchedEffect(number) {
-        contact = ContactRepository.findContactByNumber(context, number)
+        // A call's own number can transiently go blank right as it disconnects (Telecom clears
+        // call details before the call is actually removed) — re-resolving on that blank number
+        // would wipe the already-resolved name and flash "Unknown Caller" for a frame right before
+        // the screen closes. Keep showing whatever was last resolved instead.
+        if (number.isBlank()) return@LaunchedEffect
+        val fetched = ContactRepository.findContactByNumber(context, number)
+        contact = fetched
+        resolvedNumber = fetched?.number ?: number
     }
-    val displayName = if (isConference) "Conference call" else contact?.name ?: number.ifBlank { "Unknown Caller" }
+    val displayName = if (showConferenceInMainDisplay) "Conference call" else contact?.name ?: resolvedNumber.ifBlank { "Unknown Caller" }
 
     val isRinging = callState == Call.STATE_RINGING
     val isDialing = callState == Call.STATE_DIALING || callState == Call.STATE_CONNECTING
     val isActive = callState == Call.STATE_ACTIVE
     val isOnHold = callState == Call.STATE_HOLDING
     val isSecondaryRinging = secondaryCallState == Call.STATE_RINGING
-    val hasSecondaryConnected = !isConference && !isSecondaryRinging && secondaryCallState != Call.STATE_DISCONNECTED
+    val hasSecondaryConnected = !isSecondaryRinging && secondaryCallState != Call.STATE_DISCONNECTED
+
+    var buttonsVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { buttonsVisible = true }
+
+    remember { WallpaperPreferences.initialize(context) }
+    val wallpaperSelection by WallpaperPreferences.selection
+    val wallpaperBlur by WallpaperPreferences.blurEnabled
+
+    var secondaryContact by remember { mutableStateOf<Contact?>(null) }
+    var resolvedSecondaryNumber by remember { mutableStateOf(secondaryNumber) }
+    LaunchedEffect(secondaryNumber) {
+        if (secondaryNumber.isNotBlank()) {
+            val fetched = ContactRepository.findContactByNumber(context, secondaryNumber)
+            secondaryContact = fetched
+            resolvedSecondaryNumber = fetched?.number ?: secondaryNumber
+        }
+    }
+    val secondaryDisplayName = if (isConference && !showConferenceInMainDisplay) {
+        "Conference call"
+    } else {
+        secondaryContact?.name ?: resolvedSecondaryNumber.ifBlank { "Unknown Caller" }
+    }
+    val hasSecondaryContactName = secondaryDisplayName != resolvedSecondaryNumber && secondaryDisplayName != "Unknown Caller"
+
+    // Call-waiting (someone calling in while already on a call) gets its own full screen instead
+    // of a small banner crammed on top of the existing call's screen — the waiting caller becomes
+    // the prominent display, the call already in progress becomes a small status chip.
+    if (isSecondaryRinging) {
+        CallWaitingScreen(
+            waitingName = secondaryDisplayName,
+            waitingNumber = secondaryNumber,
+            waitingPhotoUri = secondaryContact?.photoUri,
+            hasWaitingContactName = hasSecondaryContactName,
+            activeCallLabel = "$displayName — ${if (isOnHold) "On hold" else "Active"}",
+            isOnHold = isOnHold,
+            wallpaperSelection = wallpaperSelection,
+            wallpaperBlur = wallpaperBlur,
+            onMessageWaitingCaller = { MessageUtils.sendMessage(context, secondaryNumber) },
+            onAnswerAndEndOtherCall = onAnswerAndEndOther,
+            onAnswerSecondaryCall = onAnswerSecondary,
+            onDeclineSecondaryCall = onRejectSecondary
+        )
+        return
+    }
 
     var elapsedSeconds by remember { mutableStateOf(0L) }
     LaunchedEffect(connectedAtElapsedRealtime) {
@@ -138,16 +207,35 @@ fun CallScreen(
     var showKeypad by remember { mutableStateOf(false) }
     var showAudioRouteSheet by remember { mutableStateOf(false) }
     var showQuickResponseSheet by remember { mutableStateOf(false) }
+    var showManageCallSheet by remember { mutableStateOf(false) }
+    var showConferenceListSheet by remember { mutableStateOf(false) }
+    val showManageCallOption = hasSecondaryConnected || isConference
+
+    LaunchedEffect(isConference) {
+        if (!isConference) {
+            showConferenceListSheet = false
+        }
+    }
+
+    var conferenceParticipants by remember { mutableStateOf<List<ConferenceParticipant>>(emptyList()) }
+    LaunchedEffect(conferenceChildren) {
+        conferenceParticipants = conferenceChildren.map { child ->
+            val childNumber = child.details?.handle?.schemeSpecificPart.orEmpty()
+            val childContact = ContactRepository.findContactByNumber(context, childNumber)
+            ConferenceParticipant(
+                call = child,
+                number = childNumber,
+                name = childContact?.name ?: childNumber.ifBlank { "Unknown" },
+                photoUri = childContact?.photoUri
+            )
+        }
+    }
 
     remember { QuickResponsePreferences.initialize(context) }
     val quickResponseTemplates by QuickResponsePreferences.templates
     val smsPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) showQuickResponseSheet = true }
-
-    remember { WallpaperPreferences.initialize(context) }
-    val wallpaperSelection by WallpaperPreferences.selection
-    val wallpaperBlur by WallpaperPreferences.blurEnabled
 
     Box(
         modifier = Modifier
@@ -163,62 +251,33 @@ fun CallScreen(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Compact call-waiting banner — a second call ringing in while this one is up.
-            // Scoped down from the reference app's own full-screen call-waiting UI.
-            if (isSecondaryRinging) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Call waiting", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-                        Text(
-                            text = secondaryNumber.ifBlank { "Unknown" },
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFE0413B))
-                            .clickable(onClick = onRejectSecondary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.CallEnd, contentDescription = "Decline", tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(modifier = Modifier.size(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF1DA463))
-                            .clickable(onClick = onAnswerSecondary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Call, contentDescription = "Answer", tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
-
             Column(
                 modifier = Modifier
                     .padding(top = 64.dp)
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val avatarContact = remember(contact, displayName, number) {
-                    contact ?: Contact(id = "", name = displayName, number = number)
+                if (showConferenceInMainDisplay) {
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Groups,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+                } else {
+                    val avatarContact = remember(contact, displayName, resolvedNumber) {
+                        contact ?: Contact(id = "", name = displayName, number = resolvedNumber)
+                    }
+                    ContactAvatar(contact = avatarContact, size = 96.dp)
                 }
-                ContactAvatar(contact = avatarContact, size = 96.dp)
 
                 Spacer(modifier = Modifier.size(16.dp))
 
@@ -235,10 +294,10 @@ fun CallScreen(
                 // Only shown when there's a resolved contact name distinct from the raw number —
                 // an unknown caller's displayName already IS the number, so showing it twice
                 // would just repeat the same line.
-                if (number.isNotBlank() && displayName != number) {
+                if (resolvedNumber.isNotBlank() && displayName != resolvedNumber) {
                     Spacer(modifier = Modifier.size(4.dp))
                     Text(
-                        text = number,
+                        text = resolvedNumber,
                         fontSize = 16.sp,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -252,19 +311,59 @@ fun CallScreen(
                         isOnHold -> "On hold"
                         isRinging -> "Incoming call"
                         isDialing -> "Dialing…"
-                        else -> "Call Ended"
-                    },
-                    fontSize = 16.sp,
-                    color = Color.White.copy(alpha = 0.75f)
-                )
+                    else -> "Call Ended"
+                },
+                fontSize = 16.sp,
+                color = Color.White.copy(alpha = 0.75f)
+            )
+
+            if (hasSecondaryConnected) {
+                Spacer(modifier = Modifier.size(16.dp))
+                Surface(
+                    onClick = onSwap,
+                    color = Color.White.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhonePaused,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.size(10.dp))
+                        Text(
+                            text = "$secondaryDisplayName - On hold",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = onEndSecondary) {
+                            Text("End call", color = Color(0xFFFF8A80), fontSize = 13.sp)
+                        }
+                    }
+                }
             }
+        }
 
             Spacer(modifier = Modifier.weight(1f))
 
             if (isRinging) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = buttonsVisible,
+                    modifier = Modifier.fillMaxWidth(),
+                    enter = androidx.compose.animation.slideInVertically(animationSpec = androidx.compose.animation.core.tween(450)) { it } + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(450))
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
                         .clickable {
                             if (MessageUtils.hasSendSmsPermission(context)) {
                                 showQuickResponseSheet = true
@@ -342,6 +441,8 @@ fun CallScreen(
                         }
                     }
                 }
+                    }
+                }
             } else {
                 val hasBluetoothRoute = (audioState?.supportedRouteMask ?: 0) and CallAudioState.ROUTE_BLUETOOTH != 0
 
@@ -358,10 +459,10 @@ fun CallScreen(
                         .clip(RoundedCornerShape(32.dp))
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.06f))
+                                colors = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.02f))
                             )
                         )
-                        .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(32.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(32.dp))
                         .padding(vertical = 32.dp, horizontal = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -369,42 +470,30 @@ fun CallScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        if (hasSecondaryConnected) {
-                            // Two live calls — Swap/Merge act on them instead of Add call/Hold,
-                            // matching contactapp's own pre-merge button layout.
-                            CallControlButton(
-                                icon = Icons.Filled.SwapCalls,
-                                label = "Swap",
-                                active = false,
-                                onClick = onSwap
-                            )
-                            CallControlButton(
-                                icon = Icons.Filled.CallMerge,
-                                label = "Merge",
-                                active = false,
-                                enabled = canMerge,
-                                onClick = onMerge
-                            )
-                        } else {
-                            CallControlButton(
-                                icon = Icons.Filled.Add,
-                                label = "Add call",
-                                active = false,
-                                enabled = isActive && !isSecondaryRinging,
-                                onClick = onAddCallClick
-                            )
-                            CallControlButton(
-                                icon = if (isOnHold) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                                label = "Hold call",
-                                active = isOnHold,
-                                // Must stay enabled while on hold too — otherwise, once the call
-                                // is actually held (callState flips to STATE_HOLDING, so isActive
-                                // becomes false), this button disables itself right when it's
-                                // needed to resume the call.
-                                enabled = isActive || isOnHold,
-                                onClick = onToggleHold
-                            )
-                        }
+                        // Once a second call exists (or the calls are already merged into a
+                        // conference), this same slot switches from "Add call" to "Manage call" —
+                        // same as the reference/stock dialer, which drops "Add call" the moment a
+                        // second call is already up, since it can't take a third that way. Hold
+                        // stays its own persistent button either way — it's single-call and
+                        // unaffected by a second call existing.
+                        CallControlButton(
+                            icon = if (showManageCallOption) Icons.Filled.PhoneInTalk else Icons.Filled.Add,
+                            label = if (showManageCallOption) "Manage call" else "Add call",
+                            active = false,
+                            enabled = if (showManageCallOption) true else canAddCall,
+                            onClick = { if (showManageCallOption) showManageCallSheet = true else onAddCallClick() }
+                        )
+                        CallControlButton(
+                            icon = if (isOnHold) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                            label = "Hold call",
+                            active = isOnHold,
+                            // Must stay enabled while on hold too — otherwise, once the call
+                            // is actually held (callState flips to STATE_HOLDING, so isActive
+                            // becomes false), this button disables itself right when it's
+                            // needed to resume the call.
+                            enabled = isActive || isOnHold,
+                            onClick = onToggleHold
+                        )
                         CallControlButton(
                             icon = Icons.AutoMirrored.Filled.Message,
                             label = "Message",
@@ -488,6 +577,40 @@ fun CallScreen(
             onDismiss = { showQuickResponseSheet = false }
         )
     }
+
+    if (showManageCallSheet) {
+        ManageCallSheet(
+            isConference = isConference,
+            hasSecondaryCall = hasSecondaryConnected,
+            canMerge = canMerge,
+            canAddCall = canAddCall,
+            onSwap = {
+                showManageCallSheet = false
+                onSwap()
+            },
+            onMerge = {
+                showManageCallSheet = false
+                onMerge()
+            },
+            onConferenceList = {
+                showManageCallSheet = false
+                showConferenceListSheet = true
+            },
+            onAddCall = {
+                showManageCallSheet = false
+                onAddCallClick()
+            },
+            onDismiss = { showManageCallSheet = false }
+        )
+    }
+
+    if (showConferenceListSheet) {
+        ConferenceListSheet(
+            participants = conferenceParticipants,
+            onDisconnect = onDisconnectParticipant,
+            onDismiss = { showConferenceListSheet = false }
+        )
+    }
 }
 
 /** No individual background of its own — these sit directly on the shared panel background that
@@ -530,7 +653,7 @@ private fun CallControlButton(
         Spacer(modifier = Modifier.size(8.dp))
         Text(
             text = label,
-            color = if (active) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.85f),
+            color = if (active) Color.White else Color.White.copy(alpha = 0.85f),
             fontSize = 12.sp
         )
     }
@@ -871,6 +994,337 @@ private fun QuickResponseSheet(
                 )
             }
             Spacer(modifier = Modifier.size(8.dp))
+        }
+    }
+}
+
+data class ConferenceParticipant(
+    val call: Call,
+    val number: String,
+    val name: String,
+    val photoUri: String?
+)
+
+@Composable
+private fun CallWaitingScreen(
+    waitingName: String,
+    waitingNumber: String,
+    waitingPhotoUri: String?,
+    hasWaitingContactName: Boolean,
+    activeCallLabel: String,
+    isOnHold: Boolean,
+    wallpaperSelection: WallpaperSelection,
+    wallpaperBlur: Boolean,
+    onMessageWaitingCaller: () -> Unit,
+    onAnswerAndEndOtherCall: () -> Unit,
+    onAnswerSecondaryCall: () -> Unit,
+    onDeclineSecondaryCall: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A1A)))
+        CallWallpaperBackground(selection = wallpaperSelection, blurEnabled = wallpaperBlur, modifier = Modifier.fillMaxSize())
+        Box(
+            modifier = Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color.Black.copy(alpha = 0.45f),
+                    0.35f to Color.Transparent,
+                    0.75f to Color.Transparent,
+                    1f to Color.Black.copy(alpha = 0.55f)
+                )
+            )
+        )
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 80.dp)
+            ) {
+                val avatarContact = remember(waitingName, waitingNumber, waitingPhotoUri) {
+                    Contact(id = "", name = waitingName, number = waitingNumber, photoUri = waitingPhotoUri)
+                }
+                ContactAvatar(contact = avatarContact, size = 96.dp)
+
+                Spacer(modifier = Modifier.size(16.dp))
+
+                Text(
+                    text = waitingName,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (hasWaitingContactName && waitingNumber.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = waitingNumber, fontSize = 16.sp, color = Color.White.copy(alpha = 0.7f))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Call waiting",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White.copy(alpha = 0.75f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Surface(
+                    color = Color.White.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (isOnHold) Icons.Default.PhonePaused else Icons.Default.Call,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = activeCallLabel,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(bottom = 40.dp).navigationBarsPadding()
+            ) {
+                Surface(
+                    onClick = onMessageWaitingCaller,
+                    color = Color.White.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(50)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Message", color = Color.White)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    onClick = onAnswerAndEndOtherCall,
+                    color = Color.White.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(50)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Call, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Answer and end other call", color = Color.White)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(48.dp)) {
+                    CallActionButtons(
+                        icon = Icons.Default.CallEnd,
+                        color = Color(0xFFD32F2F),
+                        onClick = onDeclineSecondaryCall,
+                        label = "Decline"
+                    )
+                    CallActionButtons(
+                        icon = Icons.Default.Call,
+                        color = Color(0xFF1DA463),
+                        onClick = onAnswerSecondaryCall,
+                        label = "Answer"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CallActionButtons(icon: ImageVector, color: Color, onClick: () -> Unit, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(color)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(28.dp))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = label, color = Color.White)
+    }
+}
+
+@Composable
+private fun ManageCallRow(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = label,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ManageCallSheet(
+    isConference: Boolean,
+    hasSecondaryCall: Boolean,
+    canMerge: Boolean,
+    canAddCall: Boolean,
+    onMerge: () -> Unit,
+    onSwap: () -> Unit,
+    onConferenceList: () -> Unit,
+    onAddCall: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            Text(
+                text = "Manage call",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+            )
+            if (isConference) {
+                ManageCallRow(
+                    icon = Icons.Default.Groups,
+                    label = "Conference list",
+                    enabled = true,
+                    onClick = onConferenceList
+                )
+                if (hasSecondaryCall) {
+                    ManageCallRow(
+                        icon = Icons.Default.CallMerge,
+                        label = "Merge",
+                        enabled = canMerge,
+                        onClick = onMerge
+                    )
+                }
+                ManageCallRow(
+                    icon = Icons.Default.PersonAdd,
+                    label = "Add call",
+                    enabled = canAddCall || !hasSecondaryCall,
+                    onClick = onAddCall
+                )
+            } else {
+                ManageCallRow(
+                    icon = Icons.Default.CallMerge,
+                    label = "Merge calls",
+                    enabled = canMerge,
+                    onClick = onMerge
+                )
+                ManageCallRow(
+                    icon = Icons.Default.SwapCalls,
+                    label = "Swap calls",
+                    enabled = true,
+                    onClick = onSwap
+                )
+                ManageCallRow(
+                    icon = Icons.Default.PersonAdd,
+                    label = "Add call",
+                    enabled = false,
+                    onClick = {}
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ConferenceListSheet(
+    participants: List<ConferenceParticipant>,
+    onDisconnect: (Call) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Conference list",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = null)
+                }
+            }
+            participants.forEach { participant ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val avatarContact = remember(participant) {
+                        Contact(id = "", name = participant.name, number = participant.number, photoUri = participant.photoUri)
+                    }
+                    ContactAvatar(contact = avatarContact, size = 44.dp)
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = participant.name, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (participant.name != participant.number) {
+                            Text(
+                                text = participant.number,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = { onDisconnect(participant.call) },
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFFFCDD2))
+                    ) {
+                        Icon(Icons.Default.CallEnd, contentDescription = null, tint = Color(0xFFD32F2F))
+                    }
+                }
+            }
         }
     }
 }

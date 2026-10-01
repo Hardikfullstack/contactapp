@@ -57,6 +57,14 @@ object CallManager {
     private val _canMerge = MutableStateFlow(false)
     val canMerge: StateFlow<Boolean> = _canMerge.asStateFlow()
 
+    /** Whether a third call can be dialed right now — only ever true with exactly one call up
+     * (no secondary yet) that itself supports being put on hold, matching contactapp's own gate
+     * (CAPABILITY_HOLD isn't reliably reported on a just-merged conference call on every telephony
+     * stack, so callers needing the post-merge case fall back to "no secondary call pending"
+     * instead of this flag — see ManageCallSheet). */
+    private val _canAddCall = MutableStateFlow(false)
+    val canAddCall: StateFlow<Boolean> = _canAddCall.asStateFlow()
+
     // Mute/audio-routing are InCallService-level operations, not Call-level — held weakly since
     // CallManager outlives any single call/service instance and must never keep it alive.
     private var serviceRef: WeakReference<InCallService>? = null
@@ -71,6 +79,8 @@ object CallManager {
                 primary.details.can(Call.Details.CAPABILITY_MERGE_CONFERENCE) ||
                 secondary.details.can(Call.Details.CAPABILITY_MERGE_CONFERENCE)
         }
+        _canAddCall.value = primary != null && secondary == null &&
+            primary.details.can(Call.Details.CAPABILITY_HOLD)
     }
 
     private val callCallback = object : Call.Callback() {
@@ -247,6 +257,15 @@ object CallManager {
         if (_callState.value == Call.STATE_ACTIVE) {
             _currentCall.value?.hold()
         }
+        secondary.answer(VideoProfile.STATE_AUDIO_ONLY)
+    }
+
+    /** Ends the in-progress call outright and answers the waiting one instead — the call-waiting
+     * screen's "Answer & end other call" option, distinct from [answerSecondaryCall] which holds
+     * (not disconnects) the primary. */
+    fun answerSecondaryAndEndOther() {
+        val secondary = _secondaryCall.value ?: return
+        _currentCall.value?.disconnect()
         secondary.answer(VideoProfile.STATE_AUDIO_ONLY)
     }
 
