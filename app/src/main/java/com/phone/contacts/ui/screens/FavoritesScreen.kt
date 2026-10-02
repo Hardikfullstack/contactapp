@@ -37,12 +37,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.ListRowSkeleton
@@ -105,10 +107,10 @@ fun FavoritesScreen(onAddFavoriteClick: () -> Unit, onFavoriteClick: (Contact) -
             .statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenTitleBar(title = "Favorites")
+            ScreenTitleBar(title = stringResource(R.string.favorites))
 
             if (!hasPermission) {
-                PlaceholderScreen(title = "Permission required")
+                PlaceholderScreen(title = stringResource(R.string.permission_required_title))
             } else if (isLoading) {
                 ListRowSkeleton()
             } else if (favorites.isEmpty()) {
@@ -119,7 +121,7 @@ fun FavoritesScreen(onAddFavoriteClick: () -> Unit, onFavoriteClick: (Contact) -
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No favorites yet",
+                        text = stringResource(R.string.no_favorites_yet),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

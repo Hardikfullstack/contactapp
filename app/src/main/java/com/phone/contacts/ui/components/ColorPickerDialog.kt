@@ -37,9 +37,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.phone.contacts.R
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -70,7 +72,7 @@ fun ColorPickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Pick a color",
+                    text = stringResource(R.string.pick_a_color),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -110,7 +112,7 @@ fun ColorPickerDialog(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Text(
-                    text = "Brightness",
+                    text = stringResource(R.string.brightness),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.Start)
@@ -133,7 +135,7 @@ fun ColorPickerDialog(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -143,7 +145,7 @@ fun ColorPickerDialog(
                         },
                         shape = RoundedCornerShape(20.dp)
                     ) {
-                        Text("Select")
+                        Text(stringResource(R.string.select))
                     }
                 }
             }

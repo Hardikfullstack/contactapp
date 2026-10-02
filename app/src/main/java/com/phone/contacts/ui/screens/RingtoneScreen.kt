@@ -57,10 +57,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.phone.contacts.R
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.DeviceAudioFile
 import com.phone.contacts.util.SystemRingtoneItem
 import com.phone.contacts.util.formatAudioDuration
@@ -200,7 +203,7 @@ fun RingtoneScreen(
     fun openSystemRingtonePicker() {
         val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
             putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_RINGTONE)
-            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "System default")
+            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, context.getString(R.string.system_default_label))
             putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, false)
             putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
             val existingUri = if (stagedUri == USE_DEFAULT_SENTINEL) {
@@ -213,6 +216,13 @@ fun RingtoneScreen(
         systemPickerLauncher.launch(intent)
     }
 
+    // Resolved here (stringResource needs a composable context) so the remember{} block below -
+    // which @DisallowComposableCalls forbids calling stringResource from directly - can just
+    // close over these as plain strings.
+    val defaultWithNameLabel = stringResource(R.string.default_with_name_label)
+    val defaultLabel = stringResource(R.string.default_label)
+    val silentLabel = stringResource(R.string.silent_label)
+    val unknownLabel = stringResource(R.string.unknown)
     val currentTitle = remember(stagedUri) {
         when (stagedUri) {
             USE_DEFAULT_SENTINEL -> {
@@ -222,13 +232,13 @@ fun RingtoneScreen(
                 } catch (e: Exception) {
                     null
                 }
-                if (defaultTitle != null) "Default ($defaultTitle)" else "Default"
+                if (defaultTitle != null) String.format(defaultWithNameLabel, defaultTitle) else defaultLabel
             }
-            null -> "Silent"
+            null -> silentLabel
             else -> try {
-                RingtoneManager.getRingtone(context, stagedUri)?.getTitle(context) ?: "Unknown"
+                RingtoneManager.getRingtone(context, stagedUri)?.getTitle(context) ?: unknownLabel
             } catch (e: Exception) {
-                "Unknown"
+                unknownLabel
             }
         }
     }
@@ -247,7 +257,7 @@ fun RingtoneScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = if (isContactMode) "Ringtone for ${contactName.orEmpty()}" else "Set Ringtone",
+                text = if (isContactMode) stringResource(R.string.ringtone_for_contact_title, contactName.orEmpty()) else stringResource(R.string.action_set_ringtone),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -258,7 +268,7 @@ fun RingtoneScreen(
 
         if (isLoading) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                CircularProgressIndicator(color = primaryAccentColor())
             }
         } else {
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValuesVertical) {
@@ -283,12 +293,12 @@ fun RingtoneScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "System default",
+                                    text = stringResource(R.string.system_default_label),
                                     color = MaterialTheme.colorScheme.onBackground,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "Default tones provided by your device.",
+                                    text = stringResource(R.string.default_tones_description),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodySmall
                                 )
@@ -300,7 +310,7 @@ fun RingtoneScreen(
 
                 item {
                     Text(
-                        text = "Current ringtone",
+                        text = stringResource(R.string.current_ringtone_label),
                         modifier = Modifier.padding(start = 20.dp, top = 12.dp, bottom = 4.dp),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -317,7 +327,7 @@ fun RingtoneScreen(
 
                 item {
                     Text(
-                        text = "Custom",
+                        text = stringResource(R.string.custom_type_fallback),
                         modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 4.dp),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -327,16 +337,16 @@ fun RingtoneScreen(
                 if (!hasAudioPermission) {
                     item {
                         PermissionCard(
-                            title = "Allow access to audio files",
-                            description = "Lets you pick any song or audio file on your device as a ringtone.",
-                            buttonLabel = "Grant access",
+                            title = stringResource(R.string.allow_audio_access_title),
+                            description = stringResource(R.string.allow_audio_access_description),
+                            buttonLabel = stringResource(R.string.grant_access_label),
                             onClick = { audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO) }
                         )
                     }
                 } else if (customFiles.isEmpty()) {
                     item {
                         Text(
-                            text = "No audio files found on this device.",
+                            text = stringResource(R.string.no_audio_files_found),
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium
@@ -358,7 +368,7 @@ fun RingtoneScreen(
 
                 item {
                     Text(
-                        text = "System",
+                        text = stringResource(R.string.system_label),
                         modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 4.dp),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -366,7 +376,7 @@ fun RingtoneScreen(
                 }
                 item {
                     RingtoneRow(
-                        title = "Silent",
+                        title = stringResource(R.string.silent_label),
                         subtitle = null,
                         selected = stagedUri == null,
                         onClick = {
@@ -405,7 +415,7 @@ fun RingtoneScreen(
                         } else {
                             RingtoneManager.setActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE, stagedUri)
                         }
-                        Toast.makeText(context, "Ringtone updated", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.toast_ringtone_updated), Toast.LENGTH_SHORT).show()
                         onBack()
                     }
                 }
@@ -418,7 +428,7 @@ fun RingtoneScreen(
             shape = RoundedCornerShape(26.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text("Set ringtone", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.action_set_ringtone_button), fontWeight = FontWeight.Bold)
         }
     }
 }

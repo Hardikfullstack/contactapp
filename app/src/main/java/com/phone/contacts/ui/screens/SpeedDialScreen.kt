@@ -35,10 +35,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.phone.contacts.R
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.SpeedDialEntry
 import com.phone.contacts.util.SpeedDialPreferences
 import com.phone.contacts.util.speedDialColorFor
@@ -72,7 +75,7 @@ fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListC
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Speed dial",
+                text = stringResource(R.string.speed_dial_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -81,8 +84,8 @@ fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListC
         }
 
         Text(
-            text = "Tap on number to add speed dial",
-            color = MaterialTheme.colorScheme.primary,
+            text = stringResource(R.string.tap_on_number_hint),
+            color = primaryAccentColor(),
             fontWeight = FontWeight.Medium,
             fontSize = 15.sp,
             textAlign = TextAlign.Center,
@@ -115,25 +118,25 @@ fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListC
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 18.dp).height(48.dp)
         ) {
-            Text("Speed dial list", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.speed_dial_list_title), fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
     }
 
     confirmingKey?.let { key ->
         AlertDialog(
             onDismissRequest = { confirmingKey = null },
-            title = { Text("Speed dial") },
-            text = { Text("Set speed dial number") },
+            title = { Text(stringResource(R.string.speed_dial_title)) },
+            text = { Text(stringResource(R.string.set_speed_dial_number_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmingKey = null
                     onAssignClick(key)
                 }) {
-                    Text("Set")
+                    Text(stringResource(R.string.action_set))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingKey = null }) { Text("Cancel") }
+                TextButton(onClick = { confirmingKey = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -187,7 +190,7 @@ private fun SpeedDialKey(dialKey: String, entry: SpeedDialEntry?, onClick: () ->
             }
         }
         Text(
-            text = entry?.name?.substringBefore(" ") ?: "Empty",
+            text = entry?.name?.substringBefore(" ") ?: stringResource(R.string.empty_label),
             fontSize = 10.sp,
             maxLines = 1,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

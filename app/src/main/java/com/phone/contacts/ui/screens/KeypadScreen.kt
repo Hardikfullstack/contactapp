@@ -54,14 +54,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.verticalScrollIndicator
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.MessageUtils
 import com.phone.contacts.util.KeypadTonePreferences
@@ -193,7 +196,7 @@ fun KeypadScreen(onAddNumberClick: (String) -> Unit) {
                     }
                 }
                 Text(
-                    text = "Add Number",
+                    text = stringResource(R.string.add_number_label),
                     color = if (dialedNumber.isNotEmpty()) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -418,7 +421,7 @@ private fun DialMatchRow(contact: Contact, onCall: () -> Unit, onMessage: () -> 
         Icon(
             imageVector = Icons.Filled.Call,
             contentDescription = "Call",
-            tint = MaterialTheme.colorScheme.primary,
+            tint = primaryAccentColor(),
             modifier = Modifier
                 .size(22.dp)
                 .clip(CircleShape)

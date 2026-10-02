@@ -3,6 +3,9 @@ package com.phone.contacts.ui.features.call
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.telecom.Call
+import android.telecom.CallAudioState
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,12 +27,79 @@ import com.phone.contacts.util.CallButtonStylePreferences
 import com.phone.contacts.util.DeviceUtils
 import com.phone.contacts.util.WallpaperPreferences
 import com.phone.contacts.util.isDarkOnCallScreen
+import kotlinx.coroutines.delay
 
 /** Shows over the lock screen for whichever call [com.phone.contacts.service.ContactsCallService]
  * just handed to [CallManager] — launched fresh from onCallAdded each time, but Telecom hands a
  * new call to the same running process, so this Activity itself just re-reads CallManager's
  * current state on each recomposition rather than owning any call state of its own. */
 class CallActivity : ComponentActivity() {
+
+    // PROXIMITY_SCREEN_OFF_WAKE_LOCK is the standard way to turn the screen off when the phone is
+    // held to the ear during an active earpiece call — without it, FLAG_KEEP_SCREEN_ON below leaves
+    // the screen fully lit and touch-responsive against the user's face/cheek for the whole call.
+    private var proximityWakeLock: PowerManager.WakeLock? = null
+
+    private fun acquireProximityWakeLock() {
+        if (proximityWakeLock?.isHeld == true) return
+        try {
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+            if (!powerManager.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) return
+            proximityWakeLock = powerManager.newWakeLock(
+                PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
+                "Contacts:ProximityCallWakeLock"
+            ).apply { acquire(10 * 60 * 1000L /*10 min safety timeout*/) }
+        } catch (e: Exception) {
+            // Some OEMs restrict this wake lock level despite reporting it as supported — the
+            // call screen must never crash over a missing proximity-off nicety.
+        }
+    }
+
+    private fun releaseProximityWakeLock() {
+        proximityWakeLock?.let { if (it.isHeld) it.release() }
+        proximityWakeLock = null
+    }
+
+    // Last computed "should the proximity sensor be controlling the screen" state, from the
+    // call/audio-route LaunchedEffect below — re-applied in onStart() since the wake lock is
+    // always fully released in onStop() (see there for why), so coming back to this screen with
+    // the exact same call/audio state wouldn't otherwise re-trigger that LaunchedEffect at all.
+    private var wantsProximityControl = false
+
+    private fun applyProximityState(nearEar: Boolean) {
+        wantsProximityControl = nearEar
+        if (nearEar) {
+            // FLAG_KEEP_SCREEN_ON would otherwise fight the proximity sensor's own screen-off —
+            // hand full control to the wake lock while it's in charge.
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            acquireProximityWakeLock()
+        } else {
+            releaseProximityWakeLock()
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Re-acquire if we're coming back to an already-active earpiece call — released
+        // unconditionally in onStop() below, so this is the only thing that restores it.
+        if (wantsProximityControl) applyProximityState(true)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Once this screen isn't visible (user went Home, or swiped it away while the call keeps
+        // running via ContactsCallService), fighting for proximity-based screen control no longer
+        // makes sense — without this, the wake lock stayed held in the background and could turn
+        // the screen off on the Home screen/another app if the phone was near the body.
+        releaseProximityWakeLock()
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        releaseProximityWakeLock()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +112,10 @@ class CallActivity : ComponentActivity() {
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             )
         }
+        // Keeps the screen on (and off the system's normal timeout-then-lock path) for the whole
+        // call by default - applyProximityState() clears this temporarily while the proximity
+        // wake lock itself is in charge (phone held to the ear), then restores it once not.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         enableEdgeToEdge()
 
@@ -107,6 +181,23 @@ class CallActivity : ComponentActivity() {
                 val frontCallState = if (secondaryIsFront) secondaryCallState else callState
                 val backCallState = if (secondaryIsFront) callState else secondaryCallState
                 val frontConnectedAtElapsedRealtime = if (secondaryIsFront) secondaryConnectedAtElapsedRealtime else connectedAtElapsedRealtime
+
+                LaunchedEffect(frontCallState, audioState?.route) {
+                    // Only take over screen control for an active call on the earpiece — while
+                    // ringing the user needs to see the Answer/Decline UI, and on speaker/Bluetooth/
+                    // wired-headset the phone isn't held to the face, so the screen should stay lit.
+                    val nearEar = frontCallState == Call.STATE_ACTIVE && audioState?.route == CallAudioState.ROUTE_EARPIECE
+                    if (nearEar) {
+                        // A short grace period before handing screen control to the proximity sensor —
+                        // answering (from the notification or the on-screen button) puts a finger right
+                        // near the earpiece/sensor at the exact moment the call goes ACTIVE, which would
+                        // otherwise read as a false "near ear" and blank the screen the instant the user
+                        // answers. Cancelled automatically (LaunchedEffect restarts) if the state changes
+                        // again before this delay elapses — e.g. switching to speaker right away.
+                        delay(800L)
+                    }
+                    applyProximityState(nearEar)
+                }
 
                 val activeChildren = conferenceChildren.filter { it.state != android.telecom.Call.STATE_DISCONNECTED }
                 val isRealConference = activeChildren.size > 1

@@ -5,10 +5,16 @@ import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
 import android.telecom.VideoProfile
+import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.util.CallUtils
+import com.phone.contacts.util.DefaultDialerState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
 /**
@@ -69,6 +75,63 @@ object CallManager {
     // CallManager outlives any single call/service instance and must never keep it alive.
     private var serviceRef: WeakReference<InCallService>? = null
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // Caller info resolved once per call (name/photo lookup is async) and reused by every
+    // subsequent notification re-render for that same call, matching how the on-screen caller
+    // name/photo stays fixed for the life of the call.
+    private var primaryCallerName: String? = null
+    private var primaryCallerPhotoUri: String? = null
+    private var primaryHasContactName: Boolean = false
+    private var secondaryCallerName: String? = null
+    private var secondaryCallerPhotoUri: String? = null
+    private var secondaryHasContactName: Boolean = false
+
+    private fun resolvePrimaryCallerInfo(context: Context, number: String, onResolved: () -> Unit) {
+        primaryCallerName = number
+        primaryCallerPhotoUri = null
+        primaryHasContactName = false
+        scope.launch {
+            val contact = ContactRepository.findContactByNumber(context, number)
+            if (contact?.name != null) {
+                primaryCallerName = contact.name
+                primaryHasContactName = true
+            }
+            primaryCallerPhotoUri = contact?.photoUri
+            onResolved()
+        }
+    }
+
+    private fun resolveSecondaryCallerInfo(context: Context, number: String, onResolved: () -> Unit) {
+        secondaryCallerName = number
+        secondaryCallerPhotoUri = null
+        secondaryHasContactName = false
+        scope.launch {
+            val contact = ContactRepository.findContactByNumber(context, number)
+            if (contact?.name != null) {
+                secondaryCallerName = contact.name
+                secondaryHasContactName = true
+            }
+            secondaryCallerPhotoUri = contact?.photoUri
+            onResolved()
+        }
+    }
+
+    private fun renderActiveNotification(context: Context, call: Call) {
+        // Same fresh re-check as onCallAdded - never show/refresh the call notification unless
+        // this app genuinely holds the default-dialer role right now.
+        DefaultDialerState.refresh(context)
+        if (!DefaultDialerState.isDefault.value) return
+        CallNotificationManager.showActiveCallNotification(
+            context,
+            primaryCallerName ?: call.details.handle?.schemeSpecificPart ?: "Unknown",
+            primaryCallerPhotoUri,
+            callConnectedAtMillis = _connectedAtElapsedRealtime.value,
+            hasContactName = primaryHasContactName,
+            isConference = _conferenceChildren.value.size > 1
+        )
+    }
+
     private fun recomputeCanMerge() {
         val primary = _currentCall.value
         val secondary = _secondaryCall.value
@@ -90,6 +153,12 @@ object CallManager {
                 _connectedAtElapsedRealtime.value = android.os.SystemClock.elapsedRealtime()
             }
             recomputeCanMerge()
+
+            val context = serviceRef?.get() ?: return
+            when (state) {
+                Call.STATE_ACTIVE, Call.STATE_HOLDING -> renderActiveNotification(context, call)
+                Call.STATE_DISCONNECTED -> CallNotificationManager.cancelNotification(context)
+            }
         }
 
         override fun onChildrenChanged(call: Call, children: MutableList<Call>) {
@@ -98,6 +167,11 @@ object CallManager {
                 // Telecom merged in place rather than handing back a new conference Call — the
                 // separately-tracked secondary is now redundant/stale.
                 clearSecondaryCall()
+            }
+            // Re-render immediately on a merge (not just on the next state transition) so the
+            // "Conference call" icon/title switch shows up the moment it completes.
+            if (call.state == Call.STATE_ACTIVE || call.state == Call.STATE_HOLDING) {
+                serviceRef?.get()?.let { renderActiveNotification(it, call) }
             }
         }
 
@@ -117,6 +191,12 @@ object CallManager {
                 _secondaryConnectedAtElapsedRealtime.value = android.os.SystemClock.elapsedRealtime()
             }
             recomputeCanMerge()
+
+            // Answered, held, or hung up before being answered - either way it's no longer
+            // "waiting", so the stacked call-waiting pill no longer applies.
+            if (state != Call.STATE_RINGING) {
+                serviceRef?.get()?.let { CallNotificationManager.cancelCallWaitingNotification(it) }
+            }
         }
 
         override fun onConferenceableCallsChanged(call: Call, conferenceableCalls: MutableList<Call>) {
@@ -138,9 +218,10 @@ object CallManager {
 
     fun onCallAdded(call: Call) {
         val isConferenceCall = call.children.isNotEmpty() || call.details.can(Call.Details.CAPABILITY_MANAGE_CONFERENCE)
+        val isFirstCall = _currentCall.value == null
         when {
             isConferenceCall -> promoteToConference(call)
-            _currentCall.value == null -> {
+            isFirstCall -> {
                 _currentCall.value = call
                 _callState.value = call.state
                 _connectedAtElapsedRealtime.value = if (call.state == Call.STATE_ACTIVE) {
@@ -153,6 +234,48 @@ object CallManager {
             else -> addSecondaryCall(call)
         }
         recomputeCanMerge()
+
+        val context = serviceRef?.get() ?: return
+        // Re-queried fresh (not the cached DefaultDialerState.isDefault.value some screen last
+        // set) - Telecom can still bind this InCallService and hand over a call in the brief
+        // window right as the role is being granted, before any screen's own refresh() has run;
+        // trusting a stale cached value here could wrongly skip the very first call's notification.
+        DefaultDialerState.refresh(context)
+        if (!DefaultDialerState.isDefault.value) return
+        CallNotificationManager.ensureChannels(context)
+        val number = call.details.handle?.schemeSpecificPart ?: "Unknown"
+        when {
+            isConferenceCall -> {} // callCallback's onStateChanged/onChildrenChanged renders this once it's active.
+            isFirstCall && call.state == Call.STATE_RINGING -> {
+                resolvePrimaryCallerInfo(context, number) {
+                    CallNotificationManager.showIncomingCallNotification(
+                        context, primaryCallerName ?: number, number, primaryCallerPhotoUri, primaryHasContactName
+                    )
+                }
+            }
+            isFirstCall -> {
+                // Outgoing call (dialing/connecting) - reuses the active-call notification since
+                // there's nothing to Answer/Decline on our own outgoing call.
+                resolvePrimaryCallerInfo(context, number) {
+                    CallNotificationManager.showActiveCallNotification(
+                        context,
+                        primaryCallerName ?: number,
+                        primaryCallerPhotoUri,
+                        statusText = context.getString(com.phone.contacts.R.string.dialing),
+                        callConnectedAtMillis = null,
+                        hasContactName = primaryHasContactName
+                    )
+                }
+            }
+            call.state == Call.STATE_RINGING -> {
+                // Call-waiting: a second call ringing in while already on a call.
+                resolveSecondaryCallerInfo(context, number) {
+                    CallNotificationManager.showCallWaitingNotification(
+                        context, secondaryCallerName ?: number, number, secondaryCallerPhotoUri, secondaryHasContactName
+                    )
+                }
+            }
+        }
     }
 
     private fun addSecondaryCall(call: Call) {
@@ -204,13 +327,25 @@ object CallManager {
         _secondaryConnectedAtElapsedRealtime.value = null
         secondary.registerCallback(callCallback)
         recomputeCanMerge()
+
+        // The surviving call's own resolved info takes over as "primary" for future re-renders.
+        primaryCallerName = secondaryCallerName
+        primaryCallerPhotoUri = secondaryCallerPhotoUri
+        primaryHasContactName = secondaryHasContactName
+        if (secondary.state == Call.STATE_ACTIVE || secondary.state == Call.STATE_HOLDING) {
+            serviceRef?.get()?.let { renderActiveNotification(it, secondary) }
+        }
     }
 
     fun onCallRemoved(call: Call) {
         call.unregisterCallback(callCallback)
         call.unregisterCallback(secondaryCallCallback)
+        val context = serviceRef?.get()
         when {
-            call === _secondaryCall.value -> clearSecondaryCall()
+            call === _secondaryCall.value -> {
+                context?.let { CallNotificationManager.cancelCallWaitingNotification(it) }
+                clearSecondaryCall()
+            }
             call === _currentCall.value -> {
                 if (_secondaryCall.value != null) {
                     promoteSecondaryToPrimary()
@@ -219,6 +354,10 @@ object CallManager {
                     _callState.value = Call.STATE_DISCONNECTED
                     _connectedAtElapsedRealtime.value = null
                     _conferenceChildren.value = emptyList()
+                    context?.let { CallNotificationManager.cancelNotification(it) }
+                    primaryCallerName = null
+                    primaryCallerPhotoUri = null
+                    primaryHasContactName = false
                 }
             }
         }
@@ -227,6 +366,11 @@ object CallManager {
 
     fun onAudioStateChanged(state: CallAudioState) {
         _audioState.value = state
+        // Keeps the notification's Mute/Speaker icons in sync - covers both a toggle tapped from
+        // the notification itself and external route changes (e.g. a headset connecting).
+        if (_callState.value == Call.STATE_ACTIVE) {
+            serviceRef?.get()?.let { CallNotificationManager.refreshActiveCallNotification(it) }
+        }
     }
 
     fun answer() {

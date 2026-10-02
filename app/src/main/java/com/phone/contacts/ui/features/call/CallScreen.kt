@@ -78,16 +78,19 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.CallWallpaperBackground
 import com.phone.contacts.ui.screens.ContactAvatar
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.MessageUtils
 import com.phone.contacts.util.QuickResponsePreferences
 import com.phone.contacts.util.QuickResponseTemplate
@@ -142,7 +145,9 @@ fun CallScreen(
         contact = fetched
         resolvedNumber = fetched?.number ?: number
     }
-    val displayName = if (showConferenceInMainDisplay) "Conference call" else contact?.name ?: resolvedNumber.ifBlank { "Unknown Caller" }
+    val conferenceCallLabel = stringResource(R.string.conference_call)
+    val unknownCallerLabel = stringResource(R.string.unknown_caller)
+    val displayName = if (showConferenceInMainDisplay) conferenceCallLabel else contact?.name ?: resolvedNumber.ifBlank { unknownCallerLabel }
 
     val isRinging = callState == Call.STATE_RINGING
     val isDialing = callState == Call.STATE_DIALING || callState == Call.STATE_CONNECTING
@@ -168,11 +173,11 @@ fun CallScreen(
         }
     }
     val secondaryDisplayName = if (isConference && !showConferenceInMainDisplay) {
-        "Conference call"
+        conferenceCallLabel
     } else {
-        secondaryContact?.name ?: resolvedSecondaryNumber.ifBlank { "Unknown Caller" }
+        secondaryContact?.name ?: resolvedSecondaryNumber.ifBlank { unknownCallerLabel }
     }
-    val hasSecondaryContactName = secondaryDisplayName != resolvedSecondaryNumber && secondaryDisplayName != "Unknown Caller"
+    val hasSecondaryContactName = secondaryDisplayName != resolvedSecondaryNumber && secondaryDisplayName != unknownCallerLabel
 
     // Call-waiting (someone calling in while already on a call) gets its own full screen instead
     // of a small banner crammed on top of the existing call's screen — the waiting caller becomes
@@ -183,7 +188,7 @@ fun CallScreen(
             waitingNumber = secondaryNumber,
             waitingPhotoUri = secondaryContact?.photoUri,
             hasWaitingContactName = hasSecondaryContactName,
-            activeCallLabel = "$displayName — ${if (isOnHold) "On hold" else "Active"}",
+            activeCallLabel = "$displayName — ${if (isOnHold) stringResource(R.string.call_status_on_hold) else stringResource(R.string.call_status_active)}",
             isOnHold = isOnHold,
             wallpaperSelection = wallpaperSelection,
             wallpaperBlur = wallpaperBlur,
@@ -218,6 +223,7 @@ fun CallScreen(
     }
 
     var conferenceParticipants by remember { mutableStateOf<List<ConferenceParticipant>>(emptyList()) }
+    val unknownLabel = stringResource(R.string.unknown)
     LaunchedEffect(conferenceChildren) {
         conferenceParticipants = conferenceChildren.map { child ->
             val childNumber = child.details?.handle?.schemeSpecificPart.orEmpty()
@@ -225,7 +231,7 @@ fun CallScreen(
             ConferenceParticipant(
                 call = child,
                 number = childNumber,
-                name = childContact?.name ?: childNumber.ifBlank { "Unknown" },
+                name = childContact?.name ?: childNumber.ifBlank { unknownLabel },
                 photoUri = childContact?.photoUri
             )
         }
@@ -308,10 +314,10 @@ fun CallScreen(
                 Text(
                     text = when {
                         isActive -> formatDuration(elapsedSeconds)
-                        isOnHold -> "On hold"
-                        isRinging -> "Incoming call"
-                        isDialing -> "Dialing…"
-                    else -> "Call Ended"
+                        isOnHold -> stringResource(R.string.call_status_on_hold)
+                        isRinging -> stringResource(R.string.incoming_call)
+                        isDialing -> stringResource(R.string.dialing)
+                    else -> stringResource(R.string.call_ended)
                 },
                 fontSize = 16.sp,
                 color = Color.White.copy(alpha = 0.75f)
@@ -336,7 +342,7 @@ fun CallScreen(
                         )
                         Spacer(modifier = Modifier.size(10.dp))
                         Text(
-                            text = "$secondaryDisplayName - On hold",
+                            text = stringResource(R.string.label_caller_on_hold, secondaryDisplayName),
                             color = Color.White,
                             fontWeight = FontWeight.Medium,
                             fontSize = 14.sp,
@@ -345,7 +351,7 @@ fun CallScreen(
                             modifier = Modifier.weight(1f)
                         )
                         TextButton(onClick = onEndSecondary) {
-                            Text("End call", color = Color(0xFFFF8A80), fontSize = 13.sp)
+                            Text(stringResource(R.string.action_end_call), color = Color(0xFFFF8A80), fontSize = 13.sp)
                         }
                     }
                 }
@@ -381,7 +387,7 @@ fun CallScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.size(8.dp))
-                    Text(text = "Message", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                    Text(text = stringResource(R.string.action_message), color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
                 }
 
                 if (callButtonStyle.isSlider) {
@@ -394,7 +400,7 @@ fun CallScreen(
                         SlideToAnswer(onAnswer = onAnswer)
                         Spacer(modifier = Modifier.size(20.dp))
                         Text(
-                            text = "Decline",
+                            text = stringResource(R.string.action_decline),
                             color = Color(0xFFFF6B6B),
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier
@@ -478,14 +484,14 @@ fun CallScreen(
                         // unaffected by a second call existing.
                         CallControlButton(
                             icon = if (showManageCallOption) Icons.Filled.PhoneInTalk else Icons.Filled.Add,
-                            label = if (showManageCallOption) "Manage call" else "Add call",
+                            label = if (showManageCallOption) stringResource(R.string.manage_call_label) else stringResource(R.string.add_call_title),
                             active = false,
                             enabled = if (showManageCallOption) true else canAddCall,
                             onClick = { if (showManageCallOption) showManageCallSheet = true else onAddCallClick() }
                         )
                         CallControlButton(
                             icon = if (isOnHold) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                            label = "Hold call",
+                            label = stringResource(R.string.hold_call_label),
                             active = isOnHold,
                             // Must stay enabled while on hold too — otherwise, once the call
                             // is actually held (callState flips to STATE_HOLDING, so isActive
@@ -496,7 +502,7 @@ fun CallScreen(
                         )
                         CallControlButton(
                             icon = Icons.AutoMirrored.Filled.Message,
-                            label = "Message",
+                            label = stringResource(R.string.action_message),
                             active = false,
                             onClick = { MessageUtils.sendMessage(context, number) }
                         )
@@ -510,19 +516,19 @@ fun CallScreen(
                     ) {
                         CallControlButton(
                             icon = if (audioState?.route == CallAudioState.ROUTE_BLUETOOTH) Icons.Filled.Bluetooth else Icons.AutoMirrored.Filled.VolumeUp,
-                            label = if (audioState?.route == CallAudioState.ROUTE_BLUETOOTH) "Bluetooth" else "Speaker",
+                            label = if (audioState?.route == CallAudioState.ROUTE_BLUETOOTH) stringResource(R.string.label_bluetooth) else stringResource(R.string.label_speaker),
                             active = audioState?.route == CallAudioState.ROUTE_SPEAKER,
                             onClick = { if (hasBluetoothRoute) showAudioRouteSheet = true else onToggleSpeaker() }
                         )
                         CallControlButton(
                             icon = if (audioState?.isMuted == true) Icons.Filled.MicOff else Icons.Filled.Mic,
-                            label = "Mute",
+                            label = stringResource(R.string.label_mute),
                             active = audioState?.isMuted == true,
                             onClick = onToggleMute
                         )
                         CallControlButton(
                             icon = Icons.Filled.Dialpad,
-                            label = "Keypad",
+                            label = stringResource(R.string.keypad),
                             active = showKeypad,
                             onClick = { showKeypad = true }
                         )
@@ -759,7 +765,7 @@ internal fun SlideToAnswer(onAnswer: () -> Unit) {
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
-            text = "Slide to answer",
+            text = stringResource(R.string.slide_to_answer),
             color = Color.White.copy(alpha = 0.6f),
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
@@ -918,7 +924,7 @@ private fun AudioRouteSheet(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Continue with", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = stringResource(R.string.continue_with), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Icon(
                     Icons.Filled.Close,
                     contentDescription = "Close",
@@ -940,17 +946,17 @@ private fun AudioRouteSheet(
                         AudioRoute.WIRED_HEADSET -> Icons.Filled.Headset
                     }
                     val label = when (route) {
-                        AudioRoute.EARPIECE -> "Ear Piece (normal call)"
-                        AudioRoute.SPEAKER -> "Speaker"
-                        AudioRoute.BLUETOOTH -> "Bluetooth"
-                        AudioRoute.WIRED_HEADSET -> "Wired Headset"
+                        AudioRoute.EARPIECE -> stringResource(R.string.audio_route_earpiece)
+                        AudioRoute.SPEAKER -> stringResource(R.string.label_speaker)
+                        AudioRoute.BLUETOOTH -> stringResource(R.string.label_bluetooth)
+                        AudioRoute.WIRED_HEADSET -> stringResource(R.string.audio_route_wired_headset)
                     }
-                    val tint = if (route == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    val tint = if (route == selected) primaryAccentColor() else MaterialTheme.colorScheme.onSurface
                     Icon(icon, contentDescription = null, tint = tint)
                     Spacer(modifier = Modifier.size(16.dp))
                     Text(text = label, modifier = Modifier.weight(1f), color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (route == selected) {
-                        Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Filled.Check, contentDescription = null, tint = primaryAccentColor())
                     }
                 }
             }
@@ -977,7 +983,7 @@ private fun QuickResponseSheet(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Quick response", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = stringResource(R.string.quick_response_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Icon(
                     Icons.Filled.Close,
                     contentDescription = "Close",
@@ -1070,7 +1076,7 @@ private fun CallWaitingScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Call waiting",
+                    text = stringResource(R.string.call_waiting),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color.White.copy(alpha = 0.75f)
@@ -1119,7 +1125,7 @@ private fun CallWaitingScreen(
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Message", color = Color.White)
+                        Text(stringResource(R.string.action_message), color = Color.White)
                     }
                 }
 
@@ -1136,7 +1142,7 @@ private fun CallWaitingScreen(
                     ) {
                         Icon(Icons.Default.Call, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Answer and end other call", color = Color.White)
+                        Text(stringResource(R.string.answer_and_end_other_call), color = Color.White)
                     }
                 }
 
@@ -1147,13 +1153,13 @@ private fun CallWaitingScreen(
                         icon = Icons.Default.CallEnd,
                         color = Color(0xFFD32F2F),
                         onClick = onDeclineSecondaryCall,
-                        label = "Decline"
+                        label = stringResource(R.string.action_decline)
                     )
                     CallActionButtons(
                         icon = Icons.Default.Call,
                         color = Color(0xFF1DA463),
                         onClick = onAnswerSecondaryCall,
-                        label = "Answer"
+                        label = stringResource(R.string.action_answer)
                     )
                 }
             }
@@ -1224,7 +1230,7 @@ private fun ManageCallSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Text(
-                text = "Manage call",
+                text = stringResource(R.string.manage_call_label),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
@@ -1232,40 +1238,40 @@ private fun ManageCallSheet(
             if (isConference) {
                 ManageCallRow(
                     icon = Icons.Default.Groups,
-                    label = "Conference list",
+                    label = stringResource(R.string.conference_list_label),
                     enabled = true,
                     onClick = onConferenceList
                 )
                 if (hasSecondaryCall) {
                     ManageCallRow(
                         icon = Icons.Default.CallMerge,
-                        label = "Merge",
+                        label = stringResource(R.string.action_merge),
                         enabled = canMerge,
                         onClick = onMerge
                     )
                 }
                 ManageCallRow(
                     icon = Icons.Default.PersonAdd,
-                    label = "Add call",
+                    label = stringResource(R.string.add_call_title),
                     enabled = canAddCall || !hasSecondaryCall,
                     onClick = onAddCall
                 )
             } else {
                 ManageCallRow(
                     icon = Icons.Default.CallMerge,
-                    label = "Merge calls",
+                    label = stringResource(R.string.action_merge_calls),
                     enabled = canMerge,
                     onClick = onMerge
                 )
                 ManageCallRow(
                     icon = Icons.Default.SwapCalls,
-                    label = "Swap calls",
+                    label = stringResource(R.string.action_swap_calls),
                     enabled = true,
                     onClick = onSwap
                 )
                 ManageCallRow(
                     icon = Icons.Default.PersonAdd,
-                    label = "Add call",
+                    label = stringResource(R.string.add_call_title),
                     enabled = false,
                     onClick = {}
                 )
@@ -1289,7 +1295,7 @@ private fun ConferenceListSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Conference list",
+                    text = stringResource(R.string.conference_list_label),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

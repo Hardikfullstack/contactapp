@@ -60,11 +60,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
+import com.phone.contacts.R
 import com.phone.contacts.ui.components.CallWallpaperBackground
 import com.phone.contacts.ui.components.ColorPickerDialog
 import com.phone.contacts.ui.components.CustomSwitch
@@ -124,7 +126,7 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Call wallpaper",
+                text = stringResource(R.string.call_wallpaper_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -141,7 +143,7 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
                 WallpaperOptionRow(
                     icon = Icons.Filled.Wallpaper,
                     iconBackgroundColor = Color(0xFFE91E63),
-                    title = "App default wallpaper",
+                    title = stringResource(R.string.app_default_wallpaper),
                     selected = selection is WallpaperSelection.None,
                     onClick = { previewCandidate = WallpaperSelection.None }
                 )
@@ -153,7 +155,7 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
                 WallpaperOptionRow(
                     icon = Icons.Filled.ColorLens,
                     iconBackgroundColor = MaterialTheme.colorScheme.primary,
-                    title = "Pick color",
+                    title = stringResource(R.string.pick_color),
                     selected = selection is WallpaperSelection.SolidColor,
                     onClick = { showColorPicker = true }
                 )
@@ -165,7 +167,7 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
                 WallpaperOptionRow(
                     icon = Icons.Filled.Image,
                     iconBackgroundColor = Color(0xFFFF9800),
-                    title = "Choose from gallery",
+                    title = stringResource(R.string.choose_from_gallery),
                     selected = selection is WallpaperSelection.Device,
                     onClick = { launcher.launch("image/*") }
                 )
@@ -175,7 +177,7 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Select wallpaper",
+            text = stringResource(R.string.select_wallpaper_title),
             modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -387,7 +389,7 @@ private fun WallpaperPreviewScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
                 Text(
-                    text = "Wallpaper",
+                    text = stringResource(R.string.wallpaper_label),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -398,7 +400,7 @@ private fun WallpaperPreviewScreen(
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Set wallpaper", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.action_set_wallpaper), color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -416,9 +418,9 @@ private fun WallpaperPreviewScreen(
                     Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
                 }
                 Spacer(modifier = Modifier.size(16.dp))
-                Text(text = "Caller name", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text(text = stringResource(R.string.mock_caller_name), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.size(4.dp))
-                Text(text = "Phone number", color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp)
+                Text(text = stringResource(R.string.hint_phone_number), color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp)
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -433,7 +435,7 @@ private fun WallpaperPreviewScreen(
                     SlideToAnswer(onAnswer = {})
                     Spacer(modifier = Modifier.size(20.dp))
                     Text(
-                        text = "Decline",
+                        text = stringResource(R.string.action_decline),
                         color = Color(0xFFFF6B6B),
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier
@@ -490,7 +492,7 @@ private fun WallpaperPreviewScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Wallpaper blur", color = Color.White, modifier = Modifier.weight(1f))
+                    Text(text = stringResource(R.string.wallpaper_blur_label), color = Color.White, modifier = Modifier.weight(1f))
                     CustomSwitch(checked = blurPreview, onCheckedChange = { blurPreview = it })
                 }
             }

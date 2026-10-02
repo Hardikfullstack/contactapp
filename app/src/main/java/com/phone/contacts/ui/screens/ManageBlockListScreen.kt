@@ -35,8 +35,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.data.BlockRepository
 import com.phone.contacts.data.BlockedNumberEntry
 import kotlinx.coroutines.launch
@@ -74,7 +76,7 @@ fun ManageBlockListScreen(onBack: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Manage block list",
+                text = stringResource(R.string.manage_block_list),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -84,7 +86,7 @@ fun ManageBlockListScreen(onBack: () -> Unit) {
 
         if (entries.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "No Data Found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = stringResource(R.string.no_data_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -113,7 +115,7 @@ fun ManageBlockListScreen(onBack: () -> Unit) {
                             Spacer(modifier = Modifier.size(13.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = entry.displayName ?: "Unknown",
+                                    text = entry.displayName ?: stringResource(R.string.unknown),
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(

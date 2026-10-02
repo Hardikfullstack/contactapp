@@ -33,8 +33,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.ScreenSearchField
@@ -103,7 +105,7 @@ private fun AddCallPickerScreen(onPick: (String) -> Unit, onBack: () -> Unit) {
                 )
             }
             Text(
-                text = "Add call",
+                text = stringResource(R.string.add_call_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -113,7 +115,7 @@ private fun AddCallPickerScreen(onPick: (String) -> Unit, onBack: () -> Unit) {
         ScreenSearchField(
             value = query,
             onValueChange = { query = it },
-            placeholder = "Search contacts",
+            placeholder = stringResource(R.string.search_contacts_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
         )
 

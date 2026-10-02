@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phone.contacts.R
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.DefaultDialerState
 
 @Composable
@@ -104,7 +105,7 @@ fun SetDefaultScreen(onSetAsDefault: () -> Unit) {
             Icon(
                 imageVector = Icons.Filled.Phone,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = primaryAccentColor(),
                 modifier = Modifier.size(44.dp)
             )
         }

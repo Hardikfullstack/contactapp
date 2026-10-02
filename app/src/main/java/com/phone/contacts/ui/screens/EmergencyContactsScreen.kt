@@ -42,8 +42,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.data.local.AppDatabase
 import com.phone.contacts.data.local.EmergencyContactEntity
 import com.phone.contacts.util.CallUtils
@@ -79,7 +81,7 @@ fun EmergencyContactsScreen(onBack: () -> Unit, onAddClick: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Emergency contacts",
+                text = stringResource(R.string.emergency_contacts_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -91,7 +93,7 @@ fun EmergencyContactsScreen(onBack: () -> Unit, onAddClick: () -> Unit) {
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Add", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.action_add), color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -106,7 +108,7 @@ fun EmergencyContactsScreen(onBack: () -> Unit, onAddClick: () -> Unit) {
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White)
                     Spacer(modifier = Modifier.size(8.dp))
-                    Text("Add new contact", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.action_add_new_contact), color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
             }
         } else {
@@ -150,18 +152,18 @@ fun EmergencyContactsScreen(onBack: () -> Unit, onAddClick: () -> Unit) {
     removingEntry?.let { entry ->
         AlertDialog(
             onDismissRequest = { removingEntry = null },
-            title = { Text("Remove ${entry.name}?") },
-            text = { Text("It will be removed from your emergency contacts.") },
+            title = { Text(stringResource(R.string.remove_contact_confirm_title, entry.name)) },
+            text = { Text(stringResource(R.string.remove_emergency_contact_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     scope.launch { dao.deleteById(entry.id) }
                     removingEntry = null
                 }) {
-                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.action_remove), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { removingEntry = null }) { Text("Cancel") }
+                TextButton(onClick = { removingEntry = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

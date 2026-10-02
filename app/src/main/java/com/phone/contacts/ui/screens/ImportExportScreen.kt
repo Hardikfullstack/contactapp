@@ -38,8 +38,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.data.ContactRepository
 import kotlinx.coroutines.launch
 
@@ -60,10 +62,10 @@ fun ImportExportScreen(onBack: () -> Unit) {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             isImporting = true
-            importStatus = "Contacts will imported shortly..."
+            importStatus = context.getString(R.string.toast_contacts_importing)
             coroutineScope.launch {
                 val count = ContactRepository.importContactsFromVcf(context, uri)
-                importStatus = if (count > 0) "Contacts imported successfully" else "Import failed"
+                importStatus = if (count > 0) context.getString(R.string.toast_contacts_imported) else context.getString(R.string.toast_import_failed)
                 isImporting = false
             }
         }
@@ -71,10 +73,10 @@ fun ImportExportScreen(onBack: () -> Unit) {
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/x-vcard")) { uri ->
         if (uri != null) {
             isExporting = true
-            exportStatus = "Contacts will be exported shortly..."
+            exportStatus = context.getString(R.string.toast_contacts_exporting)
             coroutineScope.launch {
                 val count = ContactRepository.exportContactsToVcf(context, uri)
-                exportStatus = if (count > 0) "Exported successfully" else "Export failed"
+                exportStatus = if (count > 0) context.getString(R.string.toast_contacts_exported) else context.getString(R.string.toast_export_failed)
                 isExporting = false
             }
         }
@@ -94,7 +96,7 @@ fun ImportExportScreen(onBack: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Import/Export",
+                text = stringResource(R.string.import_export_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -113,7 +115,7 @@ fun ImportExportScreen(onBack: () -> Unit) {
                 ImportExportRow(
                     icon = Icons.Filled.FileDownload,
                     iconBackgroundColor = Color(0xFF009688),
-                    title = "Import from file",
+                    title = stringResource(R.string.import_from_file_title),
                     status = importStatus,
                     isBusy = isImporting,
                     onClick = { importLauncher.launch(arrayOf("text/x-vcard", "text/vcard")) }
@@ -122,7 +124,7 @@ fun ImportExportScreen(onBack: () -> Unit) {
                 ImportExportRow(
                     icon = Icons.Filled.FileUpload,
                     iconBackgroundColor = Color(0xFFFF9800),
-                    title = "Export to file",
+                    title = stringResource(R.string.export_to_file_title),
                     status = exportStatus,
                     isBusy = isExporting,
                     onClick = { exportLauncher.launch("contacts.vcf") }

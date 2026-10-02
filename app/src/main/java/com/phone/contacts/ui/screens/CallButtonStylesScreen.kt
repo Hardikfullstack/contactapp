@@ -48,10 +48,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.phone.contacts.R
 import com.phone.contacts.ui.components.CustomSwitch
 import com.phone.contacts.ui.features.call.ButtonFace
 import com.phone.contacts.ui.features.call.CallButtonStyle
@@ -102,7 +104,7 @@ fun CallButtonStylesScreen(onBack: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Call button styles",
+                text = stringResource(R.string.call_button_styles_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -130,7 +132,7 @@ fun CallButtonStylesScreen(onBack: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.size(15.dp))
                 Text(
-                    text = "Swap call buttons",
+                    text = stringResource(R.string.swap_call_buttons_label),
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.weight(1f)
                 )
@@ -202,7 +204,7 @@ private fun CallButtonPreviewScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
             Text(
-                text = "Call button",
+                text = stringResource(R.string.call_button_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -213,7 +215,7 @@ private fun CallButtonPreviewScreen(
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Set call button", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.action_set_call_button), color = Color.White, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -231,9 +233,9 @@ private fun CallButtonPreviewScreen(
                 Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
             }
             Spacer(modifier = Modifier.size(16.dp))
-            Text(text = "Caller name", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text(text = stringResource(R.string.mock_caller_name), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.size(4.dp))
-            Text(text = "Phone number", color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp)
+            Text(text = stringResource(R.string.hint_phone_number), color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp)
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -248,7 +250,7 @@ private fun CallButtonPreviewScreen(
                 SlideToAnswer(onAnswer = {})
                 Spacer(modifier = Modifier.size(20.dp))
                 Text(
-                    text = "Decline",
+                    text = stringResource(R.string.action_decline),
                     color = Color(0xFFFF6B6B),
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier
@@ -342,10 +344,10 @@ private fun CallButtonStylePreview(
                         Icon(Icons.Filled.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                     }
                     Spacer(modifier = Modifier.size(4.dp))
-                    Text(text = "Slide to answer", color = Color.White, fontSize = 8.sp)
+                    Text(text = stringResource(R.string.slide_to_answer), color = Color.White, fontSize = 8.sp)
                 }
                 Spacer(modifier = Modifier.size(6.dp))
-                Text(text = "Decline", color = Color(0xFFFF6B6B), fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text(text = stringResource(R.string.action_decline), color = Color(0xFFFF6B6B), fontSize = 9.sp, fontWeight = FontWeight.Medium)
             }
         } else {
             Row(
@@ -356,10 +358,10 @@ private fun CallButtonStylePreview(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 val declineDot = @Composable {
-                    callStyle.decline?.let { MiniCallButton(it, Icons.Filled.CallEnd, "Decline", callStyle.hasSwipeGesture) }
+                    callStyle.decline?.let { MiniCallButton(it, Icons.Filled.CallEnd, stringResource(R.string.action_decline), callStyle.hasSwipeGesture) }
                 }
                 val acceptDot = @Composable {
-                    callStyle.accept?.let { MiniCallButton(it, Icons.Filled.Call, "Accept", callStyle.hasSwipeGesture) }
+                    callStyle.accept?.let { MiniCallButton(it, Icons.Filled.Call, stringResource(R.string.action_accept), callStyle.hasSwipeGesture) }
                 }
                 if (swapButtons) {
                     acceptDot()

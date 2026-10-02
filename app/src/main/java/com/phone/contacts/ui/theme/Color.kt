@@ -15,3 +15,6 @@ val BrandPrimaryContainerLight = Color(0xFFDCE6FF)
 val BrandOnPrimaryContainerLight = Color(0xFF001A47)
 val BrandPrimaryContainerDark = Color(0xFF0038A0)
 val BrandOnPrimaryContainerDark = Color(0xFFDCE6FF)
+// A lightened tint of BrandPrimary (not all the way to near-white) - legible as plain text/icon
+// color on a dark surface while still clearly reading as "the brand blue", not a washed-out pastel.
+val BrandPrimaryAccentDark = Color(0xFF4785FD)

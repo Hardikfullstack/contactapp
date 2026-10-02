@@ -126,7 +126,8 @@ object CallLogRepository {
         val name: String?,
         val number: String,
         val type: CallType,
-        val timestamp: Long
+        val timestamp: Long,
+        val presentationLabel: String? = null
     )
 
     private fun queryRawCallLogs(resolver: ContentResolver, contactIndex: Map<String, String>): List<RawEntry> {
@@ -135,6 +136,7 @@ object CallLogRepository {
             CallLog.Calls._ID,
             CallLog.Calls.CACHED_NAME,
             CallLog.Calls.NUMBER,
+            CallLog.Calls.NUMBER_PRESENTATION,
             CallLog.Calls.TYPE,
             CallLog.Calls.DATE
         )
@@ -149,11 +151,22 @@ object CallLogRepository {
                 val idIndex = cursor.getColumnIndex(CallLog.Calls._ID)
                 val nameIndex = cursor.getColumnIndex(CallLog.Calls.CACHED_NAME)
                 val numberIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER)
+                val presentationIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER_PRESENTATION)
                 val typeIndex = cursor.getColumnIndex(CallLog.Calls.TYPE)
                 val dateIndex = cursor.getColumnIndex(CallLog.Calls.DATE)
 
                 while (cursor.moveToNext()) {
-                    val number = cursor.getString(numberIndex) ?: continue
+                    val rawNumber = cursor.getString(numberIndex)
+                    // NUMBER comes back null/blank for two very different reasons: a genuinely
+                    // withheld/restricted caller ID (NUMBER_PRESENTATION says so) - nothing to show
+                    // there, that's correct - versus some OEM ROMs (seen on OnePlus/OxygenOS)
+                    // logging a real, presentation-ALLOWED call with a blank NUMBER column anyway.
+                    // Silently `continue`-ing dropped that second case' row entirely; skip only the
+                    // genuinely-presentation-restricted ones and keep the rest so at least the
+                    // call's time/type still shows instead of the row vanishing outright.
+                    val presentation = if (presentationIndex >= 0) cursor.getInt(presentationIndex) else CallLog.Calls.PRESENTATION_ALLOWED
+                    if (rawNumber.isNullOrBlank() && presentation != CallLog.Calls.PRESENTATION_ALLOWED) continue
+                    val number = rawNumber.orEmpty()
                     val normalized = normalizeNumber(number)
                     val resolvedName = contactIndex[normalized] ?: cursor.getString(nameIndex)
 
@@ -163,7 +176,8 @@ object CallLogRepository {
                             name = resolvedName,
                             number = number,
                             type = mapCallType(cursor.getInt(typeIndex)),
-                            timestamp = cursor.getLong(dateIndex)
+                            timestamp = cursor.getLong(dateIndex),
+                            presentationLabel = presentationLabel(presentation)
                         )
                     )
                 }
@@ -196,7 +210,8 @@ object CallLogRepository {
                     number = current.number,
                     type = current.type,
                     timestamp = current.timestamp,
-                    callCount = count
+                    callCount = count,
+                    presentationLabel = current.presentationLabel
                 )
             )
             index = next
@@ -241,6 +256,13 @@ object CallLogRepository {
 
     private fun normalizeNumber(number: String): String =
         number.filter { it.isDigit() }.takeLast(10)
+
+    private fun presentationLabel(presentation: Int): String? = when (presentation) {
+        CallLog.Calls.PRESENTATION_RESTRICTED -> "Private number"
+        CallLog.Calls.PRESENTATION_PAYPHONE -> "Payphone"
+        CallLog.Calls.PRESENTATION_UNKNOWN -> "Unknown"
+        else -> null
+    }
 
     private fun mapCallType(type: Int): CallType = when (type) {
         CallLog.Calls.INCOMING_TYPE -> CallType.INCOMING

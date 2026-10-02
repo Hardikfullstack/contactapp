@@ -73,6 +73,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -83,6 +84,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
+import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.ListRowSkeleton
@@ -254,7 +256,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                 )
             } else {
                 ScreenTitleBar(
-                    title = "Contacts",
+                    title = stringResource(R.string.contacts),
                     trailingAction = {
                         Box {
                             IconButton(onClick = { menuExpanded = true }) {
@@ -270,14 +272,14 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                 shape = RoundedCornerShape(16.dp)
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Select") },
+                                    text = { Text(stringResource(R.string.select)) },
                                     onClick = {
                                         menuExpanded = false
                                         selectionMode = true
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Select all") },
+                                    text = { Text(stringResource(R.string.select_all_label)) },
                                     onClick = {
                                         menuExpanded = false
                                         selectionMode = true
@@ -293,7 +295,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                 )
                                 if (selectedFilter == ContactFilter.RECENT_ADDED) {
                                     DropdownMenuItem(
-                                        text = { Text("Clear Recently Added") },
+                                        text = { Text(stringResource(R.string.clear_recently_added_label)) },
                                         onClick = {
                                             menuExpanded = false
                                             RecentlyAddedContacts.clear(context)
@@ -308,7 +310,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
             }
 
             if (!hasPermission) {
-                PlaceholderScreen(title = "Permission required")
+                PlaceholderScreen(title = stringResource(R.string.permission_required_title))
             } else if (isLoading) {
                 ScreenSearchField(
                     value = query,
@@ -827,8 +829,8 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text(if (count == 1) "Move to Bin?" else "Move $count contacts to Bin?") },
-            text = { Text(if (count == 1) "This contact will be removed from all your synced devices." else "These contacts will be removed from all your synced devices.") },
+            title = { Text(if (count == 1) stringResource(R.string.move_to_bin_title) else stringResource(R.string.move_multiple_to_bin_title, count)) },
+            text = { Text(if (count == 1) stringResource(R.string.move_to_bin_message) else stringResource(R.string.move_multiple_to_bin_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     val toDelete = allContacts.filter { it.id in selectedIds }
@@ -838,10 +840,10 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                         selectionMode = false
                         selectedIds = emptySet()
                     }
-                }) { Text("Move to Bin") }
+                }) { Text(stringResource(R.string.action_move_to_bin)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

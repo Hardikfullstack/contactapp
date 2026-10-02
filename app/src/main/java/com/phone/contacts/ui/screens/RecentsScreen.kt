@@ -35,7 +35,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
@@ -93,6 +94,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -101,12 +103,14 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.phone.contacts.R
 import com.phone.contacts.data.BlockRepository
 import com.phone.contacts.data.CallLogItem
 import com.phone.contacts.data.CallLogRepository
 import com.phone.contacts.data.CallType
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.DefaultDialerState
 import com.phone.contacts.util.MessageUtils
@@ -158,7 +162,7 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
     }
 
     if (!hasCallLogPermission) {
-        PlaceholderScreen(title = "Recents")
+        PlaceholderScreen(title = stringResource(R.string.recents))
         return
     }
 
@@ -213,7 +217,7 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
             .statusBarsPadding()
     ) {
         Text(
-            text = "Recents",
+            text = stringResource(R.string.recents),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
@@ -230,8 +234,8 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(label = "All", selected = !showMissedOnly, onClick = { showMissedOnly = false })
-                FilterChip(label = "Missed", selected = showMissedOnly, onClick = { showMissedOnly = true })
+                FilterChip(label = stringResource(R.string.filter_all), selected = !showMissedOnly, onClick = { showMissedOnly = false })
+                FilterChip(label = stringResource(R.string.filter_missed), selected = showMissedOnly, onClick = { showMissedOnly = true })
             }
             CallLogSkeleton()
         } else if (grouped.isEmpty()) {
@@ -244,12 +248,12 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(label = "All", selected = !showMissedOnly, onClick = { showMissedOnly = false })
-                FilterChip(label = "Missed", selected = showMissedOnly, onClick = { showMissedOnly = true })
+                FilterChip(label = stringResource(R.string.filter_all), selected = !showMissedOnly, onClick = { showMissedOnly = false })
+                FilterChip(label = stringResource(R.string.filter_missed), selected = showMissedOnly, onClick = { showMissedOnly = true })
             }
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "No recent calls",
+                    text = stringResource(R.string.no_recent_calls),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -347,20 +351,28 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                                 .onGloballyPositioned { filterRowHeightPx = it.size.height },
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            FilterChip(label = "All", selected = !showMissedOnly, onClick = { showMissedOnly = false })
-                            FilterChip(label = "Missed", selected = showMissedOnly, onClick = { showMissedOnly = true })
+                            FilterChip(label = stringResource(R.string.filter_all), selected = !showMissedOnly, onClick = { showMissedOnly = false })
+                            FilterChip(label = stringResource(R.string.filter_missed), selected = showMissedOnly, onClick = { showMissedOnly = true })
                         }
                     }
-                    grouped.forEach { (dateLabel, calls) ->
+                    grouped.forEachIndexed { groupIndex, (dateLabel, calls) ->
                         item {
+                            // The very first header (always "Today") has no previous group above it
+                            // to separate from, so it only needs the small resting gap - not the
+                            // larger one every other header uses to break away from the group before it.
                             Text(
                                 text = dateLabel,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                modifier = Modifier.padding(
+                                    start = 20.dp,
+                                    end = 20.dp,
+                                    top = if (groupIndex == 0) 3.dp else 14.dp,
+                                    bottom = 0.dp
+                                )
                             )
                         }
-                        items(calls, key = { it.id }) { call ->
+                        itemsIndexed(calls, key = { _, call -> call.id }) { index, call ->
                             Column {
                                 // Swipe-to-call/message stays disabled — that's what caused the
                                 // accidental-call bug (a stray swipe mid-scroll placed real
@@ -380,11 +392,16 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                                     onDeleted = { refreshTrigger++ },
                                     onAddToContact = { onAddToContact(call.number) }
                                 )
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 74.dp),
-                                    thickness = 1.dp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                                )
+                                // Skipped on each group's last row — that row's own bottom edge is
+                                // already the boundary into the next date header's extra top
+                                // spacing, so a divider there would just double up with it.
+                                if (index != calls.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 74.dp),
+                                        thickness = 1.dp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -614,7 +631,7 @@ private fun SearchField(
             Box(modifier = Modifier.weight(1f)) {
                 if (value.isEmpty()) {
                     Text(
-                        text = "Search calls",
+                        text = stringResource(R.string.search_calls_placeholder),
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -674,7 +691,7 @@ private fun CallLogSkeleton() {
                         .clip(CircleShape)
                         .background(shimmerColor)
                 )
-                Spacer(modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.size(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Box(
                         modifier = Modifier
@@ -790,7 +807,7 @@ private fun CallLogRow(
     // call logged before the number was blocked never has it either.
     val displayType = if (isBlocked) CallType.BLOCKED else call.type
     val badgeColor = when (displayType) {
-        CallType.INCOMING -> MaterialTheme.colorScheme.primary
+        CallType.INCOMING -> primaryAccentColor()
         CallType.OUTGOING -> Color(0xFF1DA463)
         CallType.MISSED, CallType.REJECTED -> Color(0xFFE0413B)
         CallType.BLOCKED -> blockedCallColor()
@@ -838,12 +855,12 @@ private fun CallLogRow(
             }
         }
 
-        Spacer(modifier = Modifier.size(14.dp))
+        Spacer(modifier = Modifier.size(8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = buildString {
-                    append(call.name ?: call.number)
+                    append(call.name ?: call.presentationLabel ?: call.number)
                     if (call.callCount > 1) append(" (${call.callCount})")
                 },
                 color = if (displayType == CallType.MISSED) badgeColor else MaterialTheme.colorScheme.onBackground,
@@ -863,7 +880,12 @@ private fun CallLogRow(
                 .clickable(onClick = onInfoClick),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "i", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "Contact info",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 
@@ -877,7 +899,7 @@ private fun CallLogRow(
         shape = RoundedCornerShape(16.dp)
     ) {
         Text(
-            text = call.number,
+            text = call.presentationLabel ?: call.number,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -887,7 +909,7 @@ private fun CallLogRow(
         // those, matching the reference app's own "Add to contact" being unknown-number-only.
         if (call.name == null) {
             DropdownMenuItem(
-                text = { Text("Add to contact") },
+                text = { Text(stringResource(R.string.action_add_to_contact)) },
                 leadingIcon = { Icon(Icons.Filled.PersonAdd, contentDescription = null) },
                 onClick = {
                     showMenu = false
@@ -896,17 +918,17 @@ private fun CallLogRow(
             )
         }
         DropdownMenuItem(
-            text = { Text("Copy number") },
+            text = { Text(stringResource(R.string.action_copy_number)) },
             leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
             onClick = {
                 showMenu = false
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Phone number", call.number))
-                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.hint_phone_number), call.number))
+                Toast.makeText(context, context.getString(R.string.toast_copied_to_clipboard), Toast.LENGTH_SHORT).show()
             }
         )
         DropdownMenuItem(
-            text = { Text("Call") },
+            text = { Text(stringResource(R.string.action_call)) },
             leadingIcon = { Icon(Icons.Filled.Call, contentDescription = null) },
             onClick = {
                 showMenu = false
@@ -914,7 +936,7 @@ private fun CallLogRow(
             }
         )
         DropdownMenuItem(
-            text = { Text("Message") },
+            text = { Text(stringResource(R.string.action_message)) },
             leadingIcon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
             onClick = {
                 showMenu = false
@@ -922,7 +944,7 @@ private fun CallLogRow(
             }
         )
         DropdownMenuItem(
-            text = { Text("Delete") },
+            text = { Text(stringResource(R.string.action_delete)) },
             leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
             onClick = {
                 showMenu = false
@@ -930,7 +952,7 @@ private fun CallLogRow(
             }
         )
         DropdownMenuItem(
-            text = { Text("Video call") },
+            text = { Text(stringResource(R.string.action_video_call)) },
             leadingIcon = { Icon(Icons.Filled.Videocam, contentDescription = null) },
             onClick = {
                 showMenu = false
@@ -945,8 +967,8 @@ private fun CallLogRow(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Clear Call History") },
-            text = { Text("Clear all ${call.number}'s history?") },
+            title = { Text(stringResource(R.string.clear_call_history_title)) },
+            text = { Text(stringResource(R.string.clear_history_confirm_message, call.number)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
@@ -954,10 +976,10 @@ private fun CallLogRow(
                         CallLogRepository.deleteAllForNumber(context, call.number)
                         onDeleted()
                     }
-                }) { Text("Delete") }
+                }) { Text(stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

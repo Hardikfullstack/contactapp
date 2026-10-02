@@ -1,10 +1,8 @@
 package com.phone.contacts.ui.screens
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -24,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.Emergency
 import androidx.compose.material.icons.filled.Feedback
@@ -57,12 +56,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.phone.contacts.R
 import com.phone.contacts.ui.components.CustomSwitch
+import com.phone.contacts.ui.components.RateUsDialog
 import com.phone.contacts.ui.components.ScreenTitleBar
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.KeypadTonePreferences
+import com.phone.contacts.util.RateUsHelper
 
 /** Matches the reference app's Settings screen structure: Personalization (App language,
  * Application theme, Call back screen, Blocking, Recycle bin), Appearance (Call button styles,
@@ -90,6 +94,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     remember { KeypadTonePreferences.initialize(context) }
     var keypadToneEnabled by remember { mutableStateOf(KeypadTonePreferences.enabled.value) }
+    var showRateUsDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -97,7 +102,7 @@ fun SettingsScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        ScreenTitleBar(title = "Settings")
+        ScreenTitleBar(title = stringResource(R.string.settings))
 
         Column(
             modifier = Modifier
@@ -105,26 +110,26 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 20.dp)
         ) {
-            SettingsSectionHeader(title = "Personalization")
+            SettingsSectionHeader(title = stringResource(R.string.settings_section_personalization))
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Filled.Language,
                     iconBackgroundColor = Color(0xFF2196F3),
-                    title = "App language",
+                    title = stringResource(R.string.app_language),
                     onClick = onLanguageClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Palette,
                     iconBackgroundColor = Color(0xFF9C27B0),
-                    title = "Application theme",
+                    title = stringResource(R.string.application_theme_title),
                     onClick = onThemeClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.PhoneCallback,
                     iconBackgroundColor = Color(0xFF00BCD4),
-                    title = "Call back screen",
+                    title = stringResource(R.string.call_back_screen_title),
                     enabled = false,
                     trailing = { CustomSwitch(checked = false, onCheckedChange = {}, enabled = false) }
                 )
@@ -132,86 +137,86 @@ fun SettingsScreen(
                 SettingsRow(
                     icon = Icons.Filled.Block,
                     iconBackgroundColor = Color(0xFFE0413B),
-                    title = "Blocking",
+                    title = stringResource(R.string.blocking_title),
                     onClick = onBlockingClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Delete,
                     iconBackgroundColor = Color(0xFF8D6E63),
-                    title = "Recycle bin",
+                    title = stringResource(R.string.recycle_bin_title),
                     onClick = onRecycleBinClick
                 )
             }
 
-            SettingsSectionHeader(title = "Appearance")
+            SettingsSectionHeader(title = stringResource(R.string.settings_section_appearance))
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Filled.TouchApp,
                     iconBackgroundColor = Color(0xFFFF9800),
-                    title = "Call button styles",
+                    title = stringResource(R.string.call_button_styles_title),
                     onClick = onCallButtonStylesClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Wallpaper,
                     iconBackgroundColor = Color(0xFF1DA463),
-                    title = "Wallpaper",
+                    title = stringResource(R.string.wallpaper_label),
                     onClick = onWallpaperClick
                 )
             }
 
-            SettingsSectionHeader(title = "General")
+            SettingsSectionHeader(title = stringResource(R.string.settings_section_general))
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Filled.MusicNote,
                     iconBackgroundColor = Color(0xFF3F51B5),
-                    title = "Ringtone",
+                    title = stringResource(R.string.action_set_ringtone),
                     onClick = onRingtoneClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.ImportExport,
                     iconBackgroundColor = Color(0xFF009688),
-                    title = "Import/Export",
+                    title = stringResource(R.string.import_export_title),
                     onClick = onImportExportClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Emergency,
                     iconBackgroundColor = Color(0xFFD32F2F),
-                    title = "Emergency contacts",
+                    title = stringResource(R.string.emergency_contacts_title),
                     onClick = onEmergencyContactsClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Tune,
                     iconBackgroundColor = Color(0xFF607D8B),
-                    title = "Display options",
+                    title = stringResource(R.string.display_options_title),
                     onClick = onDisplayOptionsClick
                 )
             }
 
-            SettingsSectionHeader(title = "Advance settings")
+            SettingsSectionHeader(title = stringResource(R.string.settings_section_advance))
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Filled.Dialpad,
                     iconBackgroundColor = Color(0xFFFFC107),
-                    title = "Speed dial",
+                    title = stringResource(R.string.speed_dial_title),
                     onClick = onSpeedDialClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.AutoMirrored.Filled.Message,
                     iconBackgroundColor = Color(0xFF9575CD),
-                    title = "Quick response",
+                    title = stringResource(R.string.quick_response_title),
                     onClick = onQuickResponseClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.MusicNote,
                     iconBackgroundColor = Color(0xFF009688),
-                    title = "Sound and vibration",
+                    title = stringResource(R.string.sound_and_vibration_title),
                     onClick = {
                         try {
                             context.startActivity(Intent(Settings.ACTION_SOUND_SETTINGS))
@@ -224,7 +229,7 @@ fun SettingsScreen(
                 SettingsRow(
                     icon = Icons.Filled.VolumeUp,
                     iconBackgroundColor = Color(0xFF673AB7),
-                    title = "Keypad tone",
+                    title = stringResource(R.string.keypad_tone_title),
                     trailing = {
                         CustomSwitch(
                             checked = keypadToneEnabled,
@@ -237,48 +242,53 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSectionHeader(title = "About us")
+            SettingsSectionHeader(title = stringResource(R.string.settings_section_about_us))
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Filled.PrivacyTip,
                     iconBackgroundColor = Color(0xFF455A64),
-                    title = "Privacy policy",
+                    title = stringResource(R.string.privacy_policy_title),
+                    enabled = false
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Filled.Description,
+                    iconBackgroundColor = Color(0xFF02B98E),
+                    title = stringResource(R.string.terms_and_conditions_title),
                     enabled = false
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.StarRate,
                     iconBackgroundColor = Color(0xFFFBC02D),
-                    title = "Rate us",
-                    enabled = false
+                    title = stringResource(R.string.rate_us_title),
+                    onClick = { showRateUsDialog = true }
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Share,
                     iconBackgroundColor = Color(0xFF43A047),
-                    title = "Share app",
+                    title = stringResource(R.string.share_app_title),
                     onClick = { shareApp(context) }
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Feedback,
                     iconBackgroundColor = Color(0xFFE91E63),
-                    title = "Feedback",
-                    enabled = false
+                    title = stringResource(R.string.feedback_title),
+                    onClick = { RateUsHelper.openFeedbackEmail(context) }
                 )
             }
         }
     }
 
-}
-
-private fun openPlayStoreListing(context: Context) {
-    val packageName = context.packageName
-    try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
-    } catch (_: ActivityNotFoundException) {
-        context.startActivity(
-            Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
+    if (showRateUsDialog) {
+        RateUsDialog(
+            onRateClick = { stars ->
+                showRateUsDialog = false
+                RateUsHelper.handleRating(context, stars)
+            },
+            onDismiss = { showRateUsDialog = false }
         )
     }
 }
@@ -289,7 +299,7 @@ private fun shareApp(context: Context) {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=$packageName")
     }
-    context.startActivity(Intent.createChooser(intent, "Share app"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_app_title)))
 }
 
 @Composable
@@ -354,7 +364,7 @@ private fun SettingsRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = primaryAccentColor(),
                 modifier = Modifier.size(22.dp)
             )
         }

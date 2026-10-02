@@ -30,8 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.SpeedDialPreferences
 import com.phone.contacts.util.speedDialColorFor
@@ -61,7 +63,7 @@ fun SpeedDialListScreen(onBack: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Speed dial list",
+                text = stringResource(R.string.speed_dial_list_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -72,7 +74,7 @@ fun SpeedDialListScreen(onBack: () -> Unit) {
         if (assignedKeys.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "No speed dial numbers set yet.",
+                    text = stringResource(R.string.no_speed_dial_numbers_set),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

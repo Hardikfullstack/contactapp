@@ -7,13 +7,32 @@
          descendant to inflate its Toolbar — the plain platform Theme.Contacts above isn't one. -->
     <style name="Theme.Contacts.Crop" parent="Theme.AppCompat.NoActionBar" />
 
-    <!-- The classic android.app.DatePickerDialog reads its style from whatever Context it's built
-         with — by default that's the Activity's own Theme.Contacts above, which is hardcoded Light.
-         AddContactScreen wraps the dialog's Context in this via ContextThemeWrapper so it always
-         shows this same light look, regardless of the app's own in-app Light/Dark/System toggle
-         (which only affects the Compose MaterialTheme, not the Activity's XML theme) — a dark
-         variant was tried and didn't read well, so this is deliberately not theme-switched. -->
-    <style name="Theme.Contacts.DatePicker.Light" parent="android:Theme.Material.Light.Dialog.Alert">
+    <!-- The classic android.app.DatePickerDialog reads its style from whatever Context/themeResId
+         it's built with, not from this app's own in-app Light/Dark/System toggle (that only affects
+         the Compose MaterialTheme). AddContactScreen picks between these two explicitly, based on
+         the same resolved-luminance check Compose itself uses (primaryAccentColor() in Theme.kt),
+         so the picker actually follows the in-app toggle instead of only the system's day/night
+         setting — a plain values-night/themes.xml override wouldn't do that.
+         Parent is plain android:Theme.Material(.Light).Dialog — NOT the ".Dialog.Alert" variant
+         (tried first) or DeviceDefault (tried second). Both of those are AlertDialog-flavored
+         themes, and AlertDialog's own window-background drawable is what has the corner-radius
+         bug: on many devices it rounds the WINDOW but the DatePicker header view's background
+         stays a plain square rectangle, so a sliver of the window's white background peeks out
+         from behind the header's square top corner — and ".Dialog.Alert"/DeviceDefault also pulled
+         in a much wider minWidth than the reference picker, and forced ALL-CAPS Cancel/OK text.
+         The plain, non-Alert ".Dialog" parent has none of that chrome, so none of these bugs show
+         up at all - confirmed against this exact working pattern in the sibling Messages app
+         project's own CustomPickerDialogStyle (same plain Dialog parent, Light/Dark picked via
+         values-night there since IT follows only the system setting, not an in-app toggle). -->
+    <style name="Theme.Contacts.DatePicker.Light" parent="android:Theme.Material.Light.Dialog">
         <item name="android:colorAccent">@color/brand_primary</item>
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:colorBackground">@android:color/white</item>
+    </style>
+
+    <style name="Theme.Contacts.DatePicker.Dark" parent="android:Theme.Material.Dialog">
+        <item name="android:colorAccent">@color/brand_primary</item>
+        <item name="android:windowBackground">@color/date_picker_dark_background</item>
+        <item name="android:colorBackground">@color/date_picker_dark_background</item>
     </style>
 </resources>

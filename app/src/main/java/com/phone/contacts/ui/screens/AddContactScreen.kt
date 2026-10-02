@@ -3,15 +3,16 @@ package com.phone.contacts.ui.screens
 import android.app.Activity
 import android.app.DatePickerDialog
 import android.net.Uri
-import android.view.ContextThemeWrapper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import com.phone.contacts.R
 import com.yalantis.ucrop.UCrop
 import java.io.File
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -85,6 +87,7 @@ import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.data.DateValue
 import com.phone.contacts.data.NewContactInput
 import com.phone.contacts.data.TypedValue
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.RecentlyAddedContacts
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -268,7 +271,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                 )
             }
             Text(
-                text = if (isEditMode) "Edit contact" else "Add contact",
+                text = if (isEditMode) stringResource(R.string.edit_contact_title) else stringResource(R.string.add_contact_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -320,7 +323,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 contentPadding = PaddingValuesHorizontal
             ) {
-                Text(text = "Save", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
+                Text(text = stringResource(R.string.save), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -356,14 +359,14 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                             Icon(
                                 imageVector = Icons.Filled.AddAPhoto,
                                 contentDescription = "Contact image",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = primaryAccentColor(),
                                 modifier = Modifier.size(32.dp)
                             )
                         }
                     }
                     Text(
-                        text = "Add picture",
-                        color = MaterialTheme.colorScheme.primary,
+                        text = stringResource(R.string.add_picture_label),
+                        color = primaryAccentColor(),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 17.sp,
                         modifier = Modifier
@@ -407,14 +410,14 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             item {
                 SectionCard(
                     icon = Icons.Filled.Phone,
-                    emptyLabel = "Phone",
-                    addMoreLabel = "Add Phone Number",
+                    emptyLabel = stringResource(R.string.type_phone),
+                    addMoreLabel = stringResource(R.string.add_more_phone_number),
                     entries = phones,
                     onAdd = { phones.add(TypedEntry(newId(), "", "Mobile")) }
                 ) { entry ->
                     TypedEntryRow(
                         icon = Icons.Filled.Phone,
-                        valueHint = "Phone",
+                        valueHint = stringResource(R.string.type_phone),
                         entry = entry,
                         typeOptions = PHONE_TYPES,
                         onValueChange = { phones.replaceWith(entry.id) { e -> e.copy(value = it) } },
@@ -427,14 +430,14 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             item {
                 SectionCard(
                     icon = Icons.Filled.Email,
-                    emptyLabel = "Email",
-                    addMoreLabel = "Add Email",
+                    emptyLabel = stringResource(R.string.type_email),
+                    addMoreLabel = stringResource(R.string.add_more_email),
                     entries = emails,
                     onAdd = { emails.add(TypedEntry(newId(), "", "Home")) }
                 ) { entry ->
                     TypedEntryRow(
                         icon = Icons.Filled.Email,
-                        valueHint = "Email",
+                        valueHint = stringResource(R.string.type_email),
                         entry = entry,
                         typeOptions = GENERIC_TYPES,
                         onValueChange = { emails.replaceWith(entry.id) { e -> e.copy(value = it) } },
@@ -448,8 +451,8 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             item {
                 SectionCard(
                     icon = Icons.Filled.LocationOn,
-                    emptyLabel = "Address",
-                    addMoreLabel = "Add Address",
+                    emptyLabel = stringResource(R.string.type_address),
+                    addMoreLabel = stringResource(R.string.add_more_address),
                     entries = addresses,
                     onAdd = { addresses.add(AddressEntryState(newId())) }
                 ) { entry ->
@@ -464,8 +467,8 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             item {
                 SectionCard(
                     icon = Icons.Outlined.CalendarToday,
-                    emptyLabel = "Important dates",
-                    addMoreLabel = "Add date",
+                    emptyLabel = stringResource(R.string.type_important_dates),
+                    addMoreLabel = stringResource(R.string.add_more_date),
                     entries = importantDates,
                     onAdd = { importantDates.add(DateEntryState(newId())) }
                 ) { entry ->
@@ -482,14 +485,14 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             item {
                 SectionCard(
                     icon = Icons.Outlined.Language,
-                    emptyLabel = "Website",
-                    addMoreLabel = "Add website",
+                    emptyLabel = stringResource(R.string.type_website),
+                    addMoreLabel = stringResource(R.string.add_more_website),
                     entries = websites,
                     onAdd = { websites.add(TypedEntry(newId(), "", "Home")) }
                 ) { entry ->
                     TypedEntryRow(
                         icon = Icons.Outlined.Language,
-                        valueHint = "Website",
+                        valueHint = stringResource(R.string.type_website),
                         entry = entry,
                         typeOptions = GENERIC_TYPES,
                         onValueChange = { websites.replaceWith(entry.id) { e -> e.copy(value = it) } },
@@ -503,14 +506,14 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             item {
                 SectionCard(
                     icon = Icons.Outlined.FavoriteBorder,
-                    emptyLabel = "Relation",
-                    addMoreLabel = "Add Relation",
+                    emptyLabel = stringResource(R.string.type_relation),
+                    addMoreLabel = stringResource(R.string.add_more_relation),
                     entries = relations,
                     onAdd = { relations.add(TypedEntry(newId(), "", "Assistant")) }
                 ) { entry ->
                     TypedEntryRow(
                         icon = Icons.Outlined.FavoriteBorder,
-                        valueHint = "Person name",
+                        valueHint = stringResource(R.string.hint_person_name),
                         entry = entry,
                         typeOptions = RELATION_TYPES,
                         onValueChange = { relations.replaceWith(entry.id) { e -> e.copy(value = it) } },
@@ -555,7 +558,7 @@ private fun FieldIcon(icon: ImageVector, active: Boolean = false, modifier: Modi
     Icon(
         imageVector = icon,
         contentDescription = null,
-        tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        tint = if (active) primaryAccentColor() else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.size(22.dp)
     )
 }
@@ -594,15 +597,15 @@ private fun TypeLabel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (type == "Custom") customLabel.ifBlank { "Custom" } else type,
+                text = if (type == "Custom") customLabel.ifBlank { stringResource(R.string.custom_type_fallback) } else type,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary
+                color = primaryAccentColor()
             )
             Icon(
                 imageVector = Icons.Filled.ArrowDropDown,
                 contentDescription = "Change type",
-                tint = MaterialTheme.colorScheme.primary,
+                tint = primaryAccentColor(),
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -650,7 +653,7 @@ private fun RenameCustomFieldDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        title = { Text("Rename custom field") },
+        title = { Text(stringResource(R.string.rename_custom_field_title)) },
         text = {
             Column {
                 BasicTextField(
@@ -658,7 +661,7 @@ private fun RenameCustomFieldDialog(
                     onValueChange = { label = it },
                     singleLine = true,
                     textStyle = TextStyle(fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    cursorBrush = SolidColor(primaryAccentColor()),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp)
@@ -667,10 +670,10 @@ private fun RenameCustomFieldDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onRename(label) }) { Text("Rename") }
+            TextButton(onClick = { onRename(label) }) { Text(stringResource(R.string.action_rename)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -703,15 +706,15 @@ private fun ExpandableNameSection(
             Spacer(modifier = Modifier.size(14.dp))
             if (expanded) {
                 Column(modifier = Modifier.weight(1f)) {
-                    PlainInlineField(placeholder = "First name", value = firstName, onValueChange = onFirstNameChange)
+                    PlainInlineField(placeholder = stringResource(R.string.hint_first_name), value = firstName, onValueChange = onFirstNameChange)
                     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    PlainInlineField(placeholder = "Middle name", value = middleName, onValueChange = onMiddleNameChange)
+                    PlainInlineField(placeholder = stringResource(R.string.hint_middle_name), value = middleName, onValueChange = onMiddleNameChange)
                     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    PlainInlineField(placeholder = "Last name", value = lastName, onValueChange = onLastNameChange)
+                    PlainInlineField(placeholder = stringResource(R.string.hint_last_name), value = lastName, onValueChange = onLastNameChange)
                 }
             } else {
                 PlainInlineField(
-                    placeholder = "Name",
+                    placeholder = stringResource(R.string.hint_name),
                     value = singleName,
                     onValueChange = onSingleNameChange,
                     modifier = Modifier.weight(1f),
@@ -761,15 +764,15 @@ private fun ExpandableWorkSection(
             Spacer(modifier = Modifier.size(14.dp))
             if (expanded) {
                 Column(modifier = Modifier.weight(1f)) {
-                    PlainInlineField(placeholder = "Job title", value = jobTitle, onValueChange = onJobTitleChange)
+                    PlainInlineField(placeholder = stringResource(R.string.hint_job_title), value = jobTitle, onValueChange = onJobTitleChange)
                     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    PlainInlineField(placeholder = "Department", value = department, onValueChange = onDepartmentChange)
+                    PlainInlineField(placeholder = stringResource(R.string.hint_department), value = department, onValueChange = onDepartmentChange)
                     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    PlainInlineField(placeholder = "Company", value = company, onValueChange = onCompanyChange)
+                    PlainInlineField(placeholder = stringResource(R.string.hint_company), value = company, onValueChange = onCompanyChange)
                 }
             } else {
                 Text(
-                    text = "Work info",
+                    text = stringResource(R.string.work_info_label),
                     fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
@@ -904,11 +907,11 @@ private fun AddressEntryRow(
             RemoveButton(onClick = onRemove)
         }
         Column(modifier = Modifier.padding(start = 36.dp)) {
-            PlainInlineField(placeholder = "Street", value = entry.street, onValueChange = { onFieldChange(entry.copy(street = it)) })
-            PlainInlineField(placeholder = "City", value = entry.city, onValueChange = { onFieldChange(entry.copy(city = it)) })
-            PlainInlineField(placeholder = "State", value = entry.state, onValueChange = { onFieldChange(entry.copy(state = it)) })
-            PlainInlineField(placeholder = "Postcode", value = entry.postcode, onValueChange = { onFieldChange(entry.copy(postcode = it)) })
-            PlainInlineField(placeholder = "Country", value = entry.country, onValueChange = { onFieldChange(entry.copy(country = it)) })
+            PlainInlineField(placeholder = stringResource(R.string.hint_street), value = entry.street, onValueChange = { onFieldChange(entry.copy(street = it)) })
+            PlainInlineField(placeholder = stringResource(R.string.hint_city), value = entry.city, onValueChange = { onFieldChange(entry.copy(city = it)) })
+            PlainInlineField(placeholder = stringResource(R.string.hint_state), value = entry.state, onValueChange = { onFieldChange(entry.copy(state = it)) })
+            PlainInlineField(placeholder = stringResource(R.string.hint_postcode), value = entry.postcode, onValueChange = { onFieldChange(entry.copy(postcode = it)) })
+            PlainInlineField(placeholder = stringResource(R.string.hint_country), value = entry.country, onValueChange = { onFieldChange(entry.copy(country = it)) })
         }
     }
 }
@@ -924,6 +927,10 @@ private fun DateEntryRow(
     onRemove: () -> Unit
 ) {
     val context = LocalContext.current
+    // Same resolved-luminance check Compose's own primaryAccentColor() uses - reflects this app's
+    // actual in-app Light/Dark/System toggle (not just the OS's own day/night setting), which a
+    // plain values-night themes.xml override couldn't follow on its own.
+    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             FieldIcon(icon = Icons.Outlined.CalendarToday, active = true)
@@ -940,21 +947,33 @@ private fun DateEntryRow(
             RemoveButton(onClick = onRemove)
         }
         Text(
-            text = entry.dateMillis?.let { formatPickedDate(it) } ?: "Select date",
+            text = entry.dateMillis?.let { formatPickedDate(it) } ?: stringResource(R.string.select_date_placeholder),
             fontSize = 15.sp,
             color = if (entry.dateMillis != null) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 36.dp, top = 4.dp, bottom = 4.dp)
+                .padding(start = 36.dp, top = 4.dp)
+                .clip(RoundedCornerShape(10.dp))
+                // surfaceVariant alone is nearly indistinguishable from this screen's own
+                // background (F1F1F4 vs F7F7F9 in light mode) - an outline is what actually makes
+                // this read as a button instead of blending into the page.
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                 .clickable {
                     val cal = Calendar.getInstance().apply { entry.dateMillis?.let { timeInMillis = it } }
-                    // Always the light-styled picker — the header/body background always matches
-                    // light mode regardless of the app's own theme (see Theme.Contacts.DatePicker's
-                    // doc in themes.xml); the classic DatePickerDialog otherwise reads its style
+                    // Picks the Light/Dark picker theme to match this app's own in-app toggle (see
+                    // isDarkTheme above) - the classic DatePickerDialog otherwise reads its style
                     // from the Activity's own Theme.Contacts, not this app's in-app theme toggle.
-                    val themedContext = ContextThemeWrapper(context, R.style.Theme_Contacts_DatePicker_Light)
+                    // Passed as the themeResId constructor arg directly (matching the sibling
+                    // Messages app's own working DatePickerDialog usage) rather than wrapped via
+                    // ContextThemeWrapper - both apply the same style, but this is the proven path.
+                    val pickerTheme = if (isDarkTheme) {
+                        R.style.Theme_Contacts_DatePicker_Dark
+                    } else {
+                        R.style.Theme_Contacts_DatePicker_Light
+                    }
                     DatePickerDialog(
-                        themedContext,
+                        context,
+                        pickerTheme,
                         { _, year, month, day ->
                             val picked = Calendar.getInstance().apply { set(year, month, day, 0, 0, 0) }.timeInMillis
                             onDateChange(picked)
@@ -964,6 +983,7 @@ private fun DateEntryRow(
                         cal.get(Calendar.DAY_OF_MONTH)
                     ).show()
                 }
+                .padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }
 }
@@ -995,7 +1015,7 @@ private fun PlainInlineField(
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onBackground
             ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            cursorBrush = SolidColor(primaryAccentColor()),
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -1039,7 +1059,7 @@ private fun ContactField(
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onBackground
                     ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    cursorBrush = SolidColor(primaryAccentColor()),
                     modifier = Modifier.fillMaxWidth()
                 )
             }

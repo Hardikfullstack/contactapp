@@ -27,10 +27,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.data.BlockRepository
 import com.phone.contacts.ui.components.CustomSwitch
+import com.phone.contacts.ui.theme.primaryAccentColor
 import kotlinx.coroutines.launch
 
 /** Settings > Blocking — matches the reference app's own screen: a toggle for unidentified
@@ -61,7 +64,7 @@ fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Blocking",
+                text = stringResource(R.string.blocking_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -81,9 +84,9 @@ fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f).padding(end = 7.dp)) {
-                    Text(text = "Unknown", color = MaterialTheme.colorScheme.onBackground)
+                    Text(text = stringResource(R.string.unknown_callers_label), color = MaterialTheme.colorScheme.onBackground)
                     Text(
-                        text = "Block calls from unidentified callers",
+                        text = stringResource(R.string.block_unidentified_callers_description),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 5.dp)
@@ -107,19 +110,19 @@ fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 10.dp)
         ) {
-            Text(text = "Manage block list", color = MaterialTheme.colorScheme.onPrimary)
+            Text(text = stringResource(R.string.manage_block_list), color = MaterialTheme.colorScheme.onPrimary)
         }
 
         Text(
-            text = "You won't receive calls or texts from blocked numbers.",
+            text = stringResource(R.string.blocked_numbers_description),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(horizontal = 20.dp)
         )
 
         Text(
-            text = "Add a number",
-            color = MaterialTheme.colorScheme.primary,
+            text = stringResource(R.string.add_a_number),
+            color = primaryAccentColor(),
             fontWeight = FontWeight.Medium,
             modifier = Modifier
                 .padding(horizontal = 20.dp, vertical = 14.dp)
@@ -144,12 +147,12 @@ private fun AddBlockedNumberDialog(onDismiss: () -> Unit, onBlock: (String) -> U
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        title = { Text("Block calls and text from") },
+        title = { Text(stringResource(R.string.block_calls_and_text_from)) },
         text = {
             androidx.compose.material3.OutlinedTextField(
                 value = number,
                 onValueChange = { number = it },
-                placeholder = { Text("Phone number") },
+                placeholder = { Text(stringResource(R.string.hint_phone_number)) },
                 singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth()
@@ -159,10 +162,10 @@ private fun AddBlockedNumberDialog(onDismiss: () -> Unit, onBlock: (String) -> U
             androidx.compose.material3.TextButton(
                 onClick = { onBlock(number.trim()) },
                 enabled = number.isNotBlank()
-            ) { Text("Block") }
+            ) { Text(stringResource(R.string.action_block)) }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

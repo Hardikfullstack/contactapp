@@ -37,13 +37,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.data.local.AppDatabase
 import com.phone.contacts.data.local.EmergencyContactEntity
 import com.phone.contacts.ui.components.ScreenSearchField
+import com.phone.contacts.ui.theme.primaryAccentColor
 import kotlinx.coroutines.launch
 
 /** A multi-select picker over the device's real contacts — no preset entries, matching the
@@ -116,7 +119,7 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Select contact",
+                text = stringResource(R.string.select_contact_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -152,13 +155,13 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
         ScreenSearchField(
             value = query,
             onValueChange = { query = it },
-            placeholder = "Search contacts...",
+            placeholder = stringResource(R.string.search_contacts_dots_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
         if (!isSelectionLoaded) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                CircularProgressIndicator(color = primaryAccentColor())
             }
         } else {
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -170,7 +173,7 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
                         ) {
                             Icon(Icons.Filled.Call, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.size(8.dp))
-                            Text(text = "Emergency", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.titleSmall)
+                            Text(text = stringResource(R.string.emergency_label), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.titleSmall)
                         }
                     }
                     items(selectedContacts, key = { it.id }) { contact ->

@@ -47,8 +47,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.data.local.DeletedContactEntity
 import com.phone.contacts.ui.components.CustomSwitch
@@ -112,7 +114,7 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Text(
-                    text = "Recycle bin",
+                    text = stringResource(R.string.recycle_bin_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -129,14 +131,14 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Select") },
+                                text = { Text(stringResource(R.string.select)) },
                                 onClick = {
                                     menuExpanded = false
                                     selectionMode = true
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Select all") },
+                                text = { Text(stringResource(R.string.select_all_label)) },
                                 onClick = {
                                     menuExpanded = false
                                     selectionMode = true
@@ -162,12 +164,12 @@ fun RecycleBinScreen(onBack: () -> Unit) {
             ) {
                 Column(modifier = Modifier.weight(1f).padding(end = 15.dp)) {
                     Text(
-                        text = "Delete contacts",
+                        text = stringResource(R.string.delete_contacts_toggle_label),
                         color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "Contact that have been in the bin for more than 30 days will be deleted forever",
+                        text = stringResource(R.string.auto_delete_description),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 3.dp)
@@ -192,13 +194,13 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                     .align(Alignment.End)
                     .padding(horizontal = 15.dp, vertical = 4.dp)
             ) {
-                Text(text = "Empty bin now", color = MaterialTheme.colorScheme.onPrimary)
+                Text(text = stringResource(R.string.empty_bin_now_label), color = MaterialTheme.colorScheme.onPrimary)
             }
         }
 
         if (entries.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "No Data Found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = stringResource(R.string.no_data_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -282,8 +284,8 @@ fun RecycleBinScreen(onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Restore Contacts?") },
-            text = { Text("Are you sure to restore selected contacts?") },
+            title = { Text(stringResource(R.string.restore_contacts_title)) },
+            text = { Text(stringResource(R.string.restore_contacts_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     val toRestore = entries.filter { it.id in selectedIds }
@@ -293,10 +295,10 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                     coroutineScope.launch {
                         toRestore.forEach { ContactRepository.restoreFromRecycleBin(context, it) }
                     }
-                }) { Text("Restore") }
+                }) { Text(stringResource(R.string.action_restore)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRestoreConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showRestoreConfirm = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -305,8 +307,8 @@ fun RecycleBinScreen(onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Delete Contacts") },
-            text = { Text("Are you sure to delete selected contacts forever? You cannot recover it") },
+            title = { Text(stringResource(R.string.delete_contacts_title)) },
+            text = { Text(stringResource(R.string.delete_contacts_forever_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     val ids = selectedIds.toList()
@@ -314,10 +316,10 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                     selectionMode = false
                     selectedIds = emptySet()
                     coroutineScope.launch { ContactRepository.deleteFromRecycleBinPermanently(context, ids) }
-                }) { Text("Remove", color = Color(0xFFE0413B)) }
+                }) { Text(stringResource(R.string.action_remove), color = Color(0xFFE0413B)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -326,16 +328,16 @@ fun RecycleBinScreen(onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showEmptyBinConfirm = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Empty Bin") },
-            text = { Text("Are you sure to delete all contacts from bin? You cannot recover it") },
+            title = { Text(stringResource(R.string.empty_bin_title)) },
+            text = { Text(stringResource(R.string.empty_bin_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showEmptyBinConfirm = false
                     coroutineScope.launch { ContactRepository.clearRecycleBin(context) }
-                }) { Text("Remove", color = Color(0xFFE0413B)) }
+                }) { Text(stringResource(R.string.action_remove), color = Color(0xFFE0413B)) }
             },
             dismissButton = {
-                TextButton(onClick = { showEmptyBinConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showEmptyBinConfirm = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

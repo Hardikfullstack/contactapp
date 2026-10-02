@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -78,7 +79,9 @@ import com.phone.contacts.data.CallType
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.verticalScrollIndicator
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.CallUtils
+import com.phone.contacts.util.GoogleMeetUtils
 import com.phone.contacts.util.MessageUtils
 import com.phone.contacts.util.RecentlyViewedContacts
 import com.phone.contacts.util.WhatsAppUtils
@@ -161,6 +164,7 @@ fun ContactDetailScreen(
     var moreMenuExpanded by remember { mutableStateOf(false) }
     val whatsAppInstalled = remember { WhatsAppUtils.isInstalled(context) }
     val whatsAppIcon = ImageVector.vectorResource(id = R.drawable.ic_whatsapp)
+    val meetInstalled = remember { GoogleMeetUtils.isInstalled(context) }
 
     // Reactive — updates immediately if the number is blocked/unblocked from anywhere (this
     // screen's own menu, or the Blocking settings screen), not just on first composition.
@@ -226,29 +230,29 @@ fun ContactDetailScreen(
         ) {
             DetailActionButton(
                 icon = Icons.Outlined.Call,
-                label = "Call",
+                label = stringResource(R.string.action_call),
                 modifier = Modifier.weight(1f),
                 onClick = { CallUtils.placeCall(context, number) }
             )
             DetailActionButton(
                 icon = Icons.AutoMirrored.Outlined.Message,
-                label = "Text",
+                label = stringResource(R.string.action_text),
                 modifier = Modifier.weight(1f),
                 onClick = { MessageUtils.sendMessage(context, number) }
             )
             DetailActionButton(
                 icon = whatsAppIcon,
-                label = "Whatsapp",
+                label = stringResource(R.string.action_whatsapp),
                 enabled = whatsAppInstalled,
                 modifier = Modifier.weight(1f),
                 onClick = { WhatsAppUtils.openChat(context, number) }
             )
             DetailActionButton(
                 icon = Icons.Outlined.Videocam,
-                label = "Video call",
-                enabled = false, // kept disabled for now
+                label = stringResource(R.string.action_video_call),
+                enabled = meetInstalled,
                 modifier = Modifier.weight(1f),
-                onClick = { WhatsAppUtils.openChat(context, number) }
+                onClick = { GoogleMeetUtils.launchMeetCall(context, number) }
             )
         }
 
@@ -262,8 +266,8 @@ fun ContactDetailScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Mobile",
-                    color = MaterialTheme.colorScheme.primary,
+                    text = stringResource(R.string.type_mobile),
+                    color = primaryAccentColor(),
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.size(4.dp))
@@ -284,11 +288,19 @@ fun ContactDetailScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
             ) {
                 Column {
-                    WhatsAppActionRow(label = "Message $number") { WhatsAppUtils.openChat(context, number) }
+                    WhatsAppActionRow(label = stringResource(R.string.message_number_label, number)) { WhatsAppUtils.openChat(context, number) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    WhatsAppActionRow(label = "Voice call $number") { WhatsAppUtils.openChat(context, number) }
+                    WhatsAppActionRow(label = stringResource(R.string.voice_call_number_label, number)) {
+                        if (!WhatsAppUtils.launchVoiceCall(context, resolvedContactId)) {
+                            WhatsAppUtils.openChat(context, number)
+                        }
+                    }
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    WhatsAppActionRow(label = "Video call $number") { WhatsAppUtils.openChat(context, number) }
+                    WhatsAppActionRow(label = stringResource(R.string.video_call_number_label, number)) {
+                        if (!WhatsAppUtils.launchVideoCall(context, resolvedContactId)) {
+                            WhatsAppUtils.openChat(context, number)
+                        }
+                    }
                 }
             }
         }
@@ -306,7 +318,7 @@ fun ContactDetailScreen(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
-                    text = "Call history",
+                    text = stringResource(R.string.call_history_title),
                     color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold
                 )
@@ -324,7 +336,7 @@ fun ContactDetailScreen(
         ) {
             BottomBarAction(
                 icon = if (starred) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                label = "Favorites",
+                label = stringResource(R.string.favorites),
                 enabled = resolvedContactId != null,
                 tint = if (starred) Color(0xFFFFC107) else MaterialTheme.colorScheme.onBackground,
                 onClick = {
@@ -336,29 +348,33 @@ fun ContactDetailScreen(
             )
             BottomBarAction(
                 icon = Icons.Filled.Edit,
-                label = "Edit",
+                label = stringResource(R.string.action_edit),
                 enabled = resolvedContactId != null,
                 onClick = { resolvedContactId?.let(onEditClick) }
             )
             BottomBarAction(
                 icon = Icons.Filled.Delete,
-                label = "Delete",
+                label = stringResource(R.string.action_delete),
                 enabled = resolvedContactId != null,
                 onClick = { showDeleteConfirm = true }
             )
             Box {
                 BottomBarAction(
                     icon = Icons.Filled.MoreVert,
-                    label = "More",
+                    label = stringResource(R.string.action_more),
                     onClick = { moreMenuExpanded = true }
                 )
+                val unblockedToastMessage = stringResource(R.string.unblocked_toast, currentName)
+                val blockedToastMessage = stringResource(R.string.blocked_toast, currentName)
+                val blockDeniedToastMessage = stringResource(R.string.set_default_to_block_message)
+                val shareContactChooserTitle = stringResource(R.string.share_contact_chooser_title)
                 DropdownMenu(
                     expanded = moreMenuExpanded,
                     onDismissRequest = { moreMenuExpanded = false },
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     DropdownMenuItem(
-                        text = { Text(if (isNumberBlocked) "Unblock" else "Block") },
+                        text = { Text(if (isNumberBlocked) stringResource(R.string.action_unblock) else stringResource(R.string.action_block)) },
                         onClick = {
                             moreMenuExpanded = false
                             coroutineScope.launch {
@@ -368,16 +384,16 @@ fun ContactDetailScreen(
                                     BlockRepository.blockNumber(context, number)
                                 }
                                 val message = when {
-                                    success && isNumberBlocked -> "$currentName unblocked"
-                                    success -> "$currentName blocked"
-                                    else -> "Set this app as default phone app to block numbers"
+                                    success && isNumberBlocked -> unblockedToastMessage
+                                    success -> blockedToastMessage
+                                    else -> blockDeniedToastMessage
                                 }
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Set Ringtone") },
+                        text = { Text(stringResource(R.string.action_set_ringtone)) },
                         enabled = resolvedContactId != null,
                         onClick = {
                             moreMenuExpanded = false
@@ -385,14 +401,14 @@ fun ContactDetailScreen(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Share") },
+                        text = { Text(stringResource(R.string.action_share)) },
                         onClick = {
                             moreMenuExpanded = false
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TEXT, "$currentName\n$number")
                             }
-                            context.startActivity(Intent.createChooser(intent, "Share contact"))
+                            context.startActivity(Intent.createChooser(intent, shareContactChooserTitle))
                         }
                     )
                 }
@@ -412,8 +428,8 @@ fun ContactDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Move to Bin?") },
-            text = { Text("This contact will be removed from all your synced devices.") },
+            title = { Text(stringResource(R.string.move_to_bin_title)) },
+            text = { Text(stringResource(R.string.move_to_bin_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     val id = resolvedContactId
@@ -424,10 +440,10 @@ fun ContactDetailScreen(
                             onDeleted()
                         }
                     }
-                }) { Text("Move to Bin") }
+                }) { Text(stringResource(R.string.action_move_to_bin)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -450,7 +466,9 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
             isNumberBlocked = entries.any { normalizeForBlockMatch(it.number) == normalizeForBlockMatch(number) }
         }
     }
-    val grouped = remember(calls) { groupCallsByDate(calls) }
+    val todayLabel = stringResource(R.string.date_today)
+    val yesterdayLabel = stringResource(R.string.date_yesterday)
+    val grouped = remember(calls, todayLabel, yesterdayLabel) { groupCallsByDate(calls, todayLabel, yesterdayLabel) }
     val listState = rememberLazyListState()
 
     Box(
@@ -486,7 +504,7 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "Blocked",
+                                text = stringResource(R.string.blocked_label),
                                 color = blockedCallColor(),
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.padding(start = 4.dp)
@@ -506,7 +524,7 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
             if (calls.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "No calls with this number",
+                        text = stringResource(R.string.no_calls_with_number),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -515,7 +533,7 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScrollIndicator(listState, MaterialTheme.colorScheme.primary)
+                        .verticalScrollIndicator(listState, primaryAccentColor())
                 ) {
                     grouped.forEach { (dateLabel, callsInGroup) ->
                         item {
@@ -546,8 +564,8 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Clear Call History") },
-            text = { Text("Clear all $number's history?") },
+            title = { Text(stringResource(R.string.clear_call_history_title)) },
+            text = { Text(stringResource(R.string.clear_history_confirm_message, number)) },
             confirmButton = {
                 TextButton(onClick = {
                     showClearDialog = false
@@ -555,16 +573,16 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
                         CallLogRepository.deleteAllForNumber(context, number)
                         calls = emptyList()
                     }
-                }) { Text("Delete") }
+                }) { Text(stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
 }
 
-private fun groupCallsByDate(calls: List<CallLogItem>): List<Pair<String, List<CallLogItem>>> {
+private fun groupCallsByDate(calls: List<CallLogItem>, todayLabel: String, yesterdayLabel: String): List<Pair<String, List<CallLogItem>>> {
     val today = java.util.Calendar.getInstance()
     val yesterday = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -1) }
     val cal = java.util.Calendar.getInstance()
@@ -576,8 +594,8 @@ private fun groupCallsByDate(calls: List<CallLogItem>): List<Pair<String, List<C
     fun labelFor(timestamp: Long): String {
         cal.timeInMillis = timestamp
         return when {
-            isSameDay(cal, today) -> "Today"
-            isSameDay(cal, yesterday) -> "Yesterday"
+            isSameDay(cal, today) -> todayLabel
+            isSameDay(cal, yesterday) -> yesterdayLabel
             else -> SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(timestamp)
         }
     }
@@ -619,7 +637,7 @@ private fun DetailActionButton(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = tint ?: MaterialTheme.colorScheme.primary
+            tint = tint ?: primaryAccentColor()
         )
         Spacer(modifier = Modifier.size(6.dp))
         Text(
@@ -686,7 +704,7 @@ private fun CallHistoryDetailRow(call: CallLogItem, isBlocked: Boolean = false) 
     // CallLog itself recorded for this specific call — see CallLogRow's identical reasoning.
     val displayType = if (isBlocked) CallType.BLOCKED else call.type
     val badgeColor = when (displayType) {
-        CallType.INCOMING -> MaterialTheme.colorScheme.primary
+        CallType.INCOMING -> primaryAccentColor()
         CallType.OUTGOING -> Color(0xFF1DA463)
         CallType.MISSED, CallType.REJECTED -> Color(0xFFE0413B)
         CallType.BLOCKED -> blockedCallColor()

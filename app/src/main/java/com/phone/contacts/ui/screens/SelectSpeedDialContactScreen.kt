@@ -33,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.phone.contacts.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.data.Contact
@@ -79,7 +81,7 @@ fun SelectSpeedDialContactScreen(dialKey: String, onBack: () -> Unit, onAssigned
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Assign to $dialKey",
+                text = stringResource(R.string.assign_to_key_title, dialKey),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -90,7 +92,7 @@ fun SelectSpeedDialContactScreen(dialKey: String, onBack: () -> Unit, onAssigned
         ScreenSearchField(
             value = query,
             onValueChange = { query = it },
-            placeholder = "Search contacts...",
+            placeholder = stringResource(R.string.search_contacts_dots_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
         )
 

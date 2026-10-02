@@ -34,8 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.util.QuickResponsePreferences
 import com.phone.contacts.util.QuickResponseTemplate
 
@@ -77,7 +79,7 @@ fun QuickResponseScreen(onBack: () -> Unit) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Text(
-                    text = "Quick response",
+                    text = stringResource(R.string.quick_response_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -86,7 +88,7 @@ fun QuickResponseScreen(onBack: () -> Unit) {
             }
 
             Text(
-                text = "You can quickly respond to incoming calls by using the message templates below via SMS. You can also edit the text by tapping on it.",
+                text = stringResource(R.string.quick_response_description),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -130,9 +132,9 @@ fun QuickResponseScreen(onBack: () -> Unit) {
 
     editingTemplate?.let { template ->
         TemplateEditDialog(
-            title = "Quick response",
+            title = stringResource(R.string.quick_response_title),
             initialText = template.text,
-            confirmLabel = "Save",
+            confirmLabel = stringResource(R.string.save),
             onDismiss = { editingTemplate = null },
             onConfirm = { newText ->
                 QuickResponsePreferences.updateTemplate(context, template.id, newText)
@@ -143,7 +145,7 @@ fun QuickResponseScreen(onBack: () -> Unit) {
 
     if (showAddDialog) {
         TemplateEditDialog(
-            title = "Quick response",
+            title = stringResource(R.string.quick_response_title),
             initialText = "",
             confirmLabel = "Add",
             onDismiss = { showAddDialog = false },
@@ -171,7 +173,7 @@ private fun TemplateEditDialog(
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                placeholder = { Text("Enter message") },
+                placeholder = { Text(stringResource(R.string.hint_enter_message)) },
                 modifier = Modifier.fillMaxWidth()
             )
         },
@@ -181,7 +183,7 @@ private fun TemplateEditDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

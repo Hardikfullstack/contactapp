@@ -37,8 +37,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.phone.contacts.R
 import com.phone.contacts.util.ContactNameFormat
 import com.phone.contacts.util.ContactSortOrder
 import com.phone.contacts.util.DisplayOptionsPreferences
@@ -56,7 +58,7 @@ fun DisplayOptionsScreen(onBack: () -> Unit) {
     when (page) {
         DisplayOptionPage.SORT_BY -> {
             SingleChoiceScreen(
-                title = "Sort by",
+                title = stringResource(R.string.sort_by_title),
                 options = ContactSortOrder.entries,
                 labelOf = { it.label },
                 selected = sortOrder,
@@ -70,7 +72,7 @@ fun DisplayOptionsScreen(onBack: () -> Unit) {
         }
         DisplayOptionPage.NAME_FORMAT -> {
             SingleChoiceScreen(
-                title = "Name format",
+                title = stringResource(R.string.name_format_title),
                 options = ContactNameFormat.entries,
                 labelOf = { it.label },
                 selected = nameFormat,
@@ -99,7 +101,7 @@ fun DisplayOptionsScreen(onBack: () -> Unit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Display option",
+                text = stringResource(R.string.display_option_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -116,7 +118,7 @@ fun DisplayOptionsScreen(onBack: () -> Unit) {
                 DisplayOptionRow(
                     icon = Icons.AutoMirrored.Filled.Sort,
                     iconBackgroundColor = Color(0xFFE91E63),
-                    title = "Sort by",
+                    title = stringResource(R.string.sort_by_title),
                     subtitle = sortOrder.label,
                     onClick = { page = DisplayOptionPage.SORT_BY }
                 )
@@ -128,7 +130,7 @@ fun DisplayOptionsScreen(onBack: () -> Unit) {
                 DisplayOptionRow(
                     icon = Icons.Filled.FormatListNumbered,
                     iconBackgroundColor = Color(0xFFFF9800),
-                    title = "Name format",
+                    title = stringResource(R.string.name_format_title),
                     subtitle = nameFormat.label,
                     onClick = { page = DisplayOptionPage.NAME_FORMAT }
                 )

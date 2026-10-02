@@ -1,9 +1,15 @@
 package com.phone.contacts
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,14 +17,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.phone.contacts.ui.features.onboarding.LanguageSelectionScreen
+import com.phone.contacts.ui.features.onboarding.MiuiPermissionDialog
 import com.phone.contacts.ui.features.splash.SplashScreen
 import com.phone.contacts.ui.navigation.MainNavigation
 import com.phone.contacts.ui.theme.ContactsTheme
 import com.phone.contacts.util.AppThemePreferences
+import com.phone.contacts.util.DefaultDialerState
 import com.phone.contacts.util.DeviceUtils
 import com.phone.contacts.util.OnboardingPreferences
 import com.phone.contacts.util.ThemeMode
@@ -26,6 +35,10 @@ import com.phone.contacts.util.ThemeMode
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Keeps the screen on while the app itself is open (Contacts/Recents/Keypad/Settings
+        // etc.) - separate from CallActivity's own proximity-sensor-driven screen control during
+        // an actual call; both are meant to coexist, not replace one another.
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         setContent {
             val themeContext = LocalContext.current
@@ -39,6 +52,19 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
                 var showSplash by remember { mutableStateOf(true) }
                 var isLanguageSelected by remember { mutableStateOf(OnboardingPreferences.isLanguageSelected(context)) }
+
+                // Only relevant once the app is already the default dialer - not part of the
+                // upfront onboarding flow. Re-derived from DefaultDialerState (refreshed wherever
+                // SetDefaultScreen's onSetAsDefault fires, e.g. ContactsScreen/RecentsScreen/
+                // FavoritesScreen) every time that flips, so it reliably catches the moment
+                // default-dialer is granted regardless of which tab the user was on.
+                val isDefaultDialer by DefaultDialerState.isDefault
+                var isMiuiPermissionGranted by remember {
+                    mutableStateOf(
+                        Settings.canDrawOverlays(context) && DeviceUtils.isMiuiBackgroundPermissionGranted(context)
+                    )
+                }
+                val showMiuiPermissionDialog = isDefaultDialer && DeviceUtils.isMiui() && !isMiuiPermissionGranted
 
                 // System bottom nav bar stays hidden throughout the app on 2/3-button navigation
                 // devices (a swipe from the edge still reveals it briefly — standard immersive
@@ -58,6 +84,24 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Without this (API 33+), the call notification's checkNotificationPermission()
+                // would silently stay false forever - declaring POST_NOTIFICATIONS in the manifest
+                // alone doesn't grant it, it still needs this one-time runtime request. Deferred
+                // until isDefaultDialer is actually true - there's no call notification to show
+                // before that, so asking upfront on every fresh install would just be an unexplained
+                // permission prompt before the user has any reason to say yes to it.
+                val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { }
+                LaunchedEffect(isDefaultDialer) {
+                    if (isDefaultDialer &&
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
+
                 when {
                     showSplash -> SplashScreen(onTimeout = { showSplash = false })
                     !isLanguageSelected -> LanguageSelectionScreen(
@@ -66,7 +110,12 @@ class MainActivity : ComponentActivity() {
                             isLanguageSelected = true
                         }
                     )
-                    else -> MainNavigation()
+                    else -> {
+                        MainNavigation()
+                        if (showMiuiPermissionDialog) {
+                            MiuiPermissionDialog(onGranted = { isMiuiPermissionGranted = true })
+                        }
+                    }
                 }
             }
         }
