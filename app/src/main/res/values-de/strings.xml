@@ -387,7 +387,6 @@
     <string name="period_activity_title">%1$s Aktivität</string>
     <string name="permission_miui_desc">Ihr Gerät benötigt zusätzliche Berechtigungen für einen zuverlässigen Hintergrundbetrieb. Bitte befolgen Sie die untenstehenden Schritte.</string>
     <string name="permission_miui_title">Berechtigung erforderlich</string>
-    <string name="permission_overlay_desc">Wir benötigen die Berechtigung, Popups über anderen Apps für Schnellantworten und Anruffunktionen anzuzeigen. Dies ist erforderlich.</string>
     <string name="permissions_required_title">Berechtigungen erforderlich</string>
     <string name="pick_color">Farbe auswählen</string>
     <string name="pick_date">Datum auswählen</string>
@@ -464,4 +463,14 @@
     <string name="wired_headset">Kabelgebundenes Headset</string>
     <string name="write_settings_permission_desc">Um den Klingelton Ihres Telefons einzustellen, erlauben Sie Connect, die Systemeinstellungen zu ändern.</string>
     <string name="write_settings_permission_title">Klingeltonänderungen erlauben</string>
+    <string name="permission_overlay_title">Overlay-Berechtigung erlauben</string>
+    <string name="permission_overlay_desc">Nötig, um den Anrufbildschirm über anderen Apps anzuzeigen.</string>
+    <string name="permission_popup_title">Pop-up-Fenster erlauben</string>
+    <string name="permission_popup_desc">Nötig, damit Anrufe auf dem Bildschirm erscheinen, auch auf dem Sperrbildschirm.</string>
+    <string name="allow_audio_access_title">Zugriff auf Audiodateien erlauben</string>
+    <string name="allow_audio_access_description">Mit dieser Berechtigung kannst du jeden Song oder Ton auf deinem Handy als Klingelton wählen.</string>
+    <string name="grant_access_label">Zugriff erlauben</string>
+    <string name="custom_ringtones_label">Eigene</string>
+    <string name="spam_numbers_section">Als Spam markiert</string>
+    <string name="no_spam_numbers">Keine als Spam markierten Nummern</string>
 </resources>

@@ -387,7 +387,6 @@
     <string name="period_activity_title">Activité de %1$s</string>
     <string name="permission_miui_desc">Votre appareil nécessite des autorisations supplémentaires pour un fonctionnement fiable en arrière-plan. Veuillez suivre les étapes ci-dessous.</string>
     <string name="permission_miui_title">Autorisation requise</string>
-    <string name="permission_overlay_desc">Nous avons besoin de l\'autorisation d\'afficher des fenêtres pop-up par-dessus d\'autres applications pour les réponses rapides et les fonctions d\'appel. Ceci est obligatoire.</string>
     <string name="permissions_required_title">Autorisations requises</string>
     <string name="pick_color">Choisir une couleur</string>
     <string name="pick_date">Choisir une date</string>
@@ -464,4 +463,14 @@
     <string name="wired_headset">Casque filaire</string>
     <string name="write_settings_permission_desc">Pour définir la sonnerie de votre téléphone, autorisez Connect à modifier les paramètres système.</string>
     <string name="write_settings_permission_title">Autoriser les modifications de sonnerie</string>
+    <string name="permission_overlay_title">Autoriser la superposition</string>
+    <string name="permission_overlay_desc">Nécessaire pour afficher l\'écran d\'appel par-dessus d\'autres applications.</string>
+    <string name="permission_popup_title">Autoriser les fenêtres pop-up</string>
+    <string name="permission_popup_desc">Nécessaire pour que les appels s\'affichent à l\'écran, même sur l\'écran de verrouillage.</string>
+    <string name="allow_audio_access_title">Autoriser l\'accès aux fichiers audio</string>
+    <string name="allow_audio_access_description">Vous permet de choisir n\'importe quelle chanson ou son de votre téléphone comme sonnerie.</string>
+    <string name="grant_access_label">Autoriser l\'accès</string>
+    <string name="custom_ringtones_label">Personnalisées</string>
+    <string name="spam_numbers_section">Marqués comme spam</string>
+    <string name="no_spam_numbers">Aucun numéro marqué comme spam</string>
 </resources>

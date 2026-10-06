@@ -1,6 +1,7 @@
 package com.phone.contact.call.dialer.ui.navigation
 
 import android.app.Activity
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -67,6 +68,11 @@ import com.phone.contact.call.dialer.util.AnalyticsManager
 import com.phone.contact.call.dialer.util.PreferenceManager
 import com.phone.contact.call.dialer.viewmodel.AppConfigViewModel
 
+/** A route argument as a path segment. Encoded so "/" or symbols in a name can't break the path, and a
+ * blank value becomes a space (it is trimmed back to blank where the argument is read). An empty
+ * segment would not match the route at all, which crashed navigation for unknown numbers. */
+private fun String.routeSegment(): String = Uri.encode(ifBlank { " " })
+
 sealed class MainScreen(
     val route: String,
     val labelRes: Int? = null,
@@ -81,7 +87,8 @@ sealed class MainScreen(
     object Keypad : MainScreen("keypad")
     object Search : MainScreen("search")
     object History : MainScreen("history/{name}/{number}") {
-        fun createRoute(name: String, number: String) = "history/$name/$number"
+        // Encoded: a name with "/" or spaces/symbols would otherwise break the path and crash navigation.
+        fun createRoute(name: String, number: String) = "history/${name.routeSegment()}/${number.routeSegment()}"
     }
     object BlockedNumbers : MainScreen("blocked_numbers")
     object CallerIdSpam : MainScreen("caller_id_spam")
@@ -99,7 +106,7 @@ sealed class MainScreen(
     object CallThemes : MainScreen("call_themes")
     object Ringtone : MainScreen("ringtone")
     object ContactRingtone : MainScreen("contact_ringtone/{name}/{number}") {
-        fun createRoute(name: String, number: String) = "contact_ringtone/$name/$number"
+        fun createRoute(name: String, number: String) = "contact_ringtone/${name.routeSegment()}/${number.routeSegment()}"
     }
     object AutoReply : MainScreen("auto_reply")
     object FakeCallSetup : MainScreen("fake_call_setup")

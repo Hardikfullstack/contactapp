@@ -3,6 +3,7 @@ package com.phone.contact.call.dialer.data.repository
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.CallLog
+import com.phone.contact.call.dialer.R
 import android.provider.ContactsContract
 import com.phone.contact.call.dialer.domain.model.CallLogItem
 import com.phone.contact.call.dialer.domain.model.CallType
@@ -44,6 +45,14 @@ class CallLogRepositoryImpl @Inject constructor(
     override suspend fun fetchCallLogsForAnalytics(): List<CallLogItem> = withContext(Dispatchers.IO) {
         queryCallLogs(selection = null, selectionArgs = null, shouldResolveContactInfo = false)
     }
+
+    /** Label for a call whose NUMBER column is blank: "Private Number" for a withheld caller ID, otherwise "Unknown". */
+    private fun blankNumberLabel(presentation: Int): String =
+        if (presentation == CallLog.Calls.PRESENTATION_RESTRICTED) {
+            context.getString(R.string.after_call_private_number)
+        } else {
+            context.getString(R.string.unknown)
+        }
 
     override suspend fun resolveContactDisplayInfo(number: String): Pair<String?, String?> =
         withContext(Dispatchers.IO) { resolveContactInfo(number) }
@@ -175,6 +184,7 @@ class CallLogRepositoryImpl @Inject constructor(
             CallLog.Calls.CACHED_NAME,
             CallLog.Calls.CACHED_PHOTO_URI,
             CallLog.Calls.NUMBER,
+            CallLog.Calls.NUMBER_PRESENTATION,
             CallLog.Calls.TYPE,
             CallLog.Calls.DATE,
             CallLog.Calls.DURATION
@@ -197,6 +207,7 @@ class CallLogRepositoryImpl @Inject constructor(
                 val nameIndex = cursor.getColumnIndex(CallLog.Calls.CACHED_NAME)
                 val photoUriIndex = cursor.getColumnIndex(CallLog.Calls.CACHED_PHOTO_URI)
                 val numberIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER)
+                val presentationIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER_PRESENTATION)
                 val typeIndex = cursor.getColumnIndex(CallLog.Calls.TYPE)
                 val dateIndex = cursor.getColumnIndex(CallLog.Calls.DATE)
                 val durationIndex = cursor.getColumnIndex(CallLog.Calls.DURATION)
@@ -204,7 +215,11 @@ class CallLogRepositoryImpl @Inject constructor(
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idIndex)
                     var name = cursor.getString(nameIndex)
-                    val number = cursor.getString(numberIndex)
+                    // Some phones (OnePlus) log a call with a blank NUMBER. Keep the row and label it,
+                    // so it shows up in Recents instead of being blank.
+                    val presentation = if (presentationIndex >= 0) cursor.getInt(presentationIndex) else CallLog.Calls.PRESENTATION_ALLOWED
+                    val rawNumber = cursor.getString(numberIndex)
+                    val number = if (rawNumber.isNullOrBlank()) blankNumberLabel(presentation) else rawNumber
                     val type = mapCallType(cursor.getInt(typeIndex))
                     val date = cursor.getLong(dateIndex)
                     val duration = cursor.getString(durationIndex)

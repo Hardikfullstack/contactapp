@@ -2,6 +2,8 @@ package com.phone.contact.call.dialer.util
 
 import android.app.role.RoleManager
 import android.content.Context
+import android.os.Build
+import android.telecom.TelecomManager
 import androidx.compose.runtime.mutableStateOf
 
 /**
@@ -16,6 +18,13 @@ object DefaultDialerState {
     val isDefault = mutableStateOf(true)
 
     fun refresh(context: Context) {
+        // RoleManager (and its ROLE_DIALER) only exists from Android 10. Before that, the default dialer
+        // is read from TelecomManager. Referencing RoleManager on older devices crashed the app at launch.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val telecom = context.getSystemService(TelecomManager::class.java)
+            isDefault.value = telecom?.defaultDialerPackage == context.packageName
+            return
+        }
         val roleManager = context.getSystemService(RoleManager::class.java)
         isDefault.value = roleManager?.isRoleHeld(RoleManager.ROLE_DIALER) == true
     }

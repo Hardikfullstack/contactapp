@@ -53,13 +53,11 @@ class SpamManager @Inject constructor(
         SpamStatus.NONE
     }
 
-    fun reportSpam(number: String, isSpam: Boolean) {
+    /** The user reported this number as spam. */
+    fun markAsSpam(number: String) {
         val cleanNumber = PhoneNumberMatcher.normalize(number)
-        if (cleanNumber.isNotEmpty()) {
-            val current = preferenceManager.getSpamNumbers().toMutableSet()
-            if (isSpam) current.add(cleanNumber) else current.remove(cleanNumber)
-            preferenceManager.setSpamNumbers(current)
-        }
+        if (cleanNumber.isEmpty()) return
+        preferenceManager.setSpamNumbers(preferenceManager.getSpamNumbers() + cleanNumber)
     }
 
     enum class SpamStatus {

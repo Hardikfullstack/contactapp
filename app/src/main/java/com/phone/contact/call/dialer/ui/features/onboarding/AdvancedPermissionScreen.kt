@@ -52,16 +52,19 @@ fun AdvancedPermissionScreen(
         // denied the earlier basic permissions) still gets a real chance to grant "Display over
         // other apps" here instead of it only ever coming up later, on-demand, from After Call.
         val isMiui = CallReliabilityUtils.isMiui()
-        val canDrawOverlays = Settings.canDrawOverlays(context)
+        // "Display over other apps" (OVERLAY) step is commented out for now.
+        // val canDrawOverlays = Settings.canDrawOverlays(context)
         // MIUI quirk: canDrawOverlays() can falsely report true right after install, silently
         // skipping the OVERLAY step — force it to show once on MIUI regardless, until the user's
         // acted on it. Persisted (not just remember{} state) so a kill+relaunch mid-step, or
         // between onboarding sessions, doesn't forget it was already forced and force it again
         // even after the permission was genuinely granted.
-        val forceOverlayOnMiui = isMiui && !prefs.isOverlayPermissionAutoPrompted()
-        val step = if (!canDrawOverlays || forceOverlayOnMiui) PermissionStep.OVERLAY
-        else if (isMiui && !CallReliabilityUtils.isMiuiBackgroundPopupGranted(context)) PermissionStep.MIUI_PERMISSIONS
-        else if (isMiui && !CallReliabilityUtils.isMiuiAutostartGranted(context)) PermissionStep.MIUI_AUTOSTART
+        // val forceOverlayOnMiui = isMiui && !prefs.isOverlayPermissionAutoPrompted()
+        val step = if (isMiui && !CallReliabilityUtils.isMiuiBackgroundPopupGranted(context)) PermissionStep.MIUI_PERMISSIONS
+        // "Display over other apps" (OVERLAY) step: commented out.
+        // else if (!canDrawOverlays || forceOverlayOnMiui) PermissionStep.OVERLAY
+        // Background auto start (MIUI_AUTOSTART) step: commented out.
+        // else if (isMiui && !CallReliabilityUtils.isMiuiAutostartGranted(context)) PermissionStep.MIUI_AUTOSTART
         // OnePlus/Oppo autostart step not forced during onboarding — matches Messages, which only
         // forces MIUI's autostart step automatically (its own ONEPLUS_AUTOSTART branch exists but
         // is never reached from computeNextStep() either).
@@ -171,10 +174,21 @@ fun AdvancedPermissionScreen(
         }
     }
 
-    LaunchedEffect(currentStep) {
-        if (currentStep == PermissionStep.DONE) {
+    // "Display over other apps" popup, shown right after set default. Onboarding only moves on once
+    // this is granted, even when no other step is left.
+    var overlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
+
+    LaunchedEffect(currentStep, overlayGranted) {
+        if (currentStep == PermissionStep.DONE && overlayGranted) {
             onAllPermissionsGranted()
         }
+    }
+
+    if (!overlayGranted) {
+        OverlayPermissionDialog(onGranted = {
+            overlayGranted = true
+            currentStep = computeNextStep()
+        })
     }
 
     if (currentStep != PermissionStep.DONE) {

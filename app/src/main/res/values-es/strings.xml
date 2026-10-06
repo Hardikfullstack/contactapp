@@ -413,7 +413,6 @@
     <string name="period_activity_title">Actividad de %1$s</string>
     <string name="permission_miui_desc">Tu dispositivo requiere permisos adicionales para un funcionamiento fiable en segundo plano. Sigue los pasos a continuación.</string>
     <string name="permission_miui_title">Permiso Requerido</string>
-    <string name="permission_overlay_desc">Necesitamos permiso para mostrar ventanas emergentes sobre otras apps para respuestas rápidas y funciones de llamada. Esto es obligatorio.</string>
     <string name="permissions_required_title">Permisos Requeridos</string>
     <string name="pick_date">Elige una fecha</string>
     <string name="pick_date_first">Por favor, elige una fecha</string>
@@ -474,4 +473,14 @@
     <string name="wired_headset">Auriculares con Cable</string>
     <string name="write_settings_permission_desc">Para establecer el tono de llamada de tu teléfono, permite que Connect modifique la configuración del sistema.</string>
     <string name="write_settings_permission_title">Permitir Cambios de Tono de Llamada</string>
+    <string name="permission_overlay_title">Permitir permiso superpuesto</string>
+    <string name="permission_overlay_desc">Necesario para mostrar la pantalla de llamada sobre otras apps.</string>
+    <string name="permission_popup_title">Permitir ventanas emergentes</string>
+    <string name="permission_popup_desc">Necesario para que las llamadas se muestren en pantalla, incluso en la pantalla de bloqueo.</string>
+    <string name="allow_audio_access_title">Permitir acceso a archivos de audio</string>
+    <string name="allow_audio_access_description">Te permite elegir cualquier canción o sonido de tu teléfono como tono.</string>
+    <string name="grant_access_label">Conceder acceso</string>
+    <string name="custom_ringtones_label">Personalizados</string>
+    <string name="spam_numbers_section">Marcados como spam</string>
+    <string name="no_spam_numbers">No hay números marcados como spam</string>
 </resources>

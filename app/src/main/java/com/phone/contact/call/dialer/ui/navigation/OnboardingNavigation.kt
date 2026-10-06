@@ -1,6 +1,7 @@
 package com.phone.contact.call.dialer.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -26,9 +27,16 @@ fun OnboardingNavHost(
 ) {
     val navController = rememberNavController()
 
+    // The permission screens (PermissionScreen, AdvancedPermissionScreen) are skipped at install: the
+    // "Display over other apps" popup comes after the app becomes the default dialer instead (see
+    // MainActivity). Onboarding starts at language selection, and basic onboarding counts as done.
+    LaunchedEffect(Unit) {
+        onBasicPermissionsGranted()
+    }
+
     NavHost(
         navController = navController,
-        startDestination = OnboardingScreen.Permission.route
+        startDestination = OnboardingScreen.Language.route
     ) {
         composable(OnboardingScreen.Permission.route) {
             PermissionScreen(

@@ -411,7 +411,10 @@ class InCallActivity : ComponentActivity() {
                         resolvedNumber?.let { autoReplyManager.sendQuickReply(it, message) }
                     },
                     isSpam = isSpamByCallManager,
-                    onReportSpam = { num -> spamManager.reportSpam(num, true) },
+                    onReportSpam = { num ->
+                        spamManager.markAsSpam(num)
+                        CallManager.setSpam(true)
+                    },
                     audioState = audioState,
                     onToggleMute = { CallManager.toggleMute() },
                     onToggleSpeaker = { CallManager.toggleSpeaker() },

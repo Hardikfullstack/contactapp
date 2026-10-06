@@ -14,13 +14,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.SideEffect
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import android.graphics.Color
 import com.phone.contact.call.dialer.MainActivity
 import com.phone.contact.call.dialer.ads.AppOpenBackgroundReturnTrigger
 import com.phone.contact.call.dialer.ui.theme.ContactAppTheme
 import com.phone.contact.call.dialer.util.AfterCallNotificationHelper
-import com.phone.contact.call.dialer.util.CallReliabilityUtils
 import com.phone.contact.call.dialer.util.PreferenceManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -95,15 +95,13 @@ class AfterCallActivity : AppCompatActivity() {
             )
         }
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Transparent system bars: the screen background shows behind the navigation bar too, and the
+        // nav bar stays visible (it is not hidden), like the Contacts app's after-call screen.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+        )
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-        // See MainActivity's own comment on this same pattern — fully hiding the nav bar has
-        // been observed to also disable the OS's edge-swipe back gesture on some gesture-nav OEM
-        // skins, so only do it on button-navigation devices.
-        if (!CallReliabilityUtils.isGestureNavigationEnabled(this)) {
-            insetsController.hide(WindowInsetsCompat.Type.navigationBars())
-            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
 
         if (!updateFromIntent(intent)) return
 
@@ -119,6 +117,7 @@ class AfterCallActivity : AppCompatActivity() {
             }
             SideEffect {
                 insetsController.isAppearanceLightStatusBars = !isDarkTheme
+                insetsController.isAppearanceLightNavigationBars = !isDarkTheme
             }
             ContactAppTheme(darkTheme = isDarkTheme) {
                 AfterCallScreen(
@@ -167,10 +166,4 @@ class AfterCallActivity : AppCompatActivity() {
         return true
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus && !CallReliabilityUtils.isGestureNavigationEnabled(this)) {
-            WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.navigationBars())
-        }
-    }
 }

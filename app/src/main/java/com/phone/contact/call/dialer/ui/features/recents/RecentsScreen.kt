@@ -76,6 +76,10 @@ private sealed class RecentsListRow {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+// Set once the missing permissions were asked in this app process. The request dialog returns the
+// activity through onResume, so without this flag a denied permission would be asked again on every return.
+private var askedMissingPermissionsThisProcess = false
+
 @Composable
 fun RecentsScreen(
     onSearchClick: () -> Unit,
@@ -147,8 +151,15 @@ fun RecentsScreen(
             "default_dialer_prompt", "RecentsScreen", if (isDefaultDialerState) "granted" else "denied"
         )
         if (!isDefaultDialerState) {
-            fallbackPermissionLauncher.launch(fallbackPermissions.toTypedArray())
+            // Default role declined (Cancel): no permission prompts here. Phone, Call Log, Contacts and
+            // notifications are asked only once the app is the default dialer.
         } else {
+            // Default dialer now: ask only for what is still missing - the role covers most of these.
+            val missing = fallbackPermissions.filter {
+                ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+            }
+            if (missing.isNotEmpty()) fallbackPermissionLauncher.launch(missing.toTypedArray())
+
             // Being default dialer doesn't itself grant Call Log/Contacts — without this, the
             // list stayed stuck on whatever hasPermission/isLoading was at first mount until the
             // user left this tab and came back (which re-runs the LaunchedEffect(Unit) below).
@@ -180,6 +191,17 @@ fun RecentsScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 refreshDefaultDialerState()
                 viewModel.checkPermissionAndFetch()
+                // Already the default dialer on app open: ask for anything still missing (for example
+                // notifications turned off in Settings). The default-role callback above only runs once.
+                if (DefaultDialerState.isDefault.value && !askedMissingPermissionsThisProcess) {
+                    val missing = fallbackPermissions.filter {
+                        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+                    }
+                    if (missing.isNotEmpty()) {
+                        askedMissingPermissionsThisProcess = true
+                        fallbackPermissionLauncher.launch(missing.toTypedArray())
+                    }
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -281,13 +303,12 @@ fun RecentsScreen(
         onDispose { updateFlowLifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Auto Rate Us — the first-ever open never touches AppOpenCounter (see its doc comment),
-    // so count == 1 here is exactly the user's second open, shown once ever.
+    // Auto Rate Us — shown once, when the user has opened the app 5 times (AppOpenCounter's count).
     var showRateUsDialog by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!RateUsHelper.hasAutoShown(context) &&
             !RateUsHelper.hasInteracted(context) &&
-            AppOpenCounter.currentCount(context) == 1
+            AppOpenCounter.currentCount(context) == 5
         ) {
             showRateUsDialog = true
             RateUsHelper.markAutoShown(context)

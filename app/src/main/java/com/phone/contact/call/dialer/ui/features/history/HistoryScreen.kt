@@ -343,8 +343,10 @@ fun HistoryScreen(
                                         onLongClick = { viewModel.requestDeleteCall(call.id) }
                                     )
                                     if (index < calls.size - 1) {
+                                        // Starts under the text, not the icon: 16dp row padding + 24dp icon + 16dp spacer
+                                        // from HistoryItem, and runs to the card's right edge.
                                         HorizontalDivider(
-                                            modifier = Modifier.padding(horizontal = 16.dp),
+                                            modifier = Modifier.padding(start = 56.dp),
                                             thickness = 0.5.dp,
                                             color = MaterialTheme.colorScheme.outlineVariant
                                         )

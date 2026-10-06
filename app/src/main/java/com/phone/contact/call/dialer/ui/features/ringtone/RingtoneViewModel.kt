@@ -1,7 +1,12 @@
 package com.phone.contact.call.dialer.ui.features.ringtone
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.Ringtone
+import android.os.Build
+import androidx.core.content.ContextCompat
+import com.phone.contact.call.dialer.util.queryDeviceAudioFiles
 import android.media.RingtoneManager
 import android.net.Uri
 import android.provider.Settings
@@ -24,9 +29,20 @@ data class RingtoneItem(val title: String, val uri: Uri?)
 
 data class RingtoneUiState(
     val ringtones: List<RingtoneItem> = emptyList(),
+    /** Audio files on the device (the "Custom" section) - empty until the audio permission is granted. */
+    val customRingtones: List<RingtoneItem> = emptyList(),
+    val hasAudioPermission: Boolean = false,
     val selectedUri: Uri? = null,
     val isLoading: Boolean = true
 )
+
+/** The runtime permission that lets the app read audio files on this device. */
+fun audioReadPermission(): String =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
 
 @HiltViewModel
 class RingtoneViewModel @Inject constructor(
@@ -88,7 +104,27 @@ class RingtoneViewModel @Inject constructor(
             } else {
                 RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE)
             }
-            _uiState.value = RingtoneUiState(ringtones = items, selectedUri = current, isLoading = false)
+            _uiState.value = _uiState.value.copy(
+                ringtones = items,
+                selectedUri = current,
+                isLoading = false,
+                hasAudioPermission = hasAudioPermission()
+            )
+            refreshCustomRingtones()
+        }
+    }
+
+    private fun hasAudioPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, audioReadPermission()) == PackageManager.PERMISSION_GRANTED
+
+    /** Reads the device's audio files for the "Custom" section. Call after the permission is granted. */
+    fun refreshCustomRingtones() {
+        val granted = hasAudioPermission()
+        _uiState.value = _uiState.value.copy(hasAudioPermission = granted)
+        if (!granted) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val custom = queryDeviceAudioFiles(context).map { RingtoneItem(it.title, it.uri) }
+            _uiState.value = _uiState.value.copy(customRingtones = custom)
         }
     }
 

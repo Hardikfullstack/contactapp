@@ -1,6 +1,7 @@
 package com.phone.contact.call.dialer.ui.features.ringtone
 
 import android.content.Intent
+import android.os.Build
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
@@ -28,6 +29,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.activity.ComponentActivity
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.phone.contact.call.dialer.R
 import com.phone.contact.call.dialer.ads.NativeOrBannerAdView
@@ -53,8 +58,60 @@ fun RingtoneScreen(
         hasWritePermission = viewModel.canWriteSystemSettings()
     }
 
+    // Audio permission for the "Custom" section; once granted, the device's audio files are loaded.
+    // Set after the second "Don't allow": the system stops showing its request dialog, so the app points to Settings.
+    var showAudioDeniedDialog by remember { mutableStateOf(false) }
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.refreshCustomRingtones()
+        if (!granted && !ActivityCompat.shouldShowRequestPermissionRationale(context as ComponentActivity, audioReadPermission())) {
+            showAudioDeniedDialog = true
+        }
+    }
+
+    if (showAudioDeniedDialog) {
+        AlertDialog(
+            onDismissRequest = { showAudioDeniedDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text(stringResource(R.string.permission_permanently_denied_title)) },
+            text = { Text(stringResource(R.string.permission_permanently_denied_desc)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showAudioDeniedDialog = false
+                    context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                    )
+                }) {
+                    Text(stringResource(R.string.action_go_to_settings).uppercase(), color = PrimaryGreen)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAudioDeniedDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
     DisposableEffect(Unit) {
         onDispose { viewModel.stopPreview() }
+    }
+
+    // Permissions can be granted in Settings while this screen is paused. Re-check them on every resume,
+    // so the access card and the Custom list update without leaving the screen.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasWritePermission = viewModel.canWriteSystemSettings()
+                viewModel.refreshCustomRingtones()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val appConfigViewModel: AppConfigViewModel = androidx.lifecycle.viewmodel.compose.viewModel(context as ComponentActivity)
@@ -121,6 +178,30 @@ fun RingtoneScreen(
                             isSelected = item.uri == uiState.selectedUri,
                             onClick = { viewModel.selectRingtone(item.uri) }
                         )
+                    }
+                    // "Custom" section: any audio file on this phone, once the audio permission is granted.
+                    // Only on Android 13+ (READ_MEDIA_AUDIO). Older phones would need the broad storage
+                    // permission, which the app no longer asks for, so the section is hidden there.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.custom_ringtones_label),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 4.dp)
+                            )
+                        }
+                        if (!uiState.hasAudioPermission) {
+                            item { AudioAccessCard(onGrantClick = { audioPermissionLauncher.launch(audioReadPermission()) }) }
+                        } else {
+                            items(uiState.customRingtones) { item ->
+                                RingtoneRow(
+                                    item = item,
+                                    isSelected = item.uri == uiState.selectedUri,
+                                    onClick = { viewModel.selectRingtone(item.uri) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -190,6 +271,52 @@ private fun PermissionRequiredCard(onGrantClick: () -> Unit) {
         }
     }
 }
+
+@Composable
+private fun AudioAccessCard(onGrantClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surface else Color(0xFFF3F3F3),
+        border = BorderStroke(1.dp, PrimaryGreen)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Filled.MusicNote,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.allow_audio_access_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.allow_audio_access_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onGrantClick,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+            ) {
+                Text(stringResource(R.string.grant_access_label))
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun RingtoneRow(item: RingtoneItem, isSelected: Boolean, onClick: () -> Unit) {

@@ -387,7 +387,6 @@
     <string name="period_activity_title">Atividade de %1$s</string>
     <string name="permission_miui_desc">Seu dispositivo requer permissões adicionais para operação confiável em segundo plano. Siga as etapas abaixo.</string>
     <string name="permission_miui_title">Permissão Necessária</string>
-    <string name="permission_overlay_desc">Precisamos de permissão para exibir pop-ups sobre outros aplicativos para respostas rápidas e recursos de chamada. Isso é obrigatório.</string>
     <string name="permissions_required_title">Permissões Necessárias</string>
     <string name="pick_color">Escolher Cor</string>
     <string name="pick_date">Escolher uma data</string>
@@ -464,4 +463,14 @@
     <string name="wired_headset">Fone com Fio</string>
     <string name="write_settings_permission_desc">Para definir o toque do seu telefone, permita que o Connect modifique as configurações do sistema.</string>
     <string name="write_settings_permission_title">Permitir Alterações de Toque</string>
+    <string name="permission_overlay_title">Permitir sobreposição</string>
+    <string name="permission_overlay_desc">Necessário para mostrar a tela de chamada sobre outros apps.</string>
+    <string name="permission_popup_title">Permitir janelas pop-up</string>
+    <string name="permission_popup_desc">Necessário para as chamadas aparecerem na tela, inclusive na tela de bloqueio.</string>
+    <string name="allow_audio_access_title">Permitir acesso a arquivos de áudio</string>
+    <string name="allow_audio_access_description">Permite escolher qualquer música ou som do seu celular como toque.</string>
+    <string name="grant_access_label">Conceder acesso</string>
+    <string name="custom_ringtones_label">Personalizados</string>
+    <string name="spam_numbers_section">Marcados como spam</string>
+    <string name="no_spam_numbers">Nenhum número marcado como spam</string>
 </resources>

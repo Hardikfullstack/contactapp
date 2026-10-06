@@ -387,7 +387,6 @@
     <string name="period_activity_title">Aktivitas %1$s</string>
     <string name="permission_miui_desc">Perangkat Anda memerlukan izin tambahan agar dapat berjalan dengan andal di latar belakang. Silakan ikuti langkah-langkah di bawah ini.</string>
     <string name="permission_miui_title">Izin Diperlukan</string>
-    <string name="permission_overlay_desc">Kami memerlukan izin untuk menampilkan pop-up di atas aplikasi lain untuk balasan cepat dan fitur panggilan. Ini wajib diperlukan.</string>
     <string name="permissions_required_title">Izin Diperlukan</string>
     <string name="pick_color">Pilih Warna</string>
     <string name="pick_date">Pilih tanggal</string>
@@ -464,4 +463,14 @@
     <string name="wired_headset">Headset Berkabel</string>
     <string name="write_settings_permission_desc">Untuk mengatur nada dering ponsel Anda, izinkan Connect untuk mengubah pengaturan sistem.</string>
     <string name="write_settings_permission_title">Izinkan Perubahan Nada Dering</string>
+    <string name="permission_overlay_title">Izinkan overlay</string>
+    <string name="permission_overlay_desc">Diperlukan untuk menampilkan layar panggilan di atas aplikasi lain.</string>
+    <string name="permission_popup_title">Izinkan jendela pop-up</string>
+    <string name="permission_popup_desc">Diperlukan agar panggilan tampil di layar, termasuk di layar kunci.</string>
+    <string name="allow_audio_access_title">Izinkan akses ke file audio</string>
+    <string name="allow_audio_access_description">Memungkinkan Anda memilih lagu atau suara apa pun di ponsel sebagai nada dering.</string>
+    <string name="grant_access_label">Berikan akses</string>
+    <string name="custom_ringtones_label">Kustom</string>
+    <string name="spam_numbers_section">Ditandai sebagai spam</string>
+    <string name="no_spam_numbers">Belum ada nomor yang ditandai spam</string>
 </resources>

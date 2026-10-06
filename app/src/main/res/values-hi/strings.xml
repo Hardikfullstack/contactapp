@@ -407,7 +407,6 @@
     <string name="period_activity_title">%1$s गतिविधि</string>
     <string name="permission_miui_desc">आपके डिवाइस को विश्वसनीय बैकग्राउंड ऑपरेशन के लिए अतिरिक्त अनुमतियों की आवश्यकता है। कृपया नीचे दिए गए चरणों का पालन करें।</string>
     <string name="permission_miui_title">अनुमति आवश्यक</string>
-    <string name="permission_overlay_desc">क्विक रिप्लाई और कॉल सुविधाओं के लिए हमें दूसरे ऐप्स के ऊपर पॉप-अप दिखाने की अनुमति चाहिए। यह आवश्यक है।</string>
     <string name="permissions_required_title">अनुमतियां आवश्यक</string>
     <string name="pick_date">एक तारीख चुनें</string>
     <string name="pick_date_first">कृपया एक तारीख चुनें</string>
@@ -472,4 +471,14 @@
     <string name="wired_headset">वायर्ड हेडसेट</string>
     <string name="write_settings_permission_desc">अपने फोन की रिंगटोन सेट करने के लिए, Connect को सिस्टम सेटिंग्स बदलने की अनुमति दें।</string>
     <string name="write_settings_permission_title">रिंगटोन बदलने की अनुमति दें</string>
+    <string name="permission_overlay_title">ओवरले अनुमति दें</string>
+    <string name="permission_overlay_desc">दूसरे ऐप्स के ऊपर कॉल स्क्रीन दिखाने के लिए ज़रूरी।</string>
+    <string name="permission_popup_title">पॉप-अप विंडो की अनुमति दें</string>
+    <string name="permission_popup_desc">कॉल स्क्रीन पर दिखने के लिए ज़रूरी, लॉक स्क्रीन पर भी।</string>
+    <string name="allow_audio_access_title">ऑडियो फ़ाइलों तक पहुंच की अनुमति दें</string>
+    <string name="allow_audio_access_description">फ़ोन पर मौजूद कोई भी गाना या आवाज़ रिंगटोन के रूप में चुनने देता है।</string>
+    <string name="grant_access_label">पहुंच की अनुमति दें</string>
+    <string name="custom_ringtones_label">कस्टम</string>
+    <string name="spam_numbers_section">स्पैम के रूप में चिह्नित</string>
+    <string name="no_spam_numbers">कोई नंबर स्पैम के रूप में चिह्नित नहीं</string>
 </resources>

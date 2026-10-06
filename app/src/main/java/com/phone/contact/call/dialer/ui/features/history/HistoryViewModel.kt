@@ -47,8 +47,9 @@ class HistoryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val name: String = savedStateHandle["name"] ?: ""
-    private val number: String = savedStateHandle["number"] ?: ""
+    // Trimmed: a blank name/number is passed through the route as a space (see MainScreen.routeSegment).
+    private val name: String = (savedStateHandle.get<String>("name") ?: "").trim()
+    private val number: String = (savedStateHandle.get<String>("number") ?: "").trim()
 
     private val _uiState = MutableStateFlow(HistoryUiState(name = name, number = number))
     val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()

@@ -387,7 +387,6 @@
     <string name="period_activity_title">Attività di %1$s</string>
     <string name="permission_miui_desc">Il tuo dispositivo richiede autorizzazioni aggiuntive per un funzionamento affidabile in background. Segui i passaggi seguenti.</string>
     <string name="permission_miui_title">Autorizzazione Richiesta</string>
-    <string name="permission_overlay_desc">Abbiamo bisogno dell\'autorizzazione per visualizzare pop-up sopra altre app per risposte rapide e funzioni di chiamata. Questo è obbligatorio.</string>
     <string name="permissions_required_title">Autorizzazioni Richieste</string>
     <string name="pick_color">Scegli Colore</string>
     <string name="pick_date">Scegli una data</string>
@@ -464,4 +463,14 @@
     <string name="wired_headset">Cuffie Cablate</string>
     <string name="write_settings_permission_desc">Per impostare la suoneria del telefono, consenti a Connect di modificare le impostazioni di sistema.</string>
     <string name="write_settings_permission_title">Consenti Modifiche Suoneria</string>
+    <string name="permission_overlay_title">Consenti sovrapposizione</string>
+    <string name="permission_overlay_desc">Necessario per mostrare la schermata di chiamata sopra altre app.</string>
+    <string name="permission_popup_title">Consenti finestre pop-up</string>
+    <string name="permission_popup_desc">Necessario perché le chiamate appaiano sullo schermo, anche sulla schermata di blocco.</string>
+    <string name="allow_audio_access_title">Consenti l\'accesso ai file audio</string>
+    <string name="allow_audio_access_description">Ti permette di scegliere qualsiasi brano o suono del telefono come suoneria.</string>
+    <string name="grant_access_label">Concedi accesso</string>
+    <string name="custom_ringtones_label">Personalizzate</string>
+    <string name="spam_numbers_section">Segnalati come spam</string>
+    <string name="no_spam_numbers">Nessun numero segnalato come spam</string>
 </resources>

@@ -25,7 +25,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.phone.contact.call.dialer.ads.AppOpenBackgroundReturnTrigger
+import android.provider.Settings
 import com.phone.contact.call.dialer.ui.features.onboarding.AdvancedPermissionScreen
+import com.phone.contact.call.dialer.ui.features.onboarding.OverlayPermissionDialog
+import com.phone.contact.call.dialer.ui.features.onboarding.MiuiBackgroundPermissionDialog
+import com.phone.contact.call.dialer.util.DefaultDialerState
 import com.phone.contact.call.dialer.ui.features.onboarding.LanguageSelectionScreen
 import com.phone.contact.call.dialer.ui.features.splash.SplashScreen
 import com.phone.contact.call.dialer.ui.navigation.MainNavigation
@@ -134,15 +138,26 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            // Onboarding completion is the saved flag only. The phone permissions are not asked during
+            // onboarding any more, so gating on them sent a user who cancelled the default-dialer prompt
+            // back to the language screen on every resume.
             var isOnboardingCompleted by remember {
-                mutableStateOf(preferenceManager.isOnboardingCompleted() && hasRequiredPermissions())
+                mutableStateOf(preferenceManager.isOnboardingCompleted())
             }
             // Live-checked, not a one-time flag — true whenever the basic onboarding step is done
             // (so this isn't a brand-new user) but a MIUI-forced permission is currently missing,
             // whether that's because onboarding got interrupted before granting it, or because it
             // was silently revoked from system Settings well after onboarding finished.
+            // MIUI permission screen at install: commented out. Stays false so AdvancedPermissionScreen never shows.
             var needsMiuiPermissions by remember {
-                mutableStateOf(preferenceManager.isBasicOnboardingCompleted() && !hasMiuiPermissionsGranted())
+                // mutableStateOf(preferenceManager.isBasicOnboardingCompleted() && !hasMiuiPermissionsGranted())
+                mutableStateOf(false)
+            }
+            // "Display over other apps" popup, shown once the app is the default dialer and the permission is missing.
+            var overlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(this)) }
+            // MIUI background pop-up permissions: a second popup after the overlay one. Non-MIUI devices skip it.
+            var miuiBackgroundGranted by remember {
+                mutableStateOf(!CallReliabilityUtils.isMiui() || CallReliabilityUtils.isMiuiBackgroundPopupGranted(this))
             }
             // Re-verify on every resume — the checks above only run at cold start, so a permission
             // revoked while backgrounded would otherwise go unnoticed and strand the user on MainNavigation.
@@ -150,12 +165,15 @@ class MainActivity : AppCompatActivity() {
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        if (isOnboardingCompleted && !hasRequiredPermissions()) {
-                            isOnboardingCompleted = false
-                        }
-                        if (preferenceManager.isBasicOnboardingCompleted()) {
-                            needsMiuiPermissions = !hasMiuiPermissionsGranted()
-                        }
+                        // Revoking the phone permissions no longer sends the user back to onboarding (see above).
+                        // MIUI permission re-check on resume: commented out along with the install-time screen.
+                        // if (preferenceManager.isBasicOnboardingCompleted()) {
+                        //     needsMiuiPermissions = !hasMiuiPermissionsGranted()
+                        // }
+                        overlayGranted = Settings.canDrawOverlays(this@MainActivity)
+                        miuiBackgroundGranted = !CallReliabilityUtils.isMiui() ||
+                            CallReliabilityUtils.isMiuiBackgroundPopupGranted(this@MainActivity)
+                        DefaultDialerState.refresh(applicationContext)
                         // Can change while backgrounded (role granted/revoked from system Settings).
                         AnalyticsManager.setUserProperty("is_default_dialer", if (isDefaultDialer()) "yes" else "no")
                     }
@@ -216,6 +234,14 @@ class MainActivity : AppCompatActivity() {
             }
 
             ContactAppTheme(darkTheme = isDarkTheme) {
+                // "Display over other apps" popup: only after the app has become the default dialer.
+                if (isOnboardingCompleted && DefaultDialerState.isDefault.value && !overlayGranted) {
+                    OverlayPermissionDialog(onGranted = { overlayGranted = true })
+                }
+                // MIUI background pop-up permissions: after the overlay popup, on MIUI devices only.
+                if (isOnboardingCompleted && DefaultDialerState.isDefault.value && overlayGranted && !miuiBackgroundGranted) {
+                    MiuiBackgroundPermissionDialog(onGranted = { miuiBackgroundGranted = true })
+                }
                 if (showSplash) {
                     SplashScreen(
                         isFullySetUp = isOnboardingCompleted,

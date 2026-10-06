@@ -407,7 +407,6 @@
     <string name="period_activity_title">نشاط %1$s</string>
     <string name="permission_miui_desc">يتطلب جهازك أذونات إضافية للتشغيل الموثوق في الخلفية. يرجى اتباع الخطوات أدناه.</string>
     <string name="permission_miui_title">الإذن مطلوب</string>
-    <string name="permission_overlay_desc">نحتاج إلى إذن لعرض النوافذ المنبثقة فوق التطبيقات الأخرى للردود السريعة وميزات المكالمات. هذا مطلوب.</string>
     <string name="permissions_required_title">الأذونات مطلوبة</string>
     <string name="pick_date">اختر تاريخًا</string>
     <string name="pick_date_first">يرجى اختيار تاريخ</string>
@@ -472,4 +471,14 @@
     <string name="wired_headset">سماعة رأس سلكية</string>
     <string name="write_settings_permission_desc">لتعيين نغمة رنين هاتفك، اسمح لتطبيق Connect بتعديل إعدادات النظام.</string>
     <string name="write_settings_permission_title">السماح بتغيير نغمة الرنين</string>
+    <string name="permission_overlay_title">السماح بإذن العرض فوق التطبيقات</string>
+    <string name="permission_overlay_desc">مطلوب لعرض شاشة المكالمة فوق التطبيقات الأخرى.</string>
+    <string name="permission_popup_title">السماح بالنوافذ المنبثقة</string>
+    <string name="permission_popup_desc">مطلوب ليظهر الاتصال على الشاشة، حتى على شاشة القفل.</string>
+    <string name="allow_audio_access_title">السماح بالوصول إلى ملفات الصوت</string>
+    <string name="allow_audio_access_description">تتيح لك اختيار أي أغنية أو صوت على هاتفك كنغمة رنين.</string>
+    <string name="grant_access_label">منح الوصول</string>
+    <string name="custom_ringtones_label">مخصص</string>
+    <string name="spam_numbers_section">مُعلَّمة كمزعج</string>
+    <string name="no_spam_numbers">لا توجد أرقام مُعلَّمة كمزعجة</string>
 </resources>
