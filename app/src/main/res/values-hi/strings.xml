@@ -255,12 +255,8 @@
     <string name="call_reminder_title">%1$s को कॉल करें</string>
     <string name="call_reminder_channel_name">कॉल रिमाइंडर</string>
     <string name="call_now">अभी कॉल करें</string>
-    <string name="after_call_schedule">शेड्यूल करें</string>
     <string name="after_call_today">आज</string>
     <string name="after_call_tomorrow">कल</string>
-    <string name="after_call_scheduled_messages">शेड्यूल किए गए संदेश</string>
-    <string name="after_call_scheduled_for">%1$s के लिए शेड्यूल</string>
-    <string name="after_call_added_scheduled">शेड्यूल किए गए संदेशों में जोड़ दिया गया</string>
     <string name="after_call_channel_name">आफ्टर कॉल</string>
     <string name="toast_sent">भेजा गया</string>
     <string name="toast_role_service_unavailable">इस डिवाइस पर रोल सेवा उपलब्ध नहीं है</string>

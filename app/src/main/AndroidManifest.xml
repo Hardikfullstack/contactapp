@@ -119,10 +119,6 @@
             android:name=".util.CallReminderReceiver"
             android:exported="false" />
 
-        <receiver
-            android:name=".util.ScheduledMessageReceiver"
-            android:exported="false" />
-
         <!-- Must be exported: PHONE_STATE is a system broadcast, not sent by this app. -->
         <receiver
             android:name=".service.AfterCallReceiver"

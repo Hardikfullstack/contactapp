@@ -255,12 +255,8 @@
     <string name="call_reminder_title">%1$s zurückrufen</string>
     <string name="call_reminder_channel_name">Anruferinnerungen</string>
     <string name="call_now">Jetzt anrufen</string>
-    <string name="after_call_schedule">Planen</string>
     <string name="after_call_today">Heute</string>
     <string name="after_call_tomorrow">Morgen</string>
-    <string name="after_call_scheduled_messages">Geplante Nachrichten</string>
-    <string name="after_call_scheduled_for">Geplant für %1$s</string>
-    <string name="after_call_added_scheduled">Zu den geplanten Nachrichten hinzugefügt</string>
     <string name="after_call_channel_name">Nach dem Anruf</string>
     <string name="toast_sent">Gesendet</string>
     <string name="toast_role_service_unavailable">Rollendienst auf diesem Gerät nicht verfügbar</string>

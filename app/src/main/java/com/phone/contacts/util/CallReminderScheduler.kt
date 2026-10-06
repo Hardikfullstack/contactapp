@@ -31,12 +31,17 @@ object CallReminderScheduler {
     private const val TIMING_TAG = "ReminderTiming"
     const val EXTRA_REMINDER_ID = "reminder_id"
 
-    /** Same as the Contactstwo reference: an inexact alarm that is still allowed during Doze. */
+    /** Same as contactapp: an alarm-clock alarm, which fires on the exact minute and is not held back
+     * by Doze. Falls back to an inexact alarm only if the system refuses the exact one. */
     fun schedule(context: Context, reminder: ReminderEntity) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val pending = pendingIntent(context, reminder.id)
         Log.d(TIMING_TAG, "scheduled id=${reminder.id} for=${reminder.timeMillis} now=${System.currentTimeMillis()}")
-        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, reminder.timeMillis, pending)
+        try {
+            alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(reminder.timeMillis, pending), pending)
+        } catch (_: SecurityException) {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, reminder.timeMillis, pending)
+        }
     }
 
     fun cancel(context: Context, reminderId: Long) {
@@ -90,7 +95,7 @@ object CallReminderScheduler {
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .setContentIntent(contentIntent)
-            .addAction(android.R.drawable.ic_menu_call, context.getString(R.string.call_now), callNowIntent)
+            .addAction(android.R.drawable.ic_menu_call, context.getString(R.string.action_call), callNowIntent)
         // The note is optional - when present, show it in the expanded view with the number.
         if (reminder.note.isNotBlank()) {
             builder.setStyle(NotificationCompat.BigTextStyle().bigText(reminder.note))

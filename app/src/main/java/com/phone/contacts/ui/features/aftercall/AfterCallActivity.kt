@@ -47,14 +47,23 @@ class AfterCallActivity : AppCompatActivity() {
         }
     }
 
+    // Home/Recents pressed while this screen is showing closes it, same as the contactapp's
+    // after-call screen — it shouldn't linger in the background or task switcher.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (!isFinishing) finishAndRemoveTask()
+    }
+
     companion object {
         const val EXTRA_NUMBER = "after_call_number"
         const val EXTRA_NAME = "after_call_name"
         const val EXTRA_DURATION_SECONDS = "after_call_duration_seconds"
-        // New ID on purpose: Android never raises the importance of an existing channel, so the old
-        // "after_call_channel" (created at a lower importance in earlier builds) stayed silent.
-        private const val CHANNEL_ID = "after_call_alert_channel"
+        // New ID on purpose: a channel's sound is fixed once created, so the previous
+        // "after_call_alert_channel" (which plays the default notification sound) can't be made
+        // silent in place — a fresh ID is the only way the after-call alert stops making noise.
+        private const val CHANNEL_ID = "after_call_silent_channel"
         private const val OLD_CHANNEL_ID = "after_call_channel"
+        private const val PREVIOUS_CHANNEL_ID = "after_call_alert_channel"
         private const val NOTIFICATION_ID = 2003
 
         fun intentFor(context: Context, number: String, name: String?, durationSeconds: Long): Intent =
@@ -76,8 +85,12 @@ class AfterCallActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 manager.deleteNotificationChannel(OLD_CHANNEL_ID)
+                manager.deleteNotificationChannel(PREVIOUS_CHANNEL_ID)
                 manager.createNotificationChannel(
-                    NotificationChannel(CHANNEL_ID, context.getString(R.string.after_call_channel_name), NotificationManager.IMPORTANCE_HIGH)
+                    NotificationChannel(CHANNEL_ID, context.getString(R.string.after_call_channel_name), NotificationManager.IMPORTANCE_HIGH).apply {
+                        setSound(null, null)
+                        enableVibration(false)
+                    }
                 )
             }
             val pending = PendingIntent.getActivity(
@@ -92,6 +105,7 @@ class AfterCallActivity : AppCompatActivity() {
                 .setAutoCancel(true)
                 .setFullScreenIntent(pending, true)
                 .setContentIntent(pending)
+                .setSilent(true)
                 .build()
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
         }

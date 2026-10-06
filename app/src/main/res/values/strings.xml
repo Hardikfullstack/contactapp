@@ -255,12 +255,8 @@
     <string name="call_reminder_title">Call back %1$s</string>
     <string name="call_reminder_channel_name">Call reminders</string>
     <string name="call_now">Call now</string>
-    <string name="after_call_schedule">Schedule</string>
     <string name="after_call_today">Today</string>
     <string name="after_call_tomorrow">Tomorrow</string>
-    <string name="after_call_scheduled_messages">Scheduled messages</string>
-    <string name="after_call_scheduled_for">Scheduled for %1$s</string>
-    <string name="after_call_added_scheduled">Added to scheduled messages</string>
     <string name="after_call_channel_name">After call</string>
     <string name="toast_sent">Sent</string>
     <string name="toast_role_service_unavailable">Role service unavailable on this device</string>

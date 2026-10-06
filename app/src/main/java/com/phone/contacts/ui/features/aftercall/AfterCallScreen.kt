@@ -9,9 +9,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Schedule
-import com.phone.contacts.data.local.ScheduledMessageEntity
-import com.phone.contacts.util.ScheduledMessageScheduler
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -199,7 +196,10 @@ fun AfterCallScreen(
                         }
                         Spacer(Modifier.size(12.dp))
                         Box(
-                            modifier = Modifier.size(30.dp).clickable { CallUtils.placeCall(context, number) },
+                            modifier = Modifier.size(30.dp).clickable {
+                                CallUtils.placeCall(context, number)
+                                onFinish()
+                            },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Filled.Call, contentDescription = null, tint = CallGreen, modifier = Modifier.size(24.dp))
@@ -249,7 +249,7 @@ fun AfterCallScreen(
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().weight(1f)) { page ->
                 when (page) {
                     0 -> HistoryTab(number, resolvedName ?: number, resolvedPhoto)
-                    1 -> QuickMessageTab(number, resolvedName ?: number)
+                    1 -> QuickMessageTab(number)
                     2 -> ReminderTab(number, resolvedName ?: number)
                     else -> MoreTab(number, resolvedName ?: number, isSaved)
                 }
@@ -342,13 +342,8 @@ private fun callTypeIcon(type: CallType): ImageVector = when (type) {
 }
 
 @Composable
-private fun QuickMessageTab(number: String, name: String) {
+private fun QuickMessageTab(number: String) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val dao = remember { AppDatabase.getInstance(context).scheduledMessageDao() }
-    val scheduled by dao.getForNumber(number).collectAsState(initial = emptyList())
-    var scheduling by remember { mutableStateOf(false) }
-    val pickFutureMsg = stringResource(R.string.after_call_pick_future_time)
     val presets = listOf(
         stringResource(R.string.after_call_quick_reply_1),
         stringResource(R.string.after_call_quick_reply_2),
@@ -423,17 +418,6 @@ private fun QuickMessageTab(number: String, name: String) {
                     inner()
                 }
             )
-            // Schedule the current text for later (same as the Messages app's schedule action).
-            Icon(
-                Icons.Filled.Schedule,
-                contentDescription = stringResource(R.string.after_call_schedule),
-                tint = if (text.isNotBlank()) acAccent() else acSecondary(),
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(enabled = text.isNotBlank()) { scheduling = !scheduling }
-                    .padding(8.dp)
-            )
             // Compact send button: a filled accent circle once there is text to send.
             Box(
                 modifier = Modifier
@@ -452,83 +436,9 @@ private fun QuickMessageTab(number: String, name: String) {
             }
         }
 
-        if (scheduling && text.isNotBlank()) {
-            Spacer(Modifier.height(12.dp))
-            SchedulePanel(
-                onCancel = { scheduling = false },
-                onSchedule = { time ->
-                    if (time <= System.currentTimeMillis()) {
-                        Toast.makeText(context, pickFutureMsg, Toast.LENGTH_SHORT).show()
-                    } else {
-                        val entity = ScheduledMessageEntity(number = number, name = name, body = text, timeMillis = time)
-                        scope.launch {
-                            val id = dao.insert(entity)
-                            ScheduledMessageScheduler.schedule(context, entity.copy(id = id))
-                        }
-                        Toast.makeText(context, context.getString(R.string.after_call_added_scheduled), Toast.LENGTH_SHORT).show()
-                        scheduling = false
-                    }
-                }
-            )
-        }
-
-        if (scheduled.isNotEmpty()) {
-            Spacer(Modifier.height(20.dp))
-            Text(stringResource(R.string.after_call_scheduled_messages), color = acSecondary(), fontSize = 13.sp)
-            Spacer(Modifier.height(8.dp))
-            scheduled.forEach { message ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).background(acSurface()).padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(message.body, color = acOnSurface(), fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            stringResource(R.string.after_call_scheduled_for, reminderTimeLabel(message.timeMillis)),
-                            color = acSecondary(),
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                    IconButton(onClick = {
-                        scope.launch {
-                            ScheduledMessageScheduler.cancel(context, message.id)
-                            dao.deleteById(message.id)
-                        }
-                    }) {
-                        Icon(Icons.Filled.Delete, contentDescription = null, tint = acSecondary())
-                    }
-                }
-            }
-        }
     }
 }
 
-/** Time wheel + Cancel/Schedule for a queued message, shown under the composer. */
-@Composable
-private fun SchedulePanel(onCancel: () -> Unit, onSchedule: (Long) -> Unit) {
-    var time by remember { mutableLongStateOf(Calendar.getInstance().apply { add(Calendar.MINUTE, 1) }.timeInMillis) }
-    Column {
-        WheelTimePicker(initialMillis = time) { time = it }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.cancel), color = acAccent())
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(acAccent())
-                    .clickable { onSchedule(time) }
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(stringResource(R.string.after_call_schedule), color = Color.White, fontWeight = FontWeight.SemiBold)
-            }
-        }
-    }
-}
 
 @Composable
 private fun ReminderTab(number: String, name: String) {
@@ -652,8 +562,9 @@ private fun ReminderForm(onCancel: () -> Unit, onSave: (note: String, timeMillis
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(acAccent())
-                    .clickable {
+                    .background(acAccent().copy(alpha = if (note.isNotBlank()) 1f else 0.4f))
+                    // Same as contactapp: a reminder needs a message, so Save stays disabled until one is typed.
+                    .clickable(enabled = note.isNotBlank()) {
                         if (timeMillis <= System.currentTimeMillis()) {
                             error = pickFutureMsg
                         } else {

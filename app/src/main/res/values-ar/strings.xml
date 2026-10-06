@@ -255,12 +255,8 @@
     <string name="call_reminder_title">معاودة الاتصال بـ %1$s</string>
     <string name="call_reminder_channel_name">تذكيرات المكالمات</string>
     <string name="call_now">اتصل الآن</string>
-    <string name="after_call_schedule">جدولة</string>
     <string name="after_call_today">اليوم</string>
     <string name="after_call_tomorrow">غداً</string>
-    <string name="after_call_scheduled_messages">الرسائل المجدولة</string>
-    <string name="after_call_scheduled_for">مجدولة لـ %1$s</string>
-    <string name="after_call_added_scheduled">تمت الإضافة إلى الرسائل المجدولة</string>
     <string name="after_call_channel_name">بعد المكالمة</string>
     <string name="toast_sent">تم الإرسال</string>
     <string name="toast_role_service_unavailable">خدمة الأدوار غير متاحة على هذا الجهاز</string>

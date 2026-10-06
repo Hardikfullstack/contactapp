@@ -255,12 +255,8 @@
     <string name="call_reminder_title">Richiama %1$s</string>
     <string name="call_reminder_channel_name">Promemoria chiamate</string>
     <string name="call_now">Chiama ora</string>
-    <string name="after_call_schedule">Programma</string>
     <string name="after_call_today">Oggi</string>
     <string name="after_call_tomorrow">Domani</string>
-    <string name="after_call_scheduled_messages">Messaggi programmati</string>
-    <string name="after_call_scheduled_for">Programmato per %1$s</string>
-    <string name="after_call_added_scheduled">Aggiunto ai messaggi programmati</string>
     <string name="after_call_channel_name">Dopo la chiamata</string>
     <string name="toast_sent">Inviato</string>
     <string name="toast_role_service_unavailable">Servizio dei ruoli non disponibile su questo dispositivo</string>

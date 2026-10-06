@@ -255,12 +255,8 @@
     <string name="call_reminder_title">Telepon balik %1$s</string>
     <string name="call_reminder_channel_name">Pengingat panggilan</string>
     <string name="call_now">Telepon sekarang</string>
-    <string name="after_call_schedule">Jadwalkan</string>
     <string name="after_call_today">Hari ini</string>
     <string name="after_call_tomorrow">Besok</string>
-    <string name="after_call_scheduled_messages">Pesan terjadwal</string>
-    <string name="after_call_scheduled_for">Dijadwalkan untuk %1$s</string>
-    <string name="after_call_added_scheduled">Ditambahkan ke pesan terjadwal</string>
     <string name="after_call_channel_name">Setelah panggilan</string>
     <string name="toast_sent">Terkirim</string>
     <string name="toast_role_service_unavailable">Layanan peran tidak tersedia di perangkat ini</string>

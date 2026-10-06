@@ -10,15 +10,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 /** Plain manual singleton, no Hilt — matching this project's other `object`-style
  * repositories/managers rather than a DI-provided instance. */
 @Database(
-    entities = [DeletedContactEntity::class, EmergencyContactEntity::class, ReminderEntity::class, ScheduledMessageEntity::class],
-    version = 4,
+    entities = [DeletedContactEntity::class, EmergencyContactEntity::class, ReminderEntity::class],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun recycleBinDao(): RecycleBinDao
     abstract fun emergencyContactDao(): EmergencyContactDao
     abstract fun reminderDao(): ReminderDao
-    abstract fun scheduledMessageDao(): ScheduledMessageDao
 
     companion object {
         @Volatile
@@ -34,6 +33,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Drops the unused scheduled_messages table; reminders and the recycle bin are untouched. */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `scheduled_messages`")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -41,7 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "contacts_app_db"
                 )
-                    .addMigrations(MIGRATION_3_4)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { instance = it }
