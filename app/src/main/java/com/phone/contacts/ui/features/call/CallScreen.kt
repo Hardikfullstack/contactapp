@@ -130,7 +130,8 @@ fun CallScreen(
     conferenceChildren: List<Call> = emptyList(),
     onDisconnectParticipant: (Call) -> Unit = {},
     callButtonStyle: CallButtonStyle = CallButtonStyle.SLIDER,
-    swapCallButtons: Boolean = false
+    swapCallButtons: Boolean = false,
+    callerIdName: String? = null
 ) {
     val context = LocalContext.current
     var contact by remember { mutableStateOf<Contact?>(null) }
@@ -147,7 +148,7 @@ fun CallScreen(
     }
     val conferenceCallLabel = stringResource(R.string.conference_call)
     val unknownCallerLabel = stringResource(R.string.unknown_caller)
-    val displayName = if (showConferenceInMainDisplay) conferenceCallLabel else contact?.name ?: resolvedNumber.ifBlank { unknownCallerLabel }
+    val displayName = if (showConferenceInMainDisplay) conferenceCallLabel else contact?.name ?: callerIdName ?: resolvedNumber.ifBlank { unknownCallerLabel }
 
     val isRinging = callState == Call.STATE_RINGING
     val isDialing = callState == Call.STATE_DIALING || callState == Call.STATE_CONNECTING

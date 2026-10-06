@@ -867,7 +867,7 @@ private fun CallLogRow(
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = if (displayType == CallType.BLOCKED) "Blocked" else formatTime(call.timestamp),
+                text = if (displayType == CallType.BLOCKED) stringResource(R.string.blocked_label) else formatTime(call.timestamp),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (displayType == CallType.BLOCKED) badgeColor else MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -1,5 +1,6 @@
 package com.phone.contacts.util
 
+import com.phone.contacts.R
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -42,7 +43,7 @@ object GoogleMeetUtils {
                 Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$GOOGLE_MEET_PACKAGE"))
             )
         } catch (_: Exception) {
-            Toast.makeText(context, "Google Meet isn't installed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_google_meet_missing), Toast.LENGTH_SHORT).show()
         }
     }
 }

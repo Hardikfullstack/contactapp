@@ -38,11 +38,13 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +67,7 @@ import com.phone.contacts.ui.components.CustomSwitch
 import com.phone.contacts.ui.components.RateUsDialog
 import com.phone.contacts.ui.components.ScreenTitleBar
 import com.phone.contacts.ui.theme.primaryAccentColor
+import com.phone.contacts.util.AfterCallPreferences
 import com.phone.contacts.util.KeypadTonePreferences
 import com.phone.contacts.util.RateUsHelper
 
@@ -94,6 +97,9 @@ fun SettingsScreen(
     val context = LocalContext.current
     remember { KeypadTonePreferences.initialize(context) }
     var keypadToneEnabled by remember { mutableStateOf(KeypadTonePreferences.enabled.value) }
+    remember { AfterCallPreferences.initialize(context) }
+    var afterCallEnabled by remember { mutableStateOf(AfterCallPreferences.enabled.value) }
+    var showAfterCallDisableDialog by remember { mutableStateOf(false) }
     var showRateUsDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -130,9 +136,42 @@ fun SettingsScreen(
                     icon = Icons.Filled.PhoneCallback,
                     iconBackgroundColor = Color(0xFF00BCD4),
                     title = stringResource(R.string.call_back_screen_title),
-                    enabled = false,
-                    trailing = { CustomSwitch(checked = false, onCheckedChange = {}, enabled = false) }
+                    trailing = {
+                        CustomSwitch(
+                            checked = afterCallEnabled,
+                            onCheckedChange = {
+                                // Turning it off asks first; turning it on just applies.
+                                if (it) {
+                                    afterCallEnabled = true
+                                    AfterCallPreferences.setEnabled(context, true)
+                                } else {
+                                    showAfterCallDisableDialog = true
+                                }
+                            }
+                        )
+                    }
                 )
+                if (showAfterCallDisableDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showAfterCallDisableDialog = false },
+                        title = { Text(stringResource(R.string.after_call_disable_dialog_title)) },
+                        text = { Text(stringResource(R.string.after_call_disable_dialog_message)) },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                afterCallEnabled = false
+                                AfterCallPreferences.setEnabled(context, false)
+                                showAfterCallDisableDialog = false
+                            }) {
+                                Text(stringResource(R.string.after_call_turn_off), color = MaterialTheme.colorScheme.error)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showAfterCallDisableDialog = false }) {
+                                Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    )
+                }
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Block,

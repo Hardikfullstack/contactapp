@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -63,6 +64,10 @@ dependencies {
     // uCrop's UCropActivity uses AutoTransition internally (UCropActivity.setupViews) — not pulled
     // in by anything else here, since a Compose-only app has no other reason to depend on it.
     implementation(libs.androidx.transition)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.kotlinx.serialization.converter)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

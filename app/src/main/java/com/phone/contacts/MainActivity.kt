@@ -5,16 +5,19 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -32,13 +35,20 @@ import com.phone.contacts.util.DeviceUtils
 import com.phone.contacts.util.OnboardingPreferences
 import com.phone.contacts.util.ThemeMode
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+    companion object {
+        /** Set by the After Call screen's "View Contact" - MainNavigation opens that contact's detail. */
+        const val EXTRA_OPEN_NUMBER = "open_contact_number"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Keeps the screen on while the app itself is open (Contacts/Recents/Keypad/Settings
         // etc.) - separate from CallActivity's own proximity-sensor-driven screen control during
         // an actual call; both are meant to coexist, not replace one another.
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Remote config is fetched on each app open, like the sibling contactapp does.
+        lifecycleScope.launch { com.phone.contacts.util.AppConfigStore.refresh(applicationContext) }
         enableEdgeToEdge()
         setContent {
             val themeContext = LocalContext.current
@@ -50,7 +60,9 @@ class MainActivity : ComponentActivity() {
             }
             ContactsTheme(darkTheme = isDarkTheme) {
                 val context = LocalContext.current
-                var showSplash by remember { mutableStateOf(true) }
+                // rememberSaveable: a language change recreates this activity, and the splash must
+                // not play again - the user should land back where they were, in the new language.
+                var showSplash by rememberSaveable { mutableStateOf(true) }
                 var isLanguageSelected by remember { mutableStateOf(OnboardingPreferences.isLanguageSelected(context)) }
 
                 // Only relevant once the app is already the default dialer - not part of the

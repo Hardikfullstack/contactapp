@@ -1,5 +1,6 @@
 package com.phone.contacts.service
 
+import com.phone.contacts.R
 import android.content.Context
 import android.telecom.Call
 import android.telecom.CallAudioState
@@ -81,13 +82,17 @@ object CallManager {
     // subsequent notification re-render for that same call, matching how the on-screen caller
     // name/photo stays fixed for the life of the call.
     private var primaryCallerName: String? = null
+
     private var primaryCallerPhotoUri: String? = null
     private var primaryHasContactName: Boolean = false
     private var secondaryCallerName: String? = null
     private var secondaryCallerPhotoUri: String? = null
     private var secondaryHasContactName: Boolean = false
 
-    private fun resolvePrimaryCallerInfo(context: Context, number: String, onResolved: () -> Unit) {
+    // Saved contact first; otherwise the carrier/Telecom caller-ID name (CNAP) if it has one, so an
+    // unknown number still shows a name instead of only its raw digits. CNAP is shown as a name
+    // only - it's not a saved contact, so the avatar stays the generic unknown-person style.
+    private fun resolvePrimaryCallerInfo(context: Context, call: Call, number: String, onResolved: () -> Unit) {
         primaryCallerName = number
         primaryCallerPhotoUri = null
         primaryHasContactName = false
@@ -96,13 +101,15 @@ object CallManager {
             if (contact?.name != null) {
                 primaryCallerName = contact.name
                 primaryHasContactName = true
+            } else {
+                call.details?.callerDisplayName?.takeIf { it.isNotBlank() }?.let { primaryCallerName = it }
             }
             primaryCallerPhotoUri = contact?.photoUri
             onResolved()
         }
     }
 
-    private fun resolveSecondaryCallerInfo(context: Context, number: String, onResolved: () -> Unit) {
+    private fun resolveSecondaryCallerInfo(context: Context, call: Call, number: String, onResolved: () -> Unit) {
         secondaryCallerName = number
         secondaryCallerPhotoUri = null
         secondaryHasContactName = false
@@ -111,6 +118,8 @@ object CallManager {
             if (contact?.name != null) {
                 secondaryCallerName = contact.name
                 secondaryHasContactName = true
+            } else {
+                call.details?.callerDisplayName?.takeIf { it.isNotBlank() }?.let { secondaryCallerName = it }
             }
             secondaryCallerPhotoUri = contact?.photoUri
             onResolved()
@@ -124,7 +133,7 @@ object CallManager {
         if (!DefaultDialerState.isDefault.value) return
         CallNotificationManager.showActiveCallNotification(
             context,
-            primaryCallerName ?: call.details.handle?.schemeSpecificPart ?: "Unknown",
+            primaryCallerName ?: call.details.handle?.schemeSpecificPart ?: context.getString(R.string.unknown),
             primaryCallerPhotoUri,
             callConnectedAtMillis = _connectedAtElapsedRealtime.value,
             hasContactName = primaryHasContactName,
@@ -243,11 +252,11 @@ object CallManager {
         DefaultDialerState.refresh(context)
         if (!DefaultDialerState.isDefault.value) return
         CallNotificationManager.ensureChannels(context)
-        val number = call.details.handle?.schemeSpecificPart ?: "Unknown"
+        val number = call.details.handle?.schemeSpecificPart ?: context.getString(R.string.unknown)
         when {
             isConferenceCall -> {} // callCallback's onStateChanged/onChildrenChanged renders this once it's active.
             isFirstCall && call.state == Call.STATE_RINGING -> {
-                resolvePrimaryCallerInfo(context, number) {
+                resolvePrimaryCallerInfo(context, call, number) {
                     CallNotificationManager.showIncomingCallNotification(
                         context, primaryCallerName ?: number, number, primaryCallerPhotoUri, primaryHasContactName
                     )
@@ -256,7 +265,7 @@ object CallManager {
             isFirstCall -> {
                 // Outgoing call (dialing/connecting) - reuses the active-call notification since
                 // there's nothing to Answer/Decline on our own outgoing call.
-                resolvePrimaryCallerInfo(context, number) {
+                resolvePrimaryCallerInfo(context, call, number) {
                     CallNotificationManager.showActiveCallNotification(
                         context,
                         primaryCallerName ?: number,
@@ -269,7 +278,7 @@ object CallManager {
             }
             call.state == Call.STATE_RINGING -> {
                 // Call-waiting: a second call ringing in while already on a call.
-                resolveSecondaryCallerInfo(context, number) {
+                resolveSecondaryCallerInfo(context, call, number) {
                     CallNotificationManager.showCallWaitingNotification(
                         context, secondaryCallerName ?: number, number, secondaryCallerPhotoUri, secondaryHasContactName
                     )

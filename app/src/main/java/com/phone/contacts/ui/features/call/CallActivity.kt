@@ -7,7 +7,7 @@ import android.os.PowerManager
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.phone.contacts.R
 import com.phone.contacts.service.CallManager
 import com.phone.contacts.ui.theme.ContactsTheme
 import com.phone.contacts.util.CallButtonStylePreferences
@@ -33,7 +34,7 @@ import kotlinx.coroutines.delay
  * just handed to [CallManager] — launched fresh from onCallAdded each time, but Telecom hands a
  * new call to the same running process, so this Activity itself just re-reads CallManager's
  * current state on each recomposition rather than owning any call state of its own. */
-class CallActivity : ComponentActivity() {
+class CallActivity : AppCompatActivity() {
 
     // PROXIMITY_SCREEN_OFF_WAKE_LOCK is the standard way to turn the screen off when the phone is
     // held to the ear during an active earpiece call — without it, FLAG_KEEP_SCREEN_ON below leaves
@@ -209,7 +210,7 @@ class CallActivity : ComponentActivity() {
                     if (isRealConference) {
                         android.widget.Toast.makeText(
                             this@CallActivity,
-                            "Conference call connected",
+                            this@CallActivity.getString(R.string.toast_conference_connected),
                             android.widget.Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -260,7 +261,8 @@ class CallActivity : ComponentActivity() {
                         onEndSecondary = { backCall?.disconnect() },
                         onDisconnectParticipant = { participantCall -> CallManager.disconnectConferenceParticipant(participantCall) },
                         callButtonStyle = callButtonStyle,
-                        swapCallButtons = swapCallButtons
+                        swapCallButtons = swapCallButtons,
+                        callerIdName = frontCall?.details?.callerDisplayName?.takeIf { it.isNotBlank() }
                     )
                 }
             }

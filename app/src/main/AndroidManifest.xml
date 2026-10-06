@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
@@ -17,15 +18,12 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
-    <!-- Without this, PackageManager.getPackageInfo("com.whatsapp", ...) throws
-         NameNotFoundException on Android 11+ even when WhatsApp IS installed (package-visibility
-         restriction) — that's what made the WhatsApp/Video-call buttons always show disabled.
-         Same reasoning for Google Meet (com.google.android.apps.tachyon), used by the standalone
-         "Video call" button. -->
     <queries>
         <package android:name="com.whatsapp" />
         <package android:name="com.google.android.apps.tachyon" />
@@ -116,6 +114,32 @@
         <receiver
             android:name=".service.CallActionReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".util.CallReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".util.ScheduledMessageReceiver"
+            android:exported="false" />
+
+        <!-- Must be exported: PHONE_STATE is a system broadcast, not sent by this app. -->
+        <receiver
+            android:name=".service.AfterCallReceiver"
+            android:exported="true"
+            android:permission="android.permission.READ_PHONE_STATE">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".ui.features.aftercall.AfterCallActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Contacts" />
     </application>
 
 </manifest>

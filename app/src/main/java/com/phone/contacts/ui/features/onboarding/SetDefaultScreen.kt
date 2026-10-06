@@ -65,11 +65,11 @@ fun SetDefaultScreen(onSetAsDefault: () -> Unit) {
             when {
                 roleManager == null -> {
                     Log.w("SetDefaultScreen", "RoleManager service unavailable")
-                    Toast.makeText(context, "Role service unavailable on this device", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.toast_role_service_unavailable), Toast.LENGTH_LONG).show()
                 }
                 !roleManager.isRoleAvailable(RoleManager.ROLE_DIALER) -> {
                     Log.w("SetDefaultScreen", "ROLE_DIALER not available on this device")
-                    Toast.makeText(context, "Default Phone app role isn't available on this device", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.toast_default_role_unavailable), Toast.LENGTH_LONG).show()
                 }
                 roleManager.isRoleHeld(RoleManager.ROLE_DIALER) -> {
                     onSetAsDefault()

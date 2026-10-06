@@ -1,5 +1,6 @@
 package com.phone.contacts.util
 
+import com.phone.contacts.R
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
@@ -34,7 +35,7 @@ object WhatsAppUtils {
         try {
             context.startActivity(intent)
         } catch (_: Exception) {
-            Toast.makeText(context, "WhatsApp isn't installed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_whatsapp_missing), Toast.LENGTH_SHORT).show()
         }
     }
 

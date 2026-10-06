@@ -718,12 +718,12 @@ private fun CallHistoryDetailRow(call: CallLogItem, isBlocked: Boolean = false) 
         CallType.OTHER -> null
     }
     val subtitle = when (displayType) {
-        CallType.INCOMING -> listOfNotNull("Incoming", formatCallDuration(call.durationSeconds).ifEmpty { null }).joinToString(" ")
-        CallType.OUTGOING -> listOfNotNull("Outgoing", formatCallDuration(call.durationSeconds).ifEmpty { null }).joinToString(" ")
-        CallType.MISSED -> "Missed call"
-        CallType.REJECTED -> "Declined call"
-        CallType.BLOCKED -> "Blocked"
-        CallType.OTHER -> "Call"
+        CallType.INCOMING -> listOfNotNull(stringResource(R.string.call_type_incoming), formatCallDuration(call.durationSeconds).ifEmpty { null }).joinToString(" ")
+        CallType.OUTGOING -> listOfNotNull(stringResource(R.string.call_type_outgoing), formatCallDuration(call.durationSeconds).ifEmpty { null }).joinToString(" ")
+        CallType.MISSED -> stringResource(R.string.call_type_missed)
+        CallType.REJECTED -> stringResource(R.string.call_type_declined)
+        CallType.BLOCKED -> stringResource(R.string.blocked_label)
+        CallType.OTHER -> stringResource(R.string.action_call)
     }
 
     Row(

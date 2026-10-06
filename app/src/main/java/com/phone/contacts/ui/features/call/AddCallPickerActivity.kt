@@ -2,7 +2,7 @@ package com.phone.contacts.ui.features.call
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -46,7 +46,7 @@ import com.phone.contacts.ui.theme.ContactsTheme
 /** Plain contact picker with no Telecom involvement at all — mirrors contactapp's own
  * AddCallPickerActivity exactly: it just returns a phone number via [setResult], the actual
  * second call is placed back in [CallActivity] via [com.phone.contacts.service.CallManager.addCall]. */
-class AddCallPickerActivity : ComponentActivity() {
+class AddCallPickerActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_PICKED_NUMBER = "picked_number"

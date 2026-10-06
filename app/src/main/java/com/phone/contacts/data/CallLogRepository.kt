@@ -1,5 +1,6 @@
 package com.phone.contacts.data
 
+import com.phone.contacts.R
 import android.content.ContentResolver
 import android.content.Context
 import android.provider.CallLog
@@ -16,7 +17,7 @@ object CallLogRepository {
         // lookup per number): a query per distinct number here was correct but made every screen
         // resume noticeably slower the more distinct numbers were in the call history.
         val contactIndex = buildContactNameIndex(resolver)
-        val rawEntries = queryRawCallLogs(resolver, contactIndex)
+        val rawEntries = queryRawCallLogs(context, resolver, contactIndex)
         groupConsecutiveCalls(rawEntries)
     }
 
@@ -130,7 +131,7 @@ object CallLogRepository {
         val presentationLabel: String? = null
     )
 
-    private fun queryRawCallLogs(resolver: ContentResolver, contactIndex: Map<String, String>): List<RawEntry> {
+    private fun queryRawCallLogs(context: Context, resolver: ContentResolver, contactIndex: Map<String, String>): List<RawEntry> {
         val entries = mutableListOf<RawEntry>()
         val projection = arrayOf(
             CallLog.Calls._ID,
@@ -177,7 +178,7 @@ object CallLogRepository {
                             number = number,
                             type = mapCallType(cursor.getInt(typeIndex)),
                             timestamp = cursor.getLong(dateIndex),
-                            presentationLabel = presentationLabel(presentation)
+                            presentationLabel = presentationLabel(context, presentation)
                         )
                     )
                 }
@@ -257,10 +258,10 @@ object CallLogRepository {
     private fun normalizeNumber(number: String): String =
         number.filter { it.isDigit() }.takeLast(10)
 
-    private fun presentationLabel(presentation: Int): String? = when (presentation) {
-        CallLog.Calls.PRESENTATION_RESTRICTED -> "Private number"
-        CallLog.Calls.PRESENTATION_PAYPHONE -> "Payphone"
-        CallLog.Calls.PRESENTATION_UNKNOWN -> "Unknown"
+    private fun presentationLabel(context: Context, presentation: Int): String? = when (presentation) {
+        CallLog.Calls.PRESENTATION_RESTRICTED -> context.getString(R.string.presentation_private_number)
+        CallLog.Calls.PRESENTATION_PAYPHONE -> context.getString(R.string.presentation_payphone)
+        CallLog.Calls.PRESENTATION_UNKNOWN -> context.getString(R.string.unknown)
         else -> null
     }
 

@@ -1,5 +1,6 @@
 package com.phone.contacts.util
 
+import com.phone.contacts.R
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -21,7 +22,7 @@ object MessageUtils {
         try {
             context.startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(context, "Couldn't open messaging app", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_messaging_open_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -42,7 +43,7 @@ object MessageUtils {
             smsManager.sendTextMessage(number, null, text, null, null)
             true
         } catch (e: Exception) {
-            Toast.makeText(context, "Couldn't send message", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_message_send_failed), Toast.LENGTH_SHORT).show()
             false
         }
     }

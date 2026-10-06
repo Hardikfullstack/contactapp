@@ -1,5 +1,6 @@
 package com.phone.contacts.ui.screens
 
+import com.phone.contacts.ui.components.contactTypeLabel
 import android.app.Activity
 import android.app.DatePickerDialog
 import android.net.Uri
@@ -164,7 +165,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                         setCircleDimmedLayer(true)
                         setShowCropFrame(false)
                         setShowCropGrid(false)
-                        setToolbarTitle("Crop photo")
+                        setToolbarTitle(context.getString(R.string.title_crop_photo))
                         setToolbarColor(android.graphics.Color.BLACK)
                         // 2.2.11 dropped setStatusBarColor(int) in favor of this edge-to-edge
                         // light/dark toggle — false keeps light (white) status bar icons, matching
@@ -538,7 +539,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             }
 
             item {
-                ContactField(icon = Icons.Filled.Notes, placeholder = "Notes", value = notes, onValueChange = { notes = it })
+                ContactField(icon = Icons.Filled.Notes, placeholder = stringResource(R.string.hint_notes), value = notes, onValueChange = { notes = it })
             }
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
@@ -597,7 +598,7 @@ private fun TypeLabel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (type == "Custom") customLabel.ifBlank { stringResource(R.string.custom_type_fallback) } else type,
+                text = if (type == "Custom") customLabel.ifBlank { stringResource(R.string.custom_type_fallback) } else contactTypeLabel(type),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 color = primaryAccentColor()
@@ -616,7 +617,7 @@ private fun TypeLabel(
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option) },
+                    text = { Text(contactTypeLabel(option)) },
                     trailingIcon = if (option == "Custom") {
                         { Icon(imageVector = Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp)) }
                     } else null,

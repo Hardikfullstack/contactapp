@@ -1,5 +1,6 @@
 package com.phone.contacts.util
 
+import com.phone.contacts.R
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
@@ -37,7 +38,7 @@ suspend fun queryDeviceAudioFiles(context: Context): List<DeviceAudioFile> = wit
                 results.add(
                     DeviceAudioFile(
                         uri = uri,
-                        title = cursor.getString(titleCol) ?: "Unknown",
+                        title = cursor.getString(titleCol) ?: context.getString(R.string.unknown),
                         durationMs = cursor.getLong(durationCol)
                     )
                 )

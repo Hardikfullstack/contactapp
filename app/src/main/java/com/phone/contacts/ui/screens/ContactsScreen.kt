@@ -287,7 +287,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(if (sortDescending) "Ascending" else "Descending") },
+                                    text = { Text(if (sortDescending) stringResource(R.string.action_ascending) else stringResource(R.string.action_descending)) },
                                     onClick = {
                                         menuExpanded = false
                                         sortDescending = !sortDescending
@@ -315,7 +315,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                 ScreenSearchField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = "Search contacts",
+                    placeholder = stringResource(R.string.search_contacts_placeholder),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
                 )
                 ListRowSkeleton()
@@ -323,7 +323,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                 ScreenSearchField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = "Search contacts",
+                    placeholder = stringResource(R.string.search_contacts_placeholder),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
                 )
                 Row(
@@ -348,9 +348,9 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                 ) {
                     Text(
                         text = when (selectedFilter) {
-                            ContactFilter.RECENT_VIEWED -> "No recently contacted numbers"
-                            ContactFilter.RECENT_ADDED -> "No recently added contacts"
-                            ContactFilter.ALL -> "No contacts found"
+                            ContactFilter.RECENT_VIEWED -> stringResource(R.string.empty_recently_contacted)
+                            ContactFilter.RECENT_ADDED -> stringResource(R.string.empty_recently_added)
+                            ContactFilter.ALL -> stringResource(R.string.empty_no_contacts_found)
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -440,7 +440,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                             ScreenSearchField(
                                 value = query,
                                 onValueChange = { query = it },
-                                placeholder = "Search contacts",
+                                placeholder = stringResource(R.string.search_contacts_placeholder),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 20.dp)
@@ -967,7 +967,7 @@ private fun SelectionTitleBar(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 DropdownMenuItem(
-                    text = { Text(if (allSelected) "Deselect all" else "Select all") },
+                    text = { Text(if (allSelected) stringResource(R.string.action_deselect_all) else stringResource(R.string.select_all_label)) },
                     onClick = {
                         moreMenuExpanded = false
                         onToggleSelectAll()

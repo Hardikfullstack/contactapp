@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,8 +39,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.phone.contacts.MainActivity
 import com.phone.contacts.R
 import com.phone.contacts.data.Contact
+import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.BottomBarActionItem
 import com.phone.contacts.ui.components.CommonBottomBar
 import com.phone.contacts.ui.features.onboarding.LanguageSelectionScreen
@@ -124,6 +127,19 @@ fun MainNavigation() {
     val context = LocalContext.current
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
+
+    // "View Contact" from the After Call screen opens this app's contact detail directly.
+    LaunchedEffect(Unit) {
+        val activity = context as? android.app.Activity ?: return@LaunchedEffect
+        val number = activity.intent?.getStringExtra(MainActivity.EXTRA_OPEN_NUMBER)
+        if (number.isNullOrBlank()) return@LaunchedEffect
+        activity.intent.removeExtra(MainActivity.EXTRA_OPEN_NUMBER)
+        val contact = ContactRepository.findContactByNumber(context, number)
+        navController.navigate(
+            contact?.let { MainScreen.ContactDetail.routeFor(it) }
+                ?: MainScreen.ContactDetail.routeFor(id = null, name = null, number = number)
+        )
+    }
     val currentRoute = navBackStackEntry?.destination?.route
 
     // App-wide default-dialer state — refreshed here (not just inside Recents) so Keypad/

@@ -58,9 +58,9 @@ object RateUsHelper {
         } catch (_: ActivityNotFoundException) {
             emailIntent.setPackage(null)
             try {
-                context.startActivity(Intent.createChooser(emailIntent, "Send feedback"))
+                context.startActivity(Intent.createChooser(emailIntent, context.getString(R.string.action_send_feedback)))
             } catch (_: ActivityNotFoundException) {
-                Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_no_email_app), Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Contacts" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Contacts" parent="Theme.AppCompat.Light.NoActionBar" />
 
     <!-- uCrop's own UCropActivity extends AppCompatActivity and requires a Theme.AppCompat
          descendant to inflate its Toolbar — the plain platform Theme.Contacts above isn't one. -->
