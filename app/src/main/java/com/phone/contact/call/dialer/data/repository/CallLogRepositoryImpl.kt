@@ -68,19 +68,27 @@ class CallLogRepositoryImpl @Inject constructor(
             }
         }
         
-        // Watch for changes in Call Logs
-        contentResolver.registerContentObserver(
-            CallLog.Calls.CONTENT_URI,
-            true,
-            observer
-        )
+        // Registering (not just querying) can itself throw SecurityException - resolving the
+        // provider enforces its read permission before this ever reaches a query. Without
+        // READ_CALL_LOG (revoked, or not granted yet) this crashed instead of just emitting
+        // nothing; the UI's own permission flow re-triggers this once it's granted.
+        try {
+            // Watch for changes in Call Logs
+            contentResolver.registerContentObserver(
+                CallLog.Calls.CONTENT_URI,
+                true,
+                observer
+            )
 
-        // Also watch for changes in Contacts (e.g., name edits)
-        contentResolver.registerContentObserver(
-            ContactsContract.Contacts.CONTENT_URI,
-            true,
-            observer
-        )
+            // Also watch for changes in Contacts (e.g., name edits)
+            contentResolver.registerContentObserver(
+                ContactsContract.Contacts.CONTENT_URI,
+                true,
+                observer
+            )
+        } catch (e: SecurityException) {
+            // Fail silently - no observer registered, but the initial emission below still tries.
+        }
 
         // Initial emission
         try {
@@ -90,7 +98,11 @@ class CallLogRepositoryImpl @Inject constructor(
         }
 
         awaitClose {
-            contentResolver.unregisterContentObserver(observer)
+            try {
+                contentResolver.unregisterContentObserver(observer)
+            } catch (e: Exception) {
+                // Fail silently
+            }
         }
     }.flowOn(Dispatchers.IO)
 

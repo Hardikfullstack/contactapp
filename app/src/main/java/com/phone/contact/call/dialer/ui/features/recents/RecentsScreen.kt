@@ -28,7 +28,9 @@ import android.Manifest
 import android.app.Activity
 import android.app.role.RoleManager
 import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.Build
+import android.telecom.TelecomManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -168,10 +170,20 @@ fun RecentsScreen(
     }
 
     fun launchDefaultDialerRequest() {
-        val roleManager = context.getSystemService(RoleManager::class.java)
-        if (roleManager != null) {
+        // RoleManager only exists from Android 10 - referencing it on older devices crashed this
+        // (tapping "Set Default" had no SDK check, unlike the auto-prompt in LaunchedEffect below).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = context.getSystemService(RoleManager::class.java)
+            if (roleManager != null) {
+                AnalyticsManager.logEventWithAction("default_dialer_prompt", "RecentsScreen", "shown")
+                defaultDialerRoleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER))
+            }
+        } else {
             AnalyticsManager.logEventWithAction("default_dialer_prompt", "RecentsScreen", "shown")
-            defaultDialerRoleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER))
+            val intent = Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER).apply {
+                putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, context.packageName)
+            }
+            defaultDialerRoleLauncher.launch(intent)
         }
     }
 

@@ -663,12 +663,19 @@ class ContactRepositoryImpl @Inject constructor(
                 }
             }
         }
-        contentResolver.registerContentObserver(
-            ContactsContract.Contacts.CONTENT_URI,
-            true,
-            observer
-        )
-        
+        // Registering (not just querying) can itself throw SecurityException - resolving the
+        // provider enforces its read permission before this ever reaches a query. See the same
+        // guard in CallLogRepositoryImpl.callLogFlow.
+        try {
+            contentResolver.registerContentObserver(
+                ContactsContract.Contacts.CONTENT_URI,
+                true,
+                observer
+            )
+        } catch (e: SecurityException) {
+            // Fail silently - no observer registered, but the initial emission below still tries.
+        }
+
         // Initial emission
         try {
             trySend(queryBlock())
@@ -677,7 +684,11 @@ class ContactRepositoryImpl @Inject constructor(
         }
 
         awaitClose {
-            contentResolver.unregisterContentObserver(observer)
+            try {
+                contentResolver.unregisterContentObserver(observer)
+            } catch (e: Exception) {
+                // Fail silently
+            }
         }
     }.flowOn(Dispatchers.IO)
 
