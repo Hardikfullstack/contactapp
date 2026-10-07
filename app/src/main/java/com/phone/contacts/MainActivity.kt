@@ -41,8 +41,21 @@ class MainActivity : AppCompatActivity() {
         const val EXTRA_OPEN_NUMBER = "open_contact_number"
     }
 
+    // Play Core's IMMEDIATE in-app-update flow is launched the classic startActivityForResult way
+    // (see AppUpdateHelper.startUpdate), so its outcome arrives here and is forwarded through
+    // InAppUpdateResult for whichever screen wants to react to it.
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == com.phone.contacts.util.InAppUpdateResult.REQUEST_CODE) {
+            com.phone.contacts.util.InAppUpdateResult.pendingResultCode = resultCode
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.phone.contacts.util.AppConfigStore.config.value =
+            com.phone.contacts.util.AppConfigStore.readCached(applicationContext)
         // Keeps the screen on while the app itself is open (Contacts/Recents/Keypad/Settings
         // etc.) - separate from CallActivity's own proximity-sensor-driven screen control during
         // an actual call; both are meant to coexist, not replace one another.

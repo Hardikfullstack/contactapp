@@ -1,5 +1,7 @@
 package com.phone.contacts.data
 
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import android.content.ContentValues
 import android.content.Context
 import android.database.ContentObserver
@@ -39,7 +41,9 @@ object BlockRepository {
             val values = ContentValues().apply {
                 put(BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER, number)
             }
-            context.contentResolver.insert(BlockedNumberContract.BlockedNumbers.CONTENT_URI, values) != null
+            val blocked = context.contentResolver.insert(BlockedNumberContract.BlockedNumbers.CONTENT_URI, values) != null
+            if (blocked) AnalyticsManager.logEventWithAction(AnalyticsEvents.NUMBER_BLOCKED, AnalyticsEvents.SCREEN_CONTACT_DETAIL, AnalyticsEvents.ACTION_BLOCK)
+            blocked
         } catch (_: Exception) {
             false
         }

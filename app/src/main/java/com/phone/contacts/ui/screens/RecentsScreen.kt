@@ -109,6 +109,7 @@ import com.phone.contacts.data.CallLogItem
 import com.phone.contacts.data.CallLogRepository
 import com.phone.contacts.data.CallType
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.ui.components.highlightMatches
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.CallUtils
@@ -390,7 +391,8 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                                     onClick = { CallUtils.placeCall(context, call.number) },
                                     onInfoClick = { onContactClick(call.name, call.number) },
                                     onDeleted = { refreshTrigger++ },
-                                    onAddToContact = { onAddToContact(call.number) }
+                                    onAddToContact = { onAddToContact(call.number) },
+                                    highlightQuery = query
                                 )
                                 // Skipped on each group's last row — that row's own bottom edge is
                                 // already the boundary into the next date header's extra top
@@ -795,7 +797,8 @@ private fun CallLogRow(
     onClick: () -> Unit,
     onInfoClick: () -> Unit,
     onDeleted: () -> Unit = {},
-    onAddToContact: () -> Unit = {}
+    onAddToContact: () -> Unit = {},
+    highlightQuery: String = ""
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -859,10 +862,14 @@ private fun CallLogRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = buildString {
-                    append(call.name ?: call.presentationLabel ?: call.number)
-                    if (call.callCount > 1) append(" (${call.callCount})")
-                },
+                text = highlightMatches(
+                    buildString {
+                        append(call.name ?: call.presentationLabel ?: call.number)
+                        if (call.callCount > 1) append(" (${call.callCount})")
+                    },
+                    highlightQuery,
+                    MaterialTheme.colorScheme.primary
+                ),
                 color = if (displayType == CallType.MISSED) badgeColor else MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Medium
             )

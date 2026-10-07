@@ -300,4 +300,15 @@
     <string name="after_call_disable_dialog_title">Turn off After Call screen?</string>
     <string name="after_call_disable_dialog_message">You won\'t see quick actions after your calls end. You can turn this back on anytime.</string>
     <string name="after_call_turn_off">Turn off</string>
+
+    <!-- In-app update -->
+    <string name="update_title">Update Available</string>
+    <string name="update_desc">A new version of the app is available with the latest fixes and improvements. Update now for the best experience.</string>
+    <string name="update_button">Update Now</string>
+    <string name="update_later">Later</string>
+
+    <!-- Maintenance (server kill switch) -->
+    <string name="maintenance_dialog_title">Under Maintenance</string>
+    <string name="maintenance_dialog_desc">We\'re making some improvements right now. Please check back in a little while.</string>
+    <string name="maintenance_dialog_exit_button">Exit App</string>
 </resources>

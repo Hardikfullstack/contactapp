@@ -9,6 +9,8 @@ import android.provider.ContactsContract
 import androidx.core.content.FileProvider
 import com.phone.contacts.data.local.AppDatabase
 import com.phone.contacts.data.local.DeletedContactEntity
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -291,6 +293,7 @@ object ContactRepository {
 
         try {
             context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+            AnalyticsManager.logEventWithAction(AnalyticsEvents.CONTACT_CREATED, AnalyticsEvents.SCREEN_ADD_CONTACT, AnalyticsEvents.ACTION_SUCCESS, mapOf(AnalyticsEvents.PARAM_TYPE to "single"))
             true
         } catch (_: Exception) {
             false
@@ -313,6 +316,7 @@ object ContactRepository {
         buildContactDataOps(context, input, rawContactId = null, ops)
         try {
             context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+            AnalyticsManager.logEventWithAction(AnalyticsEvents.CONTACT_CREATED, AnalyticsEvents.SCREEN_ADD_CONTACT, AnalyticsEvents.ACTION_SUCCESS, mapOf(AnalyticsEvents.PARAM_TYPE to "full"))
             true
         } catch (_: Exception) {
             false
@@ -684,6 +688,7 @@ object ContactRepository {
     /** Deletes the given contacts (by CONTACT_ID) from the device's contacts provider — used by
      * the Contacts screen's multi-select "delete" action. */
     suspend fun deleteContacts(context: Context, ids: List<String>): Boolean = withContext(Dispatchers.IO) {
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.CONTACT_DELETED, AnalyticsEvents.SCREEN_CONTACTS, AnalyticsEvents.ACTION_SUCCESS, mapOf(AnalyticsEvents.PARAM_COUNT to ids.size))
         try {
             ids.forEach { id ->
                 val uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, id.toLong())
@@ -976,8 +981,13 @@ object ContactRepository {
         }
     }
 
-    suspend fun findContactByNumber(context: Context, number: String): Contact? = withContext(Dispatchers.IO) {
-        if (number.isBlank()) return@withContext null
+    suspend fun findContactByNumber(context: Context, number: String): Contact? =
+        withContext(Dispatchers.IO) { findContactByNumberNow(context, number) }
+
+    /** Same lookup as [findContactByNumber], but runs on the calling thread — for the call-added path,
+     * where the contact must be known before the call screen opens (no first-frame flash of the number). */
+    fun findContactByNumberNow(context: Context, number: String): Contact? {
+        if (number.isBlank()) return null
         val uri = android.net.Uri.withAppendedPath(
             ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
             android.net.Uri.encode(number)
@@ -995,7 +1005,7 @@ object ContactRepository {
                     val nameIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
                     val photoIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.PHOTO_URI)
                     val starredIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.STARRED)
-                    return@withContext Contact(
+                    return Contact(
                         id = cursor.getString(idIndex) ?: "",
                         name = cursor.getString(nameIndex) ?: number,
                         number = number,
@@ -1007,7 +1017,7 @@ object ContactRepository {
         } catch (_: SecurityException) {
             // Permission not granted — caller falls back to showing the raw number.
         }
-        null
+        return null
     }
 
     /** Reactive — re-queries and re-emits whenever a contact is added/edited/deleted, instead of

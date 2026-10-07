@@ -16,7 +16,7 @@ object RateUsHelper {
         if (stars in 1..3) {
             sendFeedbackEmail(context, stars)
         } else {
-            openPlayStoreListing(context)
+            InAppReviewHelper.requestOrOpenStore(context)
         }
     }
 

@@ -64,6 +64,8 @@ import androidx.core.content.ContextCompat
 import com.phone.contacts.R
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.theme.primaryAccentColor
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import com.phone.contacts.util.DeviceAudioFile
 import com.phone.contacts.util.SystemRingtoneItem
 import com.phone.contacts.util.formatAudioDuration
@@ -412,6 +414,7 @@ fun RingtoneScreen(
                                 else -> stagedUri
                             }
                             ContactRepository.setCustomRingtone(context, contactId!!, valueToStore)
+                            AnalyticsManager.logEventWithAction(AnalyticsEvents.CONTACT_UPDATED, "RingtoneScreen", AnalyticsEvents.ACTION_RINGTONE_SET)
                         } else {
                             RingtoneManager.setActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE, stagedUri)
                         }

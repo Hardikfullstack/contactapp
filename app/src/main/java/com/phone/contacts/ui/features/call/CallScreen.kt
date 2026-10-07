@@ -88,6 +88,7 @@ import androidx.compose.ui.unit.sp
 import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.service.CallManager
 import com.phone.contacts.ui.components.CallWallpaperBackground
 import com.phone.contacts.ui.screens.ContactAvatar
 import com.phone.contacts.ui.theme.primaryAccentColor
@@ -134,8 +135,8 @@ fun CallScreen(
     callerIdName: String? = null
 ) {
     val context = LocalContext.current
-    var contact by remember { mutableStateOf<Contact?>(null) }
-    var resolvedNumber by remember { mutableStateOf(number) }
+    var contact by remember(number) { mutableStateOf(CallManager.cachedContact(number)) }
+    var resolvedNumber by remember(number) { mutableStateOf(contact?.number ?: number) }
     LaunchedEffect(number) {
         // A call's own number can transiently go blank right as it disconnects (Telecom clears
         // call details before the call is actually removed) — re-resolving on that blank number

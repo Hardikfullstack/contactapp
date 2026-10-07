@@ -78,6 +78,12 @@ object CallManager {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private val contactCache = java.util.concurrent.ConcurrentHashMap<String, com.phone.contacts.data.Contact>()
+
+    /** Contact already resolved for [number] on the call-added path, if any — read by the call screen
+     * so it doesn't have to wait for its own lookup before showing the name and photo. */
+    fun cachedContact(number: String): com.phone.contacts.data.Contact? = contactCache[number]
+
     // Caller info resolved once per call (name/photo lookup is async) and reused by every
     // subsequent notification re-render for that same call, matching how the on-screen caller
     // name/photo stays fixed for the life of the call.
@@ -96,6 +102,14 @@ object CallManager {
         primaryCallerName = number
         primaryCallerPhotoUri = null
         primaryHasContactName = false
+        // Synchronous first pass, so the call screen opened right after this already has the name and
+        // photo on its very first frame instead of showing the bare number and filling in later.
+        ContactRepository.findContactByNumberNow(context, number)?.let { early ->
+            contactCache[number] = early
+            primaryCallerName = early.name
+            primaryHasContactName = true
+            primaryCallerPhotoUri = early.photoUri
+        }
         scope.launch {
             val contact = ContactRepository.findContactByNumber(context, number)
             if (contact?.name != null) {

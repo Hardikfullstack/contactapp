@@ -43,6 +43,8 @@ import com.phone.contacts.MainActivity
 import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.ui.components.AppUpdatePrompt
+import com.phone.contacts.ui.components.MaintenanceDialog
 import com.phone.contacts.ui.components.BottomBarActionItem
 import com.phone.contacts.ui.components.CommonBottomBar
 import com.phone.contacts.ui.features.onboarding.LanguageSelectionScreen
@@ -68,6 +70,10 @@ import com.phone.contacts.ui.screens.RecentsScreen
 import com.phone.contacts.ui.screens.RecycleBinScreen
 import com.phone.contacts.ui.screens.SettingsScreen
 import com.phone.contacts.ui.screens.ThemeScreen
+import com.phone.contacts.util.AppConfigStore
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
+import com.phone.contacts.util.AppThemePreferences
 import com.phone.contacts.util.DefaultDialerState
 
 sealed class MainScreen(
@@ -125,6 +131,11 @@ sealed class MainScreen(
 @Composable
 fun MainNavigation() {
     val context = LocalContext.current
+    AppUpdatePrompt()
+    val maintenanceConfig by AppConfigStore.config.collectAsState()
+    if (maintenanceConfig?.result?.extra_data_1_on_off == "on") {
+        MaintenanceDialog(message = maintenanceConfig?.result?.extra_data_1_message)
+    }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
 
@@ -141,6 +152,16 @@ fun MainNavigation() {
         )
     }
     val currentRoute = navBackStackEntry?.destination?.route
+    // Every destination change is logged as screen_view, with the route trimmed to its base
+    // segment (drops query args) so the screen name stays stable — same as contactapp.
+    DisposableEffect(navController) {
+        val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
+            val screenName = destination.route?.substringBefore("/")?.substringBefore("?") ?: "unknown"
+            AnalyticsManager.logScreenView(screenName)
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
 
     // App-wide default-dialer state — refreshed here (not just inside Recents) so Keypad/
     // Settings' disabled state reacts no matter which tab happens to be visible when the role is
@@ -150,6 +171,17 @@ fun MainNavigation() {
     // what they land on (no jump to Recents specifically).
     remember { DefaultDialerState.refresh(context) }
     val isDefaultDialer by DefaultDialerState.isDefault
+    LaunchedEffect(isDefaultDialer) {
+        AnalyticsManager.setUserProperty(AnalyticsEvents.USER_IS_DEFAULT_DIALER, if (isDefaultDialer) "yes" else "no")
+    }
+    val appThemeMode = AppThemePreferences.themeMode.value
+    LaunchedEffect(appThemeMode) {
+        AnalyticsManager.setUserProperty(AnalyticsEvents.USER_APP_THEME, appThemeMode.name)
+    }
+    LaunchedEffect(Unit) {
+        val locales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags()
+        AnalyticsManager.setUserProperty(AnalyticsEvents.USER_APP_LANGUAGE, locales.ifEmpty { "system" })
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->

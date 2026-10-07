@@ -74,7 +74,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,6 +94,7 @@ import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.ListRowSkeleton
 import com.phone.contacts.ui.components.ScreenSearchField
 import com.phone.contacts.ui.components.ScreenTitleBar
+import com.phone.contacts.ui.components.highlightMatches
 import com.phone.contacts.ui.components.verticalScrollIndicator
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.util.DefaultDialerState
@@ -494,6 +499,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                     Column {
                                         ContactRow(
                                             contact = contact,
+                                            highlightQuery = query,
                                             selectionMode = selectionMode,
                                             isSelected = selectedIds.contains(contact.id),
                                             onClick = { onContactClick(contact) },
@@ -531,6 +537,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                     Column {
                                         ContactRow(
                                             contact = contact,
+                                            highlightQuery = query,
                                             selectionMode = selectionMode,
                                             isSelected = selectedIds.contains(contact.id),
                                             onClick = { onContactClick(contact) },
@@ -560,6 +567,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                 Column {
                                     ContactRow(
                                         contact = contact,
+                                        highlightQuery = query,
                                         selectionMode = selectionMode,
                                         isSelected = selectedIds.contains(contact.id),
                                         onClick = { onContactClick(contact) },
@@ -1004,7 +1012,8 @@ private fun ContactRow(
     onClick: () -> Unit,
     onToggleSelect: () -> Unit,
     onLongPress: () -> Unit,
-    trailingTime: String? = null
+    trailingTime: String? = null,
+    highlightQuery: String = ""
 ) {
     Row(
         modifier = Modifier
@@ -1047,8 +1056,9 @@ private fun ContactRow(
         }
         Spacer(modifier = Modifier.size(14.dp))
         val nameFormat by DisplayOptionsPreferences.nameFormat
+        val displayName = contact.name.formattedForDisplay(nameFormat)
         Text(
-            text = contact.name.formattedForDisplay(nameFormat),
+            text = highlightMatches(displayName, highlightQuery, MaterialTheme.colorScheme.primary),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)

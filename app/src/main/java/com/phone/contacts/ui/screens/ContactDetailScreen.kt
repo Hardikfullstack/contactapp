@@ -80,6 +80,8 @@ import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.verticalScrollIndicator
 import com.phone.contacts.ui.theme.primaryAccentColor
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.GoogleMeetUtils
 import com.phone.contacts.util.MessageUtils
@@ -343,6 +345,12 @@ fun ContactDetailScreen(
                     val id = resolvedContactId ?: return@BottomBarAction
                     val newStarred = !starred
                     starred = newStarred
+                    AnalyticsManager.logEventWithAction(
+                        AnalyticsEvents.CONTACT_UPDATED,
+                        AnalyticsEvents.SCREEN_CONTACT_DETAIL,
+                        AnalyticsEvents.ACTION_FAVORITE_TOGGLED,
+                        mapOf(AnalyticsEvents.PARAM_STARRED to newStarred)
+                    )
                     coroutineScope.launch { ContactRepository.setStarred(context, id, newStarred) }
                 }
             )
@@ -571,6 +579,11 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
                     showClearDialog = false
                     coroutineScope.launch {
                         CallLogRepository.deleteAllForNumber(context, number)
+                        AnalyticsManager.logEventWithAction(
+                            AnalyticsEvents.CALL_HISTORY_CLEARED,
+                            AnalyticsEvents.SCREEN_CONTACT_DETAIL,
+                            AnalyticsEvents.ACTION_SUCCESS
+                        )
                         calls = emptyList()
                     }
                 }) { Text(stringResource(R.string.action_delete)) }

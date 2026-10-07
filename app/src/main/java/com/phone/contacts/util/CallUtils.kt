@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 object CallUtils {
     fun placeCall(context: Context, number: String) {
         if (number.isBlank()) return
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.CALL_MADE, AnalyticsEvents.SCREEN_CALL, AnalyticsEvents.ACTION_PLACED)
 
         val hasCallPermission = ContextCompat.checkSelfPermission(
             context, Manifest.permission.CALL_PHONE
