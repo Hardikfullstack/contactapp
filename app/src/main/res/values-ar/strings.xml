@@ -300,4 +300,5 @@
     <string name="after_call_disable_dialog_title">إيقاف شاشة ما بعد المكالمة؟</string>
     <string name="after_call_disable_dialog_message">لن ترى الإجراءات السريعة بعد انتهاء مكالماتك. يمكنك تفعيلها مرة أخرى في أي وقت.</string>
     <string name="after_call_turn_off">إيقاف</string>
+    <string name="ad_is_loading">جارٍ تحميل الإعلان…</string>
 </resources>

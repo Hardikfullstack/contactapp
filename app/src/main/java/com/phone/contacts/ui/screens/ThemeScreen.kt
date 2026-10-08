@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.rememberBackWithInterstitial
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.AppThemePreferences
 import com.phone.contacts.util.ThemeMode
 
@@ -51,6 +58,12 @@ import com.phone.contacts.util.ThemeMode
 @Composable
 fun ThemeScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val adConfig by AppConfigStore.config.collectAsState()
+    // Matches the reference app: ThemeSelectionActivity shows an interstitial on back.
+    val backWithAd = rememberBackWithInterstitial(
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 7),
+        onBack
+    )
     var selectedMode by remember { mutableStateOf(AppThemePreferences.themeMode.value) }
 
     Column(
@@ -63,7 +76,7 @@ fun ThemeScreen(onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = backWithAd) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
@@ -94,17 +107,30 @@ fun ThemeScreen(onBack: () -> Unit) {
             }
         }
 
-        listOf(
-            Triple(ThemeMode.DARK, Icons.Filled.Bedtime, Color(0xFF3F51B5)),
-            Triple(ThemeMode.LIGHT, Icons.Filled.LightMode, Color(0xFFFF9800)),
-            Triple(ThemeMode.SYSTEM_DEFAULT, Icons.Filled.SettingsBrightness, Color(0xFF2196F3))
-        ).forEach { (mode, icon, badgeColor) ->
-            ThemeOptionRow(
-                icon = icon,
-                iconBackgroundColor = badgeColor,
-                label = mode.label,
-                selected = mode == selectedMode,
-                onClick = { selectedMode = mode }
+        // Wrapped so this static content stays at the top and the ad below is pinned to the
+        // screen's actual bottom.
+        Column(modifier = Modifier.weight(1f)) {
+            listOf(
+                Triple(ThemeMode.DARK, Icons.Filled.Bedtime, Color(0xFF3F51B5)),
+                Triple(ThemeMode.LIGHT, Icons.Filled.LightMode, Color(0xFFFF9800)),
+                Triple(ThemeMode.SYSTEM_DEFAULT, Icons.Filled.SettingsBrightness, Color(0xFF2196F3))
+            ).forEach { (mode, icon, badgeColor) ->
+                ThemeOptionRow(
+                    icon = icon,
+                    iconBackgroundColor = badgeColor,
+                    label = mode.label,
+                    selected = mode == selectedMode,
+                    onClick = { selectedMode = mode }
+                )
+            }
+        }
+
+        // Matches the reference app: native medium card (not banner) on this screen.
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 2)?.let { adUnitId ->
+            NativeAdView(
+                adUnitId = adUnitId,
+                template = NativeAdTemplate.MEDIUM,
+                modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp)
             )
         }
     }

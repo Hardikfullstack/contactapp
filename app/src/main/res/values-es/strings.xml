@@ -300,4 +300,5 @@
     <string name="after_call_disable_dialog_title">¿Desactivar la pantalla Después de la llamada?</string>
     <string name="after_call_disable_dialog_message">No verás las acciones rápidas cuando termines una llamada. Puedes volver a activarla en cualquier momento.</string>
     <string name="after_call_turn_off">Desactivar</string>
+    <string name="ad_is_loading">Cargando anuncio…</string>
 </resources>

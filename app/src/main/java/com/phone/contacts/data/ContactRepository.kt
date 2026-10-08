@@ -62,7 +62,8 @@ data class NewContactInput(
     val department: String,
     val company: String,
     val notes: String,
-    val photoUri: Uri?
+    val photoUri: Uri?,
+    val removePhoto: Boolean = false
 ) {
     fun displayName(): String = if (nameExpanded) {
         listOfNotNull(
@@ -357,7 +358,7 @@ object ContactRepository {
                 )
                 .build()
         )
-        if (input.photoUri != null) {
+        if (input.photoUri != null || input.removePhoto) {
             ops.add(
                 ContentProviderOperation.newDelete(ContactsContract.Data.CONTENT_URI)
                     .withSelection(

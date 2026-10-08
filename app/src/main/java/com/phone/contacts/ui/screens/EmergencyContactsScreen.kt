@@ -46,8 +46,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.data.local.AppDatabase
 import com.phone.contacts.data.local.EmergencyContactEntity
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.CallUtils
 import kotlinx.coroutines.launch
 
@@ -65,6 +70,7 @@ fun EmergencyContactsScreen(onBack: () -> Unit, onAddClick: () -> Unit) {
     val scope = rememberCoroutineScope()
     val dao = remember { AppDatabase.getInstance(context).emergencyContactDao() }
     val entries by dao.getAll().collectAsState(initial = emptyList())
+    val adConfig by AppConfigStore.config.collectAsState()
     var removingEntry by remember { mutableStateOf<EmergencyContactEntity?>(null) }
 
     Column(
@@ -146,6 +152,13 @@ fun EmergencyContactsScreen(onBack: () -> Unit, onAddClick: () -> Unit) {
                     }
                 }
             }
+        }
+
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 6)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 

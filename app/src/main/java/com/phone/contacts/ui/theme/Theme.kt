@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +31,10 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = Color(0xFF1F1F24),
     onSurfaceVariant = Color(0xFFA0A0A8)
 )
+
+/** True when ContactsTheme resolved dark colors — for the handful of plain Android View widgets
+ * (ads/NativeAdView.kt) that can't read MaterialTheme.colorScheme directly. */
+val LocalIsDarkTheme = compositionLocalOf { false }
 
 private val LightColorScheme = lightColorScheme(
     primary = BrandPrimary,
@@ -72,7 +77,7 @@ fun ContactsTheme(
         fontScale = uncappedDensity.fontScale.coerceAtMost(1.2f)
     )
 
-    CompositionLocalProvider(LocalDensity provides cappedDensity) {
+    CompositionLocalProvider(LocalDensity provides cappedDensity, LocalIsDarkTheme provides darkTheme) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,

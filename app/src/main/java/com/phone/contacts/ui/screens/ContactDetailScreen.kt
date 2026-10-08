@@ -51,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +73,10 @@ import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.BannerAdView
+import com.phone.contacts.ads.rememberBackWithInterstitial
 import com.phone.contacts.data.BlockRepository
 import com.phone.contacts.data.CallLogItem
 import com.phone.contacts.data.CallLogRepository
@@ -82,6 +87,7 @@ import com.phone.contacts.ui.components.verticalScrollIndicator
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AnalyticsEvents
 import com.phone.contacts.util.AnalyticsManager
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.GoogleMeetUtils
 import com.phone.contacts.util.MessageUtils
@@ -128,6 +134,12 @@ fun ContactDetailScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
+    // Matches the reference app: ViewContactActivity shows an interstitial on back.
+    val backWithAd = rememberBackWithInterstitial(
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 2),
+        onBack
+    )
     var resolvedContactId by remember(contactId) { mutableStateOf(contactId) }
     var starred by remember(contactId) { mutableStateOf(isStarred) }
     // Both start from the nav arguments and show instantly (no lag, matching the Contacts list) —
@@ -194,7 +206,7 @@ fun ContactDetailScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = backWithAd) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -421,6 +433,13 @@ fun ContactDetailScreen(
                     )
                 }
             }
+        }
+
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 4)?.let {
+            com.phone.contacts.ads.NativeAdView(
+                adUnitId = it,
+                template = com.phone.contacts.ads.NativeAdTemplate.SMALL
+            )
         }
     }
 

@@ -109,6 +109,12 @@ import com.phone.contacts.data.CallLogItem
 import com.phone.contacts.data.CallLogRepository
 import com.phone.contacts.data.CallType
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.util.AppConfigStore
+import androidx.compose.runtime.collectAsState
 import com.phone.contacts.ui.components.highlightMatches
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.ui.theme.primaryAccentColor
@@ -210,6 +216,7 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
             }
     }
     val grouped = remember(filtered) { groupByDate(filtered) }
+    val adConfig by AppConfigStore.config.collectAsState()
 
     Column(
         modifier = Modifier
@@ -238,7 +245,9 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                 FilterChip(label = stringResource(R.string.filter_all), selected = !showMissedOnly, onClick = { showMissedOnly = false })
                 FilterChip(label = stringResource(R.string.filter_missed), selected = showMissedOnly, onClick = { showMissedOnly = true })
             }
-            CallLogSkeleton()
+            Box(modifier = Modifier.weight(1f)) {
+                CallLogSkeleton()
+            }
         } else if (grouped.isEmpty()) {
             SearchField(
                 value = query,
@@ -252,7 +261,7 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                 FilterChip(label = stringResource(R.string.filter_all), selected = !showMissedOnly, onClick = { showMissedOnly = false })
                 FilterChip(label = stringResource(R.string.filter_missed), selected = showMissedOnly, onClick = { showMissedOnly = true })
             }
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
                     text = stringResource(R.string.no_recent_calls),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -329,7 +338,7 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
                 }
             }
 
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize()

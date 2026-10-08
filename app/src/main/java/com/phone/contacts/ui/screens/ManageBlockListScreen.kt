@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,8 +40,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.data.BlockRepository
 import com.phone.contacts.data.BlockedNumberEntry
+import com.phone.contacts.util.AppConfigStore
 import kotlinx.coroutines.launch
 
 /** Red in light mode; a lighter pink in dark mode, since a dark red is too close to the dark
@@ -56,6 +62,7 @@ private fun blockedCallColor(): Color =
 fun ManageBlockListScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
     var entries by remember { mutableStateOf<List<BlockedNumberEntry>>(emptyList()) }
 
     LaunchedEffect(Unit) {
@@ -85,11 +92,11 @@ fun ManageBlockListScreen(onBack: () -> Unit) {
         }
 
         if (entries.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(text = stringResource(R.string.no_data_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(modifier = Modifier.weight(1f)) {
                 items(entries, key = { it.id }) { entry ->
                     Column {
                         Row(
@@ -143,6 +150,14 @@ fun ManageBlockListScreen(onBack: () -> Unit) {
                     }
                 }
             }
+        }
+
+        // Shares banner_4 with Speed Dial — only 10 banner slots exist.
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 4)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 }

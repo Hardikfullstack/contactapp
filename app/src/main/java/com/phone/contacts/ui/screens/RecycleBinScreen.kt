@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,9 +52,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.ads.rememberBackWithInterstitial
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.data.local.DeletedContactEntity
 import com.phone.contacts.ui.components.CustomSwitch
+import com.phone.contacts.util.AppConfigStore
 import kotlinx.coroutines.launch
 
 /** Settings > Recycle bin — deleted contacts stay here (via [ContactRepository.moveToRecycleBin])
@@ -67,6 +74,13 @@ import kotlinx.coroutines.launch
 fun RecycleBinScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
+    // Matches the reference app: RecycleBinActivity shows an interstitial on back. Shares
+    // interstitial_7 with Theme and Blocking — only 7 interstitial slots exist.
+    val backWithAd = rememberBackWithInterstitial(
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 7),
+        onBack
+    )
     var entries by remember { mutableStateOf<List<DeletedContactEntity>>(emptyList()) }
     var selectionMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
@@ -110,7 +124,7 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                     Icon(Icons.Filled.DeleteForever, contentDescription = "Delete permanently", tint = MaterialTheme.colorScheme.onBackground)
                 }
             } else {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = backWithAd) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Text(
@@ -199,11 +213,11 @@ fun RecycleBinScreen(onBack: () -> Unit) {
         }
 
         if (entries.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(text = stringResource(R.string.no_data_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(modifier = Modifier.weight(1f)) {
                 items(entries, key = { it.id }) { entry ->
                     val isSelected = entry.id in selectedIds
                     Column {
@@ -277,6 +291,14 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                     }
                 }
             }
+        }
+
+        // Shares banner_8 with Speed Dial List — only 10 banner slots exist.
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 8)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 

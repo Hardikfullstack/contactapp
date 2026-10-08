@@ -315,7 +315,12 @@ fun SettingsScreen(
                     icon = Icons.Filled.Feedback,
                     iconBackgroundColor = Color(0xFFE91E63),
                     title = stringResource(R.string.feedback_title),
-                    onClick = { RateUsHelper.openFeedbackEmail(context) }
+                    onClick = {
+                        // Matches the reference app: returning from the email app shouldn't
+                        // trigger an App Open ad right as the user comes back.
+                        com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+                        RateUsHelper.openFeedbackEmail(context)
+                    }
                 )
             }
         }

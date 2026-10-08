@@ -62,6 +62,7 @@
     <string name="add_contact_title">Add contact</string>
     <string name="save">Save</string>
     <string name="add_picture_label">Add picture</string>
+    <string name="remove_photo_label">Remove photo</string>
     <string name="type_phone">Phone</string>
     <string name="add_more_phone_number">Add Phone Number</string>
     <string name="type_email">Email</string>
@@ -311,4 +312,5 @@
     <string name="maintenance_dialog_title">Under Maintenance</string>
     <string name="maintenance_dialog_desc">We\'re making some improvements right now. Please check back in a little while.</string>
     <string name="maintenance_dialog_exit_button">Exit App</string>
+    <string name="ad_is_loading">Ad is loading…</string>
 </resources>

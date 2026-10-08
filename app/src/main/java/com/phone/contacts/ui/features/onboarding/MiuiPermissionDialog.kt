@@ -148,6 +148,9 @@ fun MiuiPermissionDialog(onGranted: () -> Unit) {
 
                 Button(
                     onClick = {
+                        // Returning from system Settings for this permission shouldn't trigger
+                        // an App Open ad right as the user comes back to grant it.
+                        com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
                         if (step == MiuiStep.OVERLAY) {
                             overlayLauncher.launch(
                                 Intent(

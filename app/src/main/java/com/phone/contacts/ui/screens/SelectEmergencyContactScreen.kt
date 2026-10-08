@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,12 +42,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.data.local.AppDatabase
 import com.phone.contacts.data.local.EmergencyContactEntity
 import com.phone.contacts.ui.components.ScreenSearchField
 import com.phone.contacts.ui.theme.primaryAccentColor
+import com.phone.contacts.util.AppConfigStore
 import kotlinx.coroutines.launch
 
 /** A multi-select picker over the device's real contacts — no preset entries, matching the
@@ -58,6 +64,7 @@ import kotlinx.coroutines.launch
 fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
     val dao = remember { AppDatabase.getInstance(context).emergencyContactDao() }
 
     var query by remember { mutableStateOf("") }
@@ -203,6 +210,14 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
                     }
                 }
             }
+        }
+
+        // Shares banner_10 with Select Speed Dial Contact — only 10 banner slots exist.
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 10)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 }

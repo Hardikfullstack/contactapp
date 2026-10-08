@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.ads.rememberBackWithInterstitial
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.QuickResponsePreferences
 import com.phone.contacts.util.QuickResponseTemplate
 
@@ -48,6 +55,12 @@ import com.phone.contacts.util.QuickResponseTemplate
 @Composable
 fun QuickResponseScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val adConfig by AppConfigStore.config.collectAsState()
+    // Matches the reference app: QuickResponseActivity shows an interstitial on back.
+    val backWithAd = rememberBackWithInterstitial(
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 4),
+        onBack
+    )
     remember { QuickResponsePreferences.initialize(context) }
     val templates by QuickResponsePreferences.templates
 
@@ -63,6 +76,14 @@ fun QuickResponseScreen(onBack: () -> Unit) {
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Add template", tint = Color.White)
             }
+        },
+        bottomBar = {
+            AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 7)?.let {
+                NativeAdView(
+                    adUnitId = it,
+                    template = NativeAdTemplate.STRIP
+                )
+            }
         }
     ) { innerPadding ->
         Column(
@@ -75,7 +96,7 @@ fun QuickResponseScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = backWithAd) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Text(

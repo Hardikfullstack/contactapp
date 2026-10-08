@@ -41,6 +41,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.phone.contacts.MainActivity
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.AppUpdatePrompt
@@ -191,6 +195,9 @@ fun MainNavigation() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // Native ad shown under the bottom nav bar on all 5 main tabs.
+    val bottomAdUnitId = AdPlacements.adUnitId(maintenanceConfig?.result, AdType.NATIVE, slot = 5)
+
     val navItems = remember {
         listOf(
             MainScreen.Recents,
@@ -231,6 +238,12 @@ fun MainNavigation() {
                 }
                 Column(modifier = Modifier.navigationBarsPadding()) {
                     CommonBottomBar(items = items, windowInsets = WindowInsets(0.dp))
+                    if (bottomAdUnitId != null) {
+                        NativeAdView(
+                            adUnitId = bottomAdUnitId,
+                            template = NativeAdTemplate.SMALL
+                        )
+                    }
                 }
             }
         },

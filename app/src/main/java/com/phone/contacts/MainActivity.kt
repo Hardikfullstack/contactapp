@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,6 +78,18 @@ class MainActivity : AppCompatActivity() {
                 // not play again - the user should land back where they were, in the new language.
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var isLanguageSelected by remember { mutableStateOf(OnboardingPreferences.isLanguageSelected(context)) }
+
+                // Matches contactapp: shows an App Open ad whenever the app itself returns to the
+                // foreground from being backgrounded (not on every screen change, and not on cold
+                // start - AppOpenBackgroundReturnTrigger handles both of those distinctions).
+                val adConfig by com.phone.contacts.util.AppConfigStore.config.collectAsState()
+                LaunchedEffect(adConfig) {
+                    com.phone.contacts.ads.AdPlacements.adUnitId(
+                        adConfig?.result,
+                        com.phone.contacts.ads.AdType.APP_OPEN,
+                        slot = 1
+                    )?.let { com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.init(application, it) }
+                }
 
                 // Only relevant once the app is already the default dialer - not part of the
                 // upfront onboarding flow. Re-derived from DefaultDialerState (refreshed wherever

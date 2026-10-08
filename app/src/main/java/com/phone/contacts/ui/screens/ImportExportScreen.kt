@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +43,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.util.AppConfigStore
 import kotlinx.coroutines.launch
 
 /** Settings > Import/Export — matches the reference app's own screen exactly: just two rows,
@@ -53,6 +59,7 @@ import kotlinx.coroutines.launch
 fun ImportExportScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
 
     var importStatus by remember { mutableStateOf<String?>(null) }
     var exportStatus by remember { mutableStateOf<String?>(null) }
@@ -104,32 +111,53 @@ fun ImportExportScreen(onBack: () -> Unit) {
             )
         }
 
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(13.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 15.dp, vertical = 15.dp)
-        ) {
-            Column {
-                ImportExportRow(
-                    icon = Icons.Filled.FileDownload,
-                    iconBackgroundColor = Color(0xFF009688),
-                    title = stringResource(R.string.import_from_file_title),
-                    status = importStatus,
-                    isBusy = isImporting,
-                    onClick = { importLauncher.launch(arrayOf("text/x-vcard", "text/vcard")) }
-                )
-                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                ImportExportRow(
-                    icon = Icons.Filled.FileUpload,
-                    iconBackgroundColor = Color(0xFFFF9800),
-                    title = stringResource(R.string.export_to_file_title),
-                    status = exportStatus,
-                    isBusy = isExporting,
-                    onClick = { exportLauncher.launch("contacts.vcf") }
-                )
+        // Wrapped so this static content stays at the top and the ad below is pinned to the
+        // screen's actual bottom.
+        Column(modifier = Modifier.weight(1f)) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(13.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp, vertical = 15.dp)
+            ) {
+                Column {
+                    ImportExportRow(
+                        icon = Icons.Filled.FileDownload,
+                        iconBackgroundColor = Color(0xFF009688),
+                        title = stringResource(R.string.import_from_file_title),
+                        status = importStatus,
+                        isBusy = isImporting,
+                        onClick = {
+                            // Matches the reference app: returning from the system file picker
+                            // shouldn't trigger an App Open ad.
+                            com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+                            importLauncher.launch(arrayOf("text/x-vcard", "text/vcard"))
+                        }
+                    )
+                    HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    ImportExportRow(
+                        icon = Icons.Filled.FileUpload,
+                        iconBackgroundColor = Color(0xFFFF9800),
+                        title = stringResource(R.string.export_to_file_title),
+                        status = exportStatus,
+                        isBusy = isExporting,
+                        onClick = {
+                            // Matches the reference app: returning from the system file picker
+                            // shouldn't trigger an App Open ad.
+                            com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+                            exportLauncher.launch("contacts.vcf")
+                        }
+                    )
+                }
             }
+        }
+
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 3)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 }

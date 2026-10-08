@@ -300,4 +300,5 @@
     <string name="after_call_disable_dialog_title">Bildschirm „Nach dem Anruf“ deaktivieren?</string>
     <string name="after_call_disable_dialog_message">Du siehst nach deinen Anrufen keine Schnellaktionen mehr. Du kannst das jederzeit wieder aktivieren.</string>
     <string name="after_call_turn_off">Deaktivieren</string>
+    <string name="ad_is_loading">Anzeige wird geladen…</string>
 </resources>

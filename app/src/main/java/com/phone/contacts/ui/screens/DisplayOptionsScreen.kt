@@ -27,6 +27,7 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.ContactNameFormat
 import com.phone.contacts.util.ContactSortOrder
 import com.phone.contacts.util.DisplayOptionsPreferences
@@ -50,6 +56,7 @@ private enum class DisplayOptionPage { NONE, SORT_BY, NAME_FORMAT }
 @Composable
 fun DisplayOptionsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val adConfig by AppConfigStore.config.collectAsState()
     remember { DisplayOptionsPreferences.initialize(context) }
     val sortOrder by DisplayOptionsPreferences.sortOrder
     val nameFormat by DisplayOptionsPreferences.nameFormat
@@ -109,32 +116,43 @@ fun DisplayOptionsScreen(onBack: () -> Unit) {
             )
         }
 
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Column {
-                DisplayOptionRow(
-                    icon = Icons.AutoMirrored.Filled.Sort,
-                    iconBackgroundColor = Color(0xFFE91E63),
-                    title = stringResource(R.string.sort_by_title),
-                    subtitle = sortOrder.label,
-                    onClick = { page = DisplayOptionPage.SORT_BY }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 70.dp),
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                )
-                DisplayOptionRow(
-                    icon = Icons.Filled.FormatListNumbered,
-                    iconBackgroundColor = Color(0xFFFF9800),
-                    title = stringResource(R.string.name_format_title),
-                    subtitle = nameFormat.label,
-                    onClick = { page = DisplayOptionPage.NAME_FORMAT }
-                )
+        // Wrapped so this static content stays at the top and the ad below is pinned to the
+        // screen's actual bottom.
+        Column(modifier = Modifier.weight(1f)) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Column {
+                    DisplayOptionRow(
+                        icon = Icons.AutoMirrored.Filled.Sort,
+                        iconBackgroundColor = Color(0xFFE91E63),
+                        title = stringResource(R.string.sort_by_title),
+                        subtitle = sortOrder.label,
+                        onClick = { page = DisplayOptionPage.SORT_BY }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 70.dp),
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    )
+                    DisplayOptionRow(
+                        icon = Icons.Filled.FormatListNumbered,
+                        iconBackgroundColor = Color(0xFFFF9800),
+                        title = stringResource(R.string.name_format_title),
+                        subtitle = nameFormat.label,
+                        onClick = { page = DisplayOptionPage.NAME_FORMAT }
+                    )
+                }
             }
+        }
+
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 5)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 }

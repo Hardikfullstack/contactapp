@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,11 +48,23 @@ import androidx.compose.ui.unit.sp
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.rememberInterstitialTrigger
+import com.phone.contacts.util.AppConfigStore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
     var selectedCode by remember { mutableStateOf(currentAppLanguageCode().ifEmpty { "en" }) }
+    val adConfig by AppConfigStore.config.collectAsState()
+    // Matches the reference app: an interstitial after tapping Done (not on back — this screen's
+    // own back-arrow just leaves without saving, no ad for that).
+    val showDoneInterstitial = rememberInterstitialTrigger(
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL, slot = 1)
+    )
 
     Scaffold(
         topBar = {
@@ -81,7 +94,7 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
                         onClick = {
                             val locales = LocaleListCompat.forLanguageTags(selectedCode)
                             AppCompatDelegate.setApplicationLocales(locales)
-                            onDone()
+                            showDoneInterstitial { onDone() }
                         },
                         modifier = Modifier.padding(end = 8.dp),
                         shape = RoundedCornerShape(20.dp),
@@ -97,6 +110,16 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
+        },
+        bottomBar = {
+            // Matches the reference app / contactapp's own convention: native_1 = Language screen.
+            AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 1)?.let { adUnitId ->
+                NativeAdView(
+                    adUnitId = adUnitId,
+                    template = NativeAdTemplate.MEDIUM,
+                    modifier = Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->

@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,9 +63,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.AnalyticsManager
 import com.phone.contacts.util.DeviceAudioFile
 import com.phone.contacts.util.SystemRingtoneItem
@@ -98,6 +104,7 @@ fun RingtoneScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
     val isContactMode = contactId != null
 
     var isLoading by remember { mutableStateOf(true) }
@@ -432,6 +439,13 @@ fun RingtoneScreen(
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Text(stringResource(R.string.action_set_ringtone_button), fontWeight = FontWeight.Bold)
+        }
+
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 9)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -34,6 +35,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.SpeedDialPreferences
 import com.phone.contacts.util.speedDialColorFor
@@ -45,6 +51,7 @@ import com.phone.contacts.util.speedDialKeys
 @Composable
 fun SpeedDialListScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val adConfig by AppConfigStore.config.collectAsState()
     remember { SpeedDialPreferences.initialize(context) }
     val entries by SpeedDialPreferences.entries
     val assignedKeys = remember(entries) { speedDialKeys.filter { it in entries } }
@@ -117,6 +124,13 @@ fun SpeedDialListScreen(onBack: () -> Unit) {
                     }
                 }
             }
+        }
+
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 8)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 }

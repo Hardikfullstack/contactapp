@@ -10,6 +10,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.util.AppConfigStore
 import com.yalantis.ucrop.UCrop
 import java.io.File
 import androidx.compose.foundation.background
@@ -62,6 +67,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -135,18 +141,23 @@ private data class DateEntryState(
 fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "", editContactId: String? = null) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
     val isEditMode = editContactId != null
 
     var photoUri by remember { mutableStateOf<Uri?>(null) }
     // The contact's photo as it already exists, before any new pick — shown as the preview until
     // (and unless) the user picks a replacement, which is what [photoUri] then holds instead.
     var existingPhotoUri by remember { mutableStateOf<String?>(null) }
+    var photoRemoved by remember { mutableStateOf(false) }
     // Square crop + circular dimmed overlay — matches the reference app's own contact-photo crop
     // step (com.isseiaoki.simplecropview's CIRCLE_SQUARE mode), instead of leaving cropping to
     // whatever the device's gallery app happens to show (a generic rectangular grid, or nothing).
     val cropLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.let { UCrop.getOutput(it) }?.let { photoUri = it }
+            result.data?.let { UCrop.getOutput(it) }?.let {
+                photoUri = it
+                photoRemoved = false
+            }
         }
     }
     // PickVisualMedia (the system Photo Picker), not GetContent — matches the reference app's own
@@ -177,6 +188,9 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                     }
                 )
                 .getIntent(context)
+            // Matches the reference app: returning from the crop activity shouldn't trigger an
+            // App Open ad.
+            com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
             cropLauncher.launch(cropIntent)
         }
     }
@@ -304,7 +318,8 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                             department = department,
                             company = company,
                             notes = notes,
-                            photoUri = photoUri
+                            photoUri = photoUri,
+                            removePhoto = photoRemoved
                         )
                         val success = if (isEditMode) {
                             ContactRepository.updateFullContact(context, editContactId!!, input)
@@ -328,7 +343,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             }
         }
 
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.weight(1f)) {
             item {
                 Column(
                     modifier = Modifier
@@ -376,6 +391,21 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                                 photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                             }
                     )
+                    if (photoUri != null || existingPhotoUri != null) {
+                        Text(
+                            text = stringResource(R.string.remove_photo_label),
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 15.sp,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .clickable {
+                                    photoUri = null
+                                    existingPhotoUri = null
+                                    photoRemoved = true
+                                }
+                        )
+                    }
                 }
             }
 
@@ -542,6 +572,13 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                 ContactField(icon = Icons.Filled.Notes, placeholder = stringResource(R.string.hint_notes), value = notes, onValueChange = { notes = it })
             }
             item { Spacer(modifier = Modifier.height(24.dp)) }
+        }
+
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 2)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 }

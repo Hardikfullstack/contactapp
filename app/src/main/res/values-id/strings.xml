@@ -300,4 +300,5 @@
     <string name="after_call_disable_dialog_title">Matikan layar Setelah Panggilan?</string>
     <string name="after_call_disable_dialog_message">Anda tidak akan melihat tindakan cepat setelah panggilan berakhir. Anda bisa menyalakannya kembali kapan saja.</string>
     <string name="after_call_turn_off">Matikan</string>
+    <string name="ad_is_loading">Iklan sedang dimuat…</string>
 </resources>

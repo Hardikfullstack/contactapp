@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,7 +42,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.ads.rememberBackWithInterstitial
 import com.phone.contacts.ui.theme.primaryAccentColor
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.SpeedDialEntry
 import com.phone.contacts.util.SpeedDialPreferences
 import com.phone.contacts.util.speedDialColorFor
@@ -57,6 +64,12 @@ import com.phone.contacts.util.speedDialKeys
 @Composable
 fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListClick: () -> Unit) {
     val context = LocalContext.current
+    val adConfig by AppConfigStore.config.collectAsState()
+    // Matches the reference app: SpeedDialActivity shows an interstitial on back.
+    val backWithAd = rememberBackWithInterstitial(
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 5),
+        onBack
+    )
     remember { SpeedDialPreferences.initialize(context) }
     val entries by SpeedDialPreferences.entries
     var confirmingKey by remember { mutableStateOf<String?>(null) }
@@ -71,7 +84,7 @@ fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListC
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = backWithAd) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
@@ -83,42 +96,53 @@ fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListC
             )
         }
 
-        Text(
-            text = stringResource(R.string.tap_on_number_hint),
-            color = primaryAccentColor(),
-            fontWeight = FontWeight.Medium,
-            fontSize = 15.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 16.dp)
-        )
+        // Wrapped so this static content stays at the top and the ad below is pinned to the
+        // screen's actual bottom.
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.tap_on_number_hint),
+                color = primaryAccentColor(),
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 16.dp)
+            )
 
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            speedDialKeys.chunked(3).forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    row.forEach { key ->
-                        SpeedDialKey(
-                            dialKey = key,
-                            entry = entries[key],
-                            onClick = { confirmingKey = key }
-                        )
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                speedDialKeys.chunked(3).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        row.forEach { key ->
+                            SpeedDialKey(
+                                dialKey = key,
+                                entry = entries[key],
+                                onClick = { confirmingKey = key }
+                            )
+                        }
                     }
                 }
             }
+
+            Button(
+                onClick = onListClick,
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 18.dp).height(48.dp)
+            ) {
+                Text(stringResource(R.string.speed_dial_list_title), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
-        Button(
-            onClick = onListClick,
-            shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 18.dp).height(48.dp)
-        ) {
-            Text(stringResource(R.string.speed_dial_list_title), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 4)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 

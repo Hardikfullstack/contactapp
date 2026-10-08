@@ -300,4 +300,5 @@
     <string name="after_call_disable_dialog_title">Disattivare la schermata Dopo la chiamata?</string>
     <string name="after_call_disable_dialog_message">Non vedrai più le azioni rapide al termine delle chiamate. Puoi riattivarla in qualsiasi momento.</string>
     <string name="after_call_turn_off">Disattiva</string>
+    <string name="ad_is_loading">Caricamento annuncio…</string>
 </resources>

@@ -300,4 +300,5 @@
     <string name="after_call_disable_dialog_title">कॉल के बाद वाली स्क्रीन बंद करें?</string>
     <string name="after_call_disable_dialog_message">कॉल खत्म होने के बाद आपको त्वरित विकल्प नहीं दिखेंगे। आप इसे कभी भी फिर से चालू कर सकते हैं।</string>
     <string name="after_call_turn_off">बंद करें</string>
+    <string name="ad_is_loading">विज्ञापन लोड हो रहा है…</string>
 </resources>

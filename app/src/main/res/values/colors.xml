@@ -14,4 +14,13 @@
     <!-- Matches Compose's DarkColorScheme.background (ui/theme/Theme.kt) — used by the classic
          date-picker dialog's dark variant, which can't read the Compose color scheme either. -->
     <color name="date_picker_dark_background">#FF121212</color>
+
+    <!-- Native ad views (ads/NativeAdView.kt) - plain Android widgets, not Compose, so they read
+         these as resources instead of MaterialTheme.colorScheme. -->
+    <color name="light_color_gray">#FF82828E</color>
+    <color name="text_title">#FF1B1B24</color>
+    <color name="text_des">#FF464555</color>
+    <color name="native_ad_card_bg">#FFEBEBEF</color>
+    <!-- Contacts' own brand blue, not contactapp's green. -->
+    <color name="native_ad_primary">@color/brand_primary</color>
 </resources>

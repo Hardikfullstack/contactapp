@@ -66,12 +66,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
+import androidx.compose.runtime.collectAsState
 import com.phone.contacts.R
+import com.phone.contacts.ads.AdPlacements
+import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.NativeAdTemplate
+import com.phone.contacts.ads.rememberBackWithInterstitial
 import com.phone.contacts.ui.components.CallWallpaperBackground
 import com.phone.contacts.ui.components.ColorPickerDialog
 import com.phone.contacts.ui.components.CustomSwitch
 import com.phone.contacts.ui.features.call.IncomingCallButton
 import com.phone.contacts.ui.features.call.SlideToAnswer
+import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.BuiltInWallpapers
 import com.phone.contacts.util.CallButtonStylePreferences
 import com.phone.contacts.util.WallpaperPreferences
@@ -84,6 +91,12 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     remember { WallpaperPreferences.initialize(context) }
     val scope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
+    // Matches the reference app: WallpapersActivity shows an interstitial on back.
+    val backWithAd = rememberBackWithInterstitial(
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 6),
+        onBack
+    )
     val selection by WallpaperPreferences.selection
     var showColorPicker by remember { mutableStateOf(false) }
     var previewCandidate by remember { mutableStateOf<WallpaperSelection?>(null) }
@@ -122,7 +135,7 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = backWithAd) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
@@ -185,7 +198,7 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -254,6 +267,13 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
                     )
                 }
             }
+        }
+
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 9)?.let {
+            NativeAdView(
+                adUnitId = it,
+                template = NativeAdTemplate.STRIP
+            )
         }
     }
 
