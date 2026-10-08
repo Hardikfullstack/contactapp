@@ -21,7 +21,7 @@ data class ContactsUiState(
     val isLoading: Boolean = false,
     val showAddContactSheet: Boolean = false,
     val duplicateContact: Contact? = null,
-    val pendingContact: Pair<String, String>? = null,
+    val pendingContact: Triple<String, String, Boolean>? = null,
     val selectedIds: Set<String> = emptySet(),
     val isSelectionMode: Boolean = false
 )
@@ -83,23 +83,23 @@ class ContactsViewModel @Inject constructor(
         }
     }
 
-    fun validateAndSaveContact(name: String, number: String) {
+    fun validateAndSaveContact(name: String, number: String, isFavorite: Boolean = false) {
         viewModelScope.launch {
             val existing = repository.findContactByNumber(number)
             if (existing != null && existing.name.lowercase() != name.lowercase()) {
                 _uiState.value = _uiState.value.copy(
                     duplicateContact = existing,
-                    pendingContact = Pair(name, number)
+                    pendingContact = Triple(name, number, isFavorite)
                 )
             } else {
-                saveContact(name, number)
+                saveContact(name, number, isFavorite)
             }
         }
     }
 
     fun confirmSaveDuplicate() {
         val pending = _uiState.value.pendingContact ?: return
-        saveContact(pending.first, pending.second)
+        saveContact(pending.first, pending.second, pending.third)
         clearDuplicateState()
     }
 
@@ -110,9 +110,10 @@ class ContactsViewModel @Inject constructor(
         )
     }
 
-    private fun saveContact(name: String, number: String) {
+    private fun saveContact(name: String, number: String, isFavorite: Boolean = false) {
         viewModelScope.launch {
             repository.saveContact(name, number)
+            if (isFavorite) repository.toggleFavorite(number, true)
             showAddContactSheet(false)
         }
     }

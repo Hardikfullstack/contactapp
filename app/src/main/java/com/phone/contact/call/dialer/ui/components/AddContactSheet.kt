@@ -1,20 +1,18 @@
 package com.phone.contact.call.dialer.ui.components
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,12 +25,17 @@ import com.phone.contact.call.dialer.ui.theme.PrimaryGreen
 @Composable
 fun AddContactSheet(
     phoneNumber: String,
-    onSave: (String, String) -> Unit,
-    onMoreDetailsClick: (String, String) -> Unit = { _, _ -> },
+    onSave: (String, String, Boolean) -> Unit,
+    onMoreDetailsClick: (String, String, Boolean) -> Unit = { _, _, _ -> },
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var number by remember { mutableStateOf(phoneNumber) }
+    var isFavorite by remember { mutableStateOf(false) }
+    var nameError by remember { mutableStateOf(false) }
+    var numberError by remember { mutableStateOf(false) }
+    val contactSavedMessage = stringResource(R.string.contact_saved)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -59,13 +62,23 @@ fun AddContactSheet(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { /* Toggle Favorite */ }) {
-                        Icon(Icons.Default.StarBorder, contentDescription = stringResource(R.string.favorites), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    IconButton(onClick = { isFavorite = !isFavorite }) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = stringResource(R.string.favorites),
+                            // PrimaryGreen is the app's `primary` color in both the light and dark
+                            // schemes (see Theme.kt), so it reads correctly in both without needing
+                            // a separate white-on-badge treatment.
+                            tint = if (isFavorite) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Button(
                         onClick = {
-                            if (name.isNotBlank() && number.isNotBlank()) {
-                                onSave(name, number)
+                            nameError = name.isBlank()
+                            numberError = number.isBlank()
+                            if (!nameError && !numberError) {
+                                onSave(name, number, isFavorite)
+                                Toast.makeText(context, contactSavedMessage, Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -82,46 +95,35 @@ fun AddContactSheet(
             // Name Input
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = it; if (it.isNotBlank()) nameError = false },
                 label = { Text(stringResource(R.string.name_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                trailingIcon = {
-                    IconButton(onClick = { /* Expand */ }) {
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
-                    }
-                }
+                isError = nameError,
+                supportingText = if (nameError) {
+                    { Text(stringResource(R.string.field_required)) }
+                } else null
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Phone Input or Display
-            if (phoneNumber.isEmpty()) {
-                OutlinedTextField(
-                    value = number,
-                    onValueChange = { number = it },
-                    label = { Text(stringResource(R.string.phone_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
-                    )
-                )
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Public, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(text = phoneNumber, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
-                }
-            }
+            // Phone Input — always editable, whether it started blank (typed manually from this
+            // sheet) or pre-filled from the Keypad's typed number. Previously, a pre-filled number
+            // rendered as a plain, non-editable Text() with no way to correct a mis-dialed digit.
+            OutlinedTextField(
+                value = number,
+                onValueChange = { number = it; if (it.isNotBlank()) numberError = false },
+                label = { Text(stringResource(R.string.phone_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+                ),
+                isError = numberError,
+                supportingText = if (numberError) {
+                    { Text(stringResource(R.string.field_required)) }
+                } else null
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -135,7 +137,7 @@ fun AddContactSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { onMoreDetailsClick(name, number) },
+                onClick = { onMoreDetailsClick(name, number, isFavorite) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.surface else Color(0xFFF3F3F3)

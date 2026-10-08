@@ -473,4 +473,7 @@
     <string name="custom_ringtones_label">Personnalisées</string>
     <string name="spam_numbers_section">Marqués comme spam</string>
     <string name="no_spam_numbers">Aucun numéro marqué comme spam</string>
+    <string name="no_app_to_add_contact">Aucune application trouvée pour ajouter ce numéro à un contact</string>
+    <string name="contact_saved">Contact enregistré</string>
+    <string name="field_required">Ce champ est obligatoire</string>
 </resources>

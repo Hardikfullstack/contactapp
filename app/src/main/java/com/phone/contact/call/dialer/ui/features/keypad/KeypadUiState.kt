@@ -7,6 +7,8 @@ data class KeypadUiState(
     val showAddContactSheet: Boolean = false,
     val duplicateContact: Contact? = null,
     val pendingName: String? = null,
+    val pendingNumber: String? = null,
+    val pendingIsFavorite: Boolean = false,
     val searchResults: List<Contact> = emptyList(),
     val isKeypadSearchEnabled: Boolean = false
 ) {

@@ -1,5 +1,7 @@
 package com.phone.contact.call.dialer.ui.features.keypad
 
+import android.media.AudioManager
+import android.media.ToneGenerator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.phone.contact.call.dialer.domain.model.Contact
@@ -17,6 +19,42 @@ class KeypadViewModel @Inject constructor(
     private val contactRepository: ContactRepository,
     private val preferenceManager: PreferenceManager
 ) : ViewModel() {
+
+    // Lazily created (most sessions use the keypad at least once if it's open at all) and kept
+    // for the ViewModel's lifetime rather than one-shot per tap - constructing a ToneGenerator
+    // repeatedly is comparatively expensive and can introduce an audible delay before the tone
+    // starts. STREAM_DTMF matches what the in-call dialpad/telecom stack uses for the same tones.
+    private val toneGenerator: ToneGenerator by lazy { ToneGenerator(AudioManager.STREAM_DTMF, 75) }
+
+    private fun playKeyTone(digit: String) {
+        val tone = when (digit) {
+            "0" -> ToneGenerator.TONE_DTMF_0
+            "1" -> ToneGenerator.TONE_DTMF_1
+            "2" -> ToneGenerator.TONE_DTMF_2
+            "3" -> ToneGenerator.TONE_DTMF_3
+            "4" -> ToneGenerator.TONE_DTMF_4
+            "5" -> ToneGenerator.TONE_DTMF_5
+            "6" -> ToneGenerator.TONE_DTMF_6
+            "7" -> ToneGenerator.TONE_DTMF_7
+            "8" -> ToneGenerator.TONE_DTMF_8
+            "9" -> ToneGenerator.TONE_DTMF_9
+            "*" -> ToneGenerator.TONE_DTMF_S
+            "#" -> ToneGenerator.TONE_DTMF_P
+            // "+" (long-press on 0) isn't a real DTMF digit - no standard tone for it.
+            else -> return
+        }
+        try {
+            toneGenerator.startTone(tone, 150)
+        } catch (e: Exception) {
+            // Some OEMs throw if the DTMF audio stream is unavailable (e.g. during another call) -
+            // the typed digit itself already landed, so a missing tone isn't worth crashing over.
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        toneGenerator.release()
+    }
 
     private val _uiState = MutableStateFlow(KeypadUiState())
     val uiState: StateFlow<KeypadUiState> = _uiState.asStateFlow()
@@ -55,6 +93,7 @@ class KeypadViewModel @Inject constructor(
     }
 
     fun onDigitPressed(digit: String) {
+        playKeyTone(digit)
         _uiState.value = _uiState.value.copy(
             typedNumber = _uiState.value.typedNumber + digit
         )
@@ -113,38 +152,42 @@ class KeypadViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(showAddContactSheet = show)
     }
 
-    fun validateAndSaveContact(name: String) {
-        val number = _uiState.value.typedNumber
+    fun validateAndSaveContact(name: String, number: String, isFavorite: Boolean = false) {
         viewModelScope.launch {
             val existing = contactRepository.findContactByNumber(number)
             if (existing != null && existing.name.lowercase() != name.lowercase()) {
                 _uiState.value = _uiState.value.copy(
                     duplicateContact = existing,
-                    pendingName = name
+                    pendingName = name,
+                    pendingNumber = number,
+                    pendingIsFavorite = isFavorite
                 )
             } else {
-                saveContact(name)
+                saveContact(name, number, isFavorite)
             }
         }
     }
 
     fun confirmSaveDuplicate() {
         val name = _uiState.value.pendingName ?: return
-        saveContact(name)
+        val number = _uiState.value.pendingNumber ?: _uiState.value.typedNumber
+        saveContact(name, number, _uiState.value.pendingIsFavorite)
         clearDuplicateState()
     }
 
     fun clearDuplicateState() {
         _uiState.value = _uiState.value.copy(
             duplicateContact = null,
-            pendingName = null
+            pendingName = null,
+            pendingNumber = null,
+            pendingIsFavorite = false
         )
     }
 
-    fun saveContact(name: String) {
-        val number = _uiState.value.typedNumber
+    fun saveContact(name: String, number: String, isFavorite: Boolean = false) {
         viewModelScope.launch {
             contactRepository.saveContact(name, number)
+            if (isFavorite) contactRepository.toggleFavorite(number, true)
             showAddContactSheet(false)
             clearAll()
         }

@@ -481,4 +481,7 @@
     <string name="custom_ringtones_label">कस्टम</string>
     <string name="spam_numbers_section">स्पैम के रूप में चिह्नित</string>
     <string name="no_spam_numbers">कोई नंबर स्पैम के रूप में चिह्नित नहीं</string>
+    <string name="no_app_to_add_contact">इस नंबर को किसी संपर्क में जोड़ने के लिए कोई ऐप नहीं मिला</string>
+    <string name="contact_saved">संपर्क सेव हो गया</string>
+    <string name="field_required">यह फ़ील्ड आवश्यक है</string>
 </resources>

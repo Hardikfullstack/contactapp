@@ -17,8 +17,8 @@ android {
         applicationId = "com.phone.contact.call.dialer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.2"
+        versionCode = 5
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

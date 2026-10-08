@@ -350,16 +350,26 @@ fun ContactsScreen(
     if (uiState.showAddContactSheet) {
         AddContactSheet(
             phoneNumber = "",
-            onSave = { name, number ->
-                viewModel.validateAndSaveContact(name, number)
+            onSave = { name, number, isFavorite ->
+                viewModel.validateAndSaveContact(name, number, isFavorite)
             },
-            onMoreDetailsClick = { name, number ->
+            onMoreDetailsClick = { name, number, _ ->
                 val intent = android.content.Intent(android.content.Intent.ACTION_INSERT_OR_EDIT).apply {
                     type = android.provider.ContactsContract.Contacts.CONTENT_ITEM_TYPE
                     putExtra(android.provider.ContactsContract.Intents.Insert.NAME, name)
                     putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, number)
                 }
-                context.startActivity(intent)
+                // Same device-dependent risk as Keypad's "add to contact" shortcut - no app on the
+                // device may handle this intent.
+                try {
+                    context.startActivity(intent)
+                } catch (e: android.content.ActivityNotFoundException) {
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.no_app_to_add_contact),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
                 viewModel.showAddContactSheet(false)
             },
             onDismiss = { viewModel.showAddContactSheet(false) }

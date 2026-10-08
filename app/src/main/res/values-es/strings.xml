@@ -483,4 +483,7 @@
     <string name="custom_ringtones_label">Personalizados</string>
     <string name="spam_numbers_section">Marcados como spam</string>
     <string name="no_spam_numbers">No hay números marcados como spam</string>
+    <string name="no_app_to_add_contact">No se encontró ninguna aplicación para añadir este número a un contacto</string>
+    <string name="contact_saved">Contacto guardado</string>
+    <string name="field_required">Este campo es obligatorio</string>
 </resources>
