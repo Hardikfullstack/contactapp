@@ -77,6 +77,16 @@ fun ContactsTheme(
         fontScale = uncappedDensity.fontScale.coerceAtMost(1.2f)
     )
 
+    val view = androidx.compose.ui.platform.LocalView.current
+    if (!view.isInEditMode) {
+        androidx.compose.runtime.SideEffect {
+            val window = (view.context as android.app.Activity).window
+            val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+
     CompositionLocalProvider(LocalDensity provides cappedDensity, LocalIsDarkTheme provides darkTheme) {
         MaterialTheme(
             colorScheme = colorScheme,

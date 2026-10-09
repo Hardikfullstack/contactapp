@@ -313,4 +313,7 @@
     <string name="maintenance_dialog_desc">We\'re making some improvements right now. Please check back in a little while.</string>
     <string name="maintenance_dialog_exit_button">Exit App</string>
     <string name="ad_is_loading">Ad is loading…</string>
+    <string name="create_new_contact">Create new contact</string>
+    <string name="add_to_a_contact">Add to a contact</string>
+    <string name="send_a_message">Send a message</string>
 </resources>

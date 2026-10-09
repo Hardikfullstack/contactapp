@@ -196,7 +196,7 @@ fun MainNavigation() {
     }
 
     // Native ad shown under the bottom nav bar on all 5 main tabs.
-    val bottomAdUnitId = AdPlacements.adUnitId(maintenanceConfig?.result, AdType.NATIVE, slot = 5)
+    val bottomAdUnitId = AdPlacements.adUnitId(maintenanceConfig?.result, AdType.NATIVE, slot = 2)
 
     val navItems = remember {
         listOf(
@@ -343,8 +343,23 @@ fun MainNavigation() {
             }
             composable(MainScreen.Keypad.route) {
                 KeypadScreen(
-                    onAddNumberClick = { number ->
+                    onCreateNewContact = { number ->
+                        val intent = android.content.Intent(android.content.Intent.ACTION_INSERT_OR_EDIT).apply {
+                            type = android.provider.ContactsContract.Contacts.CONTENT_ITEM_TYPE
+                            putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, number)
+                        }
+                        try {
+                            com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(context, "Cannot open contacts", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onAddToContact = { number ->
                         navController.navigate(MainScreen.AddContact.routeWithPhone(number))
+                    },
+                    onSendMessage = { number ->
+                        com.phone.contacts.util.MessageUtils.sendMessage(context, number)
                     }
                 )
             }

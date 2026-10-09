@@ -135,11 +135,6 @@ fun ContactDetailScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val adConfig by AppConfigStore.config.collectAsState()
-    // Matches the reference app: ViewContactActivity shows an interstitial on back.
-    val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 2),
-        onBack
-    )
     var resolvedContactId by remember(contactId) { mutableStateOf(contactId) }
     var starred by remember(contactId) { mutableStateOf(isStarred) }
     // Both start from the nav arguments and show instantly (no lag, matching the Contacts list) —
@@ -206,7 +201,7 @@ fun ContactDetailScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = backWithAd) {
+            IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -228,10 +223,11 @@ fun ContactDetailScreen(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ContactAvatar(name = currentName, photoUri = currentPhotoUri, size = 96.dp)
+            val displayName = currentName.ifBlank { if (number.isBlank()) stringResource(R.string.unknown) else number }
+            ContactAvatar(name = displayName, photoUri = currentPhotoUri, size = 96.dp)
             Spacer(modifier = Modifier.size(16.dp))
             Text(
-                text = currentName,
+                text = currentName.ifBlank { if (number.isBlank()) stringResource(R.string.unknown) else number },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -435,7 +431,7 @@ fun ContactDetailScreen(
             }
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 4)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 3)?.let {
             com.phone.contacts.ads.NativeAdView(
                 adUnitId = it,
                 template = com.phone.contacts.ads.NativeAdTemplate.SMALL

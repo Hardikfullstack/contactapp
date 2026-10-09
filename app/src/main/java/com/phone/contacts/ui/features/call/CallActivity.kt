@@ -172,6 +172,16 @@ class CallActivity : AppCompatActivity() {
                     if (call == null) finishAndRemoveTask()
                 }
 
+                val adConfig by com.phone.contacts.util.AppConfigStore.config.collectAsState()
+                LaunchedEffect(adConfig) {
+                    com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 20)?.let { primaryId ->
+                        com.phone.contacts.ads.NativeAdCache.preload(context, primaryId)
+                    }
+                    com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 21)?.let { fallbackId ->
+                        com.phone.contacts.ads.NativeAdCache.preload(context, fallbackId)
+                    }
+                }
+
                 val secondaryIsFront = secondaryCall != null &&
                     callState == android.telecom.Call.STATE_HOLDING &&
                     secondaryCallState != android.telecom.Call.STATE_HOLDING &&

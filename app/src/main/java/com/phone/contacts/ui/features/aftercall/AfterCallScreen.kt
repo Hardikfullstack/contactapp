@@ -1,4 +1,4 @@
-﻿package com.phone.contacts.ui.features.aftercall
+package com.phone.contacts.ui.features.aftercall
 
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.CallReceived
@@ -47,7 +47,9 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -254,6 +256,17 @@ fun AfterCallScreen(
                     else -> MoreTab(number, resolvedName ?: number, isSaved)
                 }
             }
+
+            val adConfig by com.phone.contacts.util.AppConfigStore.config.collectAsState()
+            com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 20)?.let { primaryId ->
+                com.phone.contacts.ads.NativeAdView(
+                    adUnitId = primaryId,
+                    template = com.phone.contacts.ads.NativeAdTemplate.MEDIUM,
+                    compact = true,
+                    fallbackAdUnitId = com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 21),
+                    bottomEdge = true
+                )
+            }
         }
     }
 }
@@ -264,8 +277,8 @@ private fun HistoryTab(number: String, name: String, photoUri: String?) {
     var calls by remember { mutableStateOf<List<CallLogItem>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
     LaunchedEffect(number) {
-        // Whole call log (like the Recents screen), not just this number - grouped by the repository.
-        calls = CallLogRepository.fetchCallLogs(context)
+        // Grouped call history just for this specific number
+        calls = CallLogRepository.fetchGroupedCallLogsForNumber(context, number)
         loaded = true
     }
     if (loaded && calls.isEmpty()) {
@@ -281,16 +294,28 @@ private fun HistoryTab(number: String, name: String, photoUri: String?) {
             itemsIndexed(rows, key = { _, item -> item.id }) { index, call ->
                 Column {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                context.startActivity(
+                                    Intent(context, MainActivity::class.java).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                        putExtra(MainActivity.EXTRA_OPEN_NUMBER, call.number)
+                                    }
+                                )
+                            }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val hasName = name.isNotBlank() && name != number
+                        val rowName = call.name ?: call.presentationLabel
+                        val fallback = if (call.number.isEmpty()) context.getString(R.string.unknown) else call.number
+                        val hasName = !rowName.isNullOrBlank() && rowName != call.number
                         Box(
                             modifier = Modifier.size(44.dp).clip(CircleShape).background(acAccent()),
                             contentAlignment = Alignment.Center
                         ) {
-                            val initial = name.trim().take(1).uppercase()
-                            if (hasName && initial.isNotBlank()) {
+                            val initial = (rowName ?: fallback).trim().take(1).uppercase()
+                            if (hasName && initial.isNotBlank() && initial.first().isLetterOrDigit()) {
                                 Text(initial, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             } else {
                                 Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
@@ -300,7 +325,7 @@ private fun HistoryTab(number: String, name: String, photoUri: String?) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 buildString {
-                                    append(if (hasName) name else number)
+                                    append(rowName ?: fallback)
                                     if (call.callCount > 1) append(" (${call.callCount})")
                                 },
                                 color = if (call.type == CallType.MISSED) AcRed else acOnSurface(),
@@ -465,23 +490,39 @@ private fun ReminderTab(number: String, name: String) {
         return
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 12.dp)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp))
-                .background(acAccent())
-                .clickable { creating = true }
-                .padding(vertical = 14.dp),
-            contentAlignment = Alignment.Center
+    if (reminders.isEmpty()) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(stringResource(R.string.after_call_create_reminder), color = Color.White, fontWeight = FontWeight.SemiBold)
+            Icon(
+                imageVector = Icons.Default.NotificationsActive,
+                contentDescription = null,
+                tint = acSecondary().copy(alpha = 0.4f),
+                modifier = Modifier.size(80.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = stringResource(R.string.after_call_no_reminders), fontSize = 16.sp, color = acSecondary())
+            Spacer(modifier = Modifier.height(24.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(93.dp))
+                    .background(acAccent())
+                    .clickable { creating = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = stringResource(R.string.after_call_create_reminder), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        if (reminders.isEmpty()) {
-            Text(stringResource(R.string.after_call_no_reminders), color = acSecondary(), modifier = Modifier.padding(8.dp))
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    } else {
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(reminders, key = { it.id }) { reminder ->
                     Row(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(acSurface()).padding(16.dp),
@@ -508,6 +549,18 @@ private fun ReminderTab(number: String, name: String) {
                         }
                     }
                 }
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp)
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(acAccent())
+                    .clickable { creating = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.after_call_create_reminder), tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
     }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -66,6 +68,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
@@ -594,170 +597,140 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                     }
 
                     if (showLetterIndex) {
-                        var isDragging by remember { mutableStateOf(false) }
-                        var dragFraction by remember { mutableStateOf(0f) }
-                        var dragTargetIndex by remember { mutableStateOf<Int?>(null) }
+                        var currentDragY by remember { mutableStateOf<Float?>(null) }
+                        var clickedChar by remember { mutableStateOf<Char?>(null) }
+                        var alphabetColumnHeight by remember { mutableStateOf(0f) }
+                        val alphabet = remember { (('A'..'Z') + '#').toList() }
 
-                        fun indexForFraction(fraction: Float): Int {
-                            val lastIndex = (groupedEntries.size - 1).coerceAtLeast(0)
-                            val targetSection = (fraction * lastIndex).toInt().coerceIn(0, lastIndex)
-                            return sectionStarts.getOrElse(targetSection) { 0 }
+                        // Clear selected alphabet if user manually scrolls the list
+                        LaunchedEffect(listState.isScrollInProgress) {
+                            if (listState.isScrollInProgress && currentDragY == null) {
+                                clickedChar = null
+                            }
                         }
 
-                        // A single reactive effect instead of launching a new coroutine per drag
-                        // event — detectDragGestures' onDrag fires dozens of times a second, and each
-                        // one racing independently for the list's scroll mutex is what made this feel
-                        // janky. LaunchedEffect cancels the in-flight scroll and starts the new one
-                        // through Compose's own mechanism instead of piling up competing launches.
-                        LaunchedEffect(dragTargetIndex) {
-                            dragTargetIndex?.let { listState.scrollToItem(it) }
+                        val initialToIndex = remember(groupedEntries, sectionStarts) {
+                            val mapping = mutableMapOf<Char, Int>()
+                            groupedEntries.forEachIndexed { i, entry ->
+                                mapping[entry.key] = sectionStarts[i]
+                            }
+                            mapping
                         }
 
-                        val thumbHeight = 72.dp
-                        val displayFraction = if (isDragging) dragFraction else scrollFraction
-                        val thumbOffsetY = headerHeight +
-                            ((maxHeight - headerHeight - thumbHeight) * displayFraction).coerceAtLeast(0.dp)
-
-                        // Alphabet fast-scroll thumb — a fixed-size pill pinned to the right edge.
-                        // Grabbing and dragging it (or the wider invisible strip behind it, for an
-                        // easier target) jumps the list straight to that letter. It's only visible
-                        // while actively scrolling/dragging, fading out 2 seconds after settling.
-                        val thumbAlpha by animateFloatAsState(
-                            targetValue = if (listState.isScrollInProgress || isDragging) 1f else 0f,
-                            animationSpec = tween(
-                                durationMillis = if (listState.isScrollInProgress || isDragging) 150 else 400,
-                                delayMillis = if (listState.isScrollInProgress || isDragging) 0 else 2000
-                            ),
-                            label = "thumb_alpha"
-                        )
-
-                        // Wider invisible drag zone — the visual pill is thin, but ContactsScreen's
-                        // rows have nothing else living out at the edge (unlike Recents' "i"
-                        // button), so this can stay generously wide. It's still this close to the
-                        // OS's edge-swipe back-gesture zone though, so the rect is registered as a
-                        // system-gesture exclusion below rather than relying on inset alone — the
-                        // documented Android fix for edge-adjacent draggable UI like this.
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .fillMaxHeight()
-                                .padding(top = headerHeight, end = 10.dp)
-                                .width(44.dp)
-                                .onGloballyPositioned { coordinates ->
-                                    val bounds = coordinates.boundsInRoot()
-                                    ViewCompat.setSystemGestureExclusionRects(
-                                        view,
-                                        listOf(
-                                            android.graphics.Rect(
-                                                bounds.left.toInt(),
-                                                bounds.top.toInt(),
-                                                bounds.right.toInt(),
-                                                bounds.bottom.toInt()
-                                            )
-                                        )
-                                    )
+                        fun scrollToCharacter(
+                            y: Float,
+                            alphabet: List<Char>,
+                            height: Float,
+                            mapping: Map<Char, Int>,
+                            listState: androidx.compose.foundation.lazy.LazyListState,
+                            scope: kotlinx.coroutines.CoroutineScope
+                        ) {
+                            if (height <= 0f) return
+                            val index = (y / height * alphabet.size).toInt().coerceIn(0, alphabet.size - 1)
+                            val char = alphabet[index]
+                            mapping[char]?.let { targetIndex ->
+                                clickedChar = char
+                                scope.launch {
+                                    listState.scrollToItem(targetIndex)
                                 }
-                                .pointerInput(sectionStarts, groupedEntries) {
+                            }
+                        }
+
+                        // Alphabet Fast Scroller
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = pillTopPadding + 8.dp, end = 4.dp, bottom = 80.dp)
+                                .width(28.dp)
+                                .fillMaxHeight()
+                                .background(MaterialTheme.colorScheme.background, RoundedCornerShape(14.dp))
+                                .onGloballyPositioned { alphabetColumnHeight = it.size.height.toFloat() }
+                                .pointerInput(alphabetColumnHeight, initialToIndex) {
                                     detectDragGestures(
                                         onDragStart = { offset ->
-                                            isDragging = true
-                                            val fraction = (offset.y / size.height.toFloat()).coerceIn(0f, 1f)
-                                            dragFraction = fraction
-                                            dragTargetIndex = indexForFraction(fraction)
+                                            currentDragY = offset.y
+                                            scrollToCharacter(offset.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
                                         },
-                                        onDragEnd = { isDragging = false },
-                                        onDragCancel = { isDragging = false }
-                                    ) { change, _ ->
-                                        change.consume()
-                                        val fraction = (change.position.y / size.height.toFloat()).coerceIn(0f, 1f)
-                                        dragFraction = fraction
-                                        dragTargetIndex = indexForFraction(fraction)
+                                        onDrag = { change, _ ->
+                                            currentDragY = change.position.y
+                                            scrollToCharacter(change.position.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
+                                        },
+                                        onDragEnd = { currentDragY = null },
+                                        onDragCancel = { currentDragY = null }
+                                    )
+                                }
+                                .pointerInput(alphabetColumnHeight, initialToIndex) {
+                                    detectTapGestures { offset ->
+                                        currentDragY = offset.y
+                                        scrollToCharacter(offset.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
+                                    }
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            alphabet.forEachIndexed { index, char ->
+                                val hasContacts = initialToIndex.containsKey(char)
+                                val isSelected = char == clickedChar
+                                
+                                // Distance calculation for fish-eye zoom
+                                val itemCenterY = if (alphabetColumnHeight > 0) {
+                                    (index + 0.5f) * (alphabetColumnHeight / alphabet.size)
+                                } else 0f
+                                
+                                val distance = currentDragY?.let { abs(it - itemCenterY) } ?: Float.MAX_VALUE
+                                val scale by animateFloatAsState(
+                                    targetValue = if (distance < 120f) {
+                                        1f + (1.8f * (1f - (distance / 120f).coerceIn(0f, 1f)))
+                                    } else 1f,
+                                    animationSpec = androidx.compose.animation.core.spring(
+                                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
+                                        stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                                    ),
+                                    label = "scale"
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .graphicsLayer {
+                                            scaleX = scale
+                                            scaleY = scale
+                                            translationX = - (scale - 1f) * 25f // Pop out effect
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = char.toString(),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            color = when {
+                                                isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                hasContacts -> MaterialTheme.colorScheme.primary
+                                                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                            }
+                                        )
                                     }
                                 }
-                        )
-
-                        if (thumbAlpha > 0f) {
-                            // tonalElevation (not a flat surfaceVariant fill) so the thumb reads as
-                            // a distinct raised surface in dark mode too, where surfaceVariant and
-                            // background are otherwise too close in value to tell apart.
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                tonalElevation = 6.dp,
-                                shadowElevation = 2.dp,
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(y = thumbOffsetY)
-                                    .padding(end = 4.dp)
-                                    .size(width = 26.dp, height = thumbHeight)
-                                    .alpha(thumbAlpha)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(vertical = 6.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.KeyboardArrowUp,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Filled.KeyboardArrowDown,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
                             }
                         }
 
-                        // Letter bubble — only while actively dragging the thumb/strip, not during
-                        // a normal list scroll (that's what the top pill below is for).
-                        val bubbleAlpha by animateFloatAsState(
-                            targetValue = if (isDragging && currentSectionLabel.isNotEmpty()) 1f else 0f,
-                            animationSpec = tween(durationMillis = 150),
-                            label = "letter_bubble_alpha"
-                        )
-                        if (bubbleAlpha > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-38).dp, y = thumbOffsetY + (thumbHeight - 44.dp) / 2)
-                                    .size(44.dp)
-                                    .clip(
-                                        RoundedCornerShape(
-                                            topStart = 20.dp,
-                                            bottomStart = 20.dp,
-                                            topEnd = 6.dp,
-                                            bottomEnd = 20.dp
-                                        )
-                                    )
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .alpha(bubbleAlpha),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = currentSectionLabel,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
-                            }
-                        }
-
-                        // Top-center letter pill — driven by the exact same raw condition/timing
-                        // as thumbAlpha (not "thumbAlpha > 0f", which is itself mid-fade and would
-                        // make the pill start its own fade-out late, stacking an extra ~2.4s on
-                        // top before it actually disappeared) so the two visually hide together.
+                        // Top-center letter pill
+                        val displayLabel = clickedChar?.toString() ?: currentSectionLabel
                         val topPillAlpha by animateFloatAsState(
-                            targetValue = if ((listState.isScrollInProgress || isDragging) && currentSectionLabel.isNotEmpty()) 1f else 0f,
+                            targetValue = if ((listState.isScrollInProgress || currentDragY != null) && displayLabel.isNotEmpty()) 1f else 0f,
                             animationSpec = tween(
-                                durationMillis = if (listState.isScrollInProgress || isDragging) 150 else 400,
-                                delayMillis = if (listState.isScrollInProgress || isDragging) 0 else 2000
+                                durationMillis = if (listState.isScrollInProgress || currentDragY != null) 150 else 400,
+                                delayMillis = if (listState.isScrollInProgress || currentDragY != null) 0 else 2000
                             ),
                             label = "top_pill_alpha"
                         )
@@ -772,11 +745,18 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                     .alpha(topPillAlpha)
                             ) {
                                 Text(
-                                    text = currentSectionLabel,
+                                    text = displayLabel,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium,
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                                 )
+                            }
+                        }
+                        
+                        LaunchedEffect(currentDragY) {
+                            if (currentDragY != null) {
+                                kotlinx.coroutines.delay(800)
+                                currentDragY = null
                             }
                         }
                     }
@@ -1090,14 +1070,24 @@ fun ContactAvatar(name: String, photoUri: String?, size: Dp) {
             .background(avatarColorFor(name)),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "#",
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            // Scales with the avatar itself — a 40dp row avatar and a 120dp call-screen
-            // avatar shouldn't show the same fixed-size letter.
-            fontSize = (size.value * 0.4f).sp
-        )
+        val firstChar = name.firstOrNull() ?: '#'
+        if (firstChar.isLetter()) {
+            Text(
+                text = firstChar.uppercaseChar().toString(),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                // Scales with the avatar itself — a 40dp row avatar and a 120dp call-screen
+                // avatar shouldn't show the same fixed-size letter.
+                fontSize = (size.value * 0.4f).sp
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Filled.Person,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(size * 0.6f)
+            )
+        }
         if (photoUri != null) {
             AsyncImage(
                 model = photoUri,

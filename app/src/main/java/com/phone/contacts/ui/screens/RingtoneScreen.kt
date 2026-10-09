@@ -441,7 +441,7 @@ fun RingtoneScreen(
             Text(stringResource(R.string.action_set_ringtone_button), fontWeight = FontWeight.Bold)
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 9)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 17)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

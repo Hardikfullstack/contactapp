@@ -148,7 +148,7 @@ fun SelectSpeedDialContactScreen(dialKey: String, onBack: () -> Unit, onAssigned
             }
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 10)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 19)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

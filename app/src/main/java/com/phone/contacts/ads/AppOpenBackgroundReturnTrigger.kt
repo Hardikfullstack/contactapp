@@ -62,8 +62,8 @@ object AppOpenBackgroundReturnTrigger : Application.ActivityLifecycleCallbacks, 
         // Don't interrupt the first-run language picker.
         if (!OnboardingPreferences.isLanguageSelected(activity)) return
 
-        // Don't interrupt an in-progress call screen with a full-screen ad.
-        if (activity is CallActivity) return
+        // Don't interrupt an in-progress call screen or the after-call screen with a full-screen ad.
+        if (activity is CallActivity || activity is com.phone.contacts.ui.features.aftercall.AfterCallActivity) return
 
         if (AppOpenAdManager.isReady()) {
             AppOpenAdManager.show(activity, unitId) {}

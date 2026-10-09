@@ -64,10 +64,20 @@ class MainActivity : AppCompatActivity() {
         // Remote config is fetched on each app open, like the sibling contactapp does.
         lifecycleScope.launch { com.phone.contacts.util.AppConfigStore.refresh(applicationContext) }
         enableEdgeToEdge()
+        
+        com.phone.contacts.util.AppThemePreferences.initialize(applicationContext)
+        val resolvedDarkAtStart = when (com.phone.contacts.util.AppThemePreferences.themeMode.value) {
+            com.phone.contacts.util.ThemeMode.DARK -> true
+            com.phone.contacts.util.ThemeMode.LIGHT -> false
+            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !resolvedDarkAtStart
+            isAppearanceLightNavigationBars = !resolvedDarkAtStart
+        }
+
         setContent {
-            val themeContext = LocalContext.current
-            remember { AppThemePreferences.initialize(themeContext) }
-            val isDarkTheme = when (AppThemePreferences.themeMode.value) {
+            val isDarkTheme = when (com.phone.contacts.util.AppThemePreferences.themeMode.value) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
                 ThemeMode.SYSTEM_DEFAULT -> isSystemInDarkTheme()

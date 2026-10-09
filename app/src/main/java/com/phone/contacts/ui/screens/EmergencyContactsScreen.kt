@@ -154,7 +154,7 @@ fun EmergencyContactsScreen(onBack: () -> Unit, onAddClick: () -> Unit) {
             }
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 6)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 12)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

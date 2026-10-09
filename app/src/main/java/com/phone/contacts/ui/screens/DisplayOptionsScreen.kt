@@ -148,7 +148,7 @@ fun DisplayOptionsScreen(onBack: () -> Unit) {
             }
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 5)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 11)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

@@ -78,7 +78,7 @@ fun RecycleBinScreen(onBack: () -> Unit) {
     // Matches the reference app: RecycleBinActivity shows an interstitial on back. Shares
     // interstitial_7 with Theme and Blocking — only 7 interstitial slots exist.
     val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 7),
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 4),
         onBack
     )
     var entries by remember { mutableStateOf<List<DeletedContactEntity>>(emptyList()) }

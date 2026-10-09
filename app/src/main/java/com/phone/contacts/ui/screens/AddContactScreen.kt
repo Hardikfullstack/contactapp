@@ -574,7 +574,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 2)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 6)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

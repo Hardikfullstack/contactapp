@@ -97,6 +97,11 @@ object AppConfigStore {
                 native_14 = testNative, native_14_on_off = "on",
                 native_15 = testNative, native_15_on_off = "on",
                 native_16 = testNative, native_16_on_off = "on",
+                native_17 = testNative, native_17_on_off = "on",
+                native_18 = testNative, native_18_on_off = "on",
+                native_19 = testNative, native_19_on_off = "on",
+                native_20 = testNative, native_20_on_off = "on",
+                native_21 = testNative, native_21_on_off = "on",
 
                 banner_1 = testBanner, banner_1_on_off = "on",
                 banner_2 = testBanner, banner_2_on_off = "on",

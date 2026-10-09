@@ -153,7 +153,7 @@ fun ImportExportScreen(onBack: () -> Unit) {
             }
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 3)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 5)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

@@ -61,7 +61,7 @@ fun ThemeScreen(onBack: () -> Unit) {
     val adConfig by AppConfigStore.config.collectAsState()
     // Matches the reference app: ThemeSelectionActivity shows an interstitial on back.
     val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 7),
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 5),
         onBack
     )
     var selectedMode by remember { mutableStateOf(AppThemePreferences.themeMode.value) }
@@ -126,7 +126,7 @@ fun ThemeScreen(onBack: () -> Unit) {
         }
 
         // Matches the reference app: native medium card (not banner) on this screen.
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 2)?.let { adUnitId ->
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 9)?.let { adUnitId ->
             NativeAdView(
                 adUnitId = adUnitId,
                 template = NativeAdTemplate.MEDIUM,

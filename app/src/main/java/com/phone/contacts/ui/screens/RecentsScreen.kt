@@ -873,7 +873,8 @@ private fun CallLogRow(
             Text(
                 text = highlightMatches(
                     buildString {
-                        append(call.name ?: call.presentationLabel ?: call.number)
+                        val fallback = if (call.number.isEmpty()) stringResource(R.string.unknown) else call.number
+                        append(call.name ?: call.presentationLabel ?: fallback)
                         if (call.callCount > 1) append(" (${call.callCount})")
                     },
                     highlightQuery,

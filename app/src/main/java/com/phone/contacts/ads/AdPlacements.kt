@@ -19,7 +19,7 @@ object AdPlacements {
      * is not "on", or the id is blank. The screens that use this decide when to load and show it.
      */
     fun adUnitId(result: AppResult?, type: AdType, slot: Int = 1): String? {
-        if (type == AdType.INTERSTITIAL_ON_BACK) return null
+
         if (result == null || result.google_ads_on_off != "on") return null
         val (adUnitId, switch) = when (type) {
             AdType.BANNER -> banner(result, slot)
@@ -67,6 +67,11 @@ object AdPlacements {
             14 -> result.native_14 to result.native_14_on_off
             15 -> result.native_15 to result.native_15_on_off
             16 -> result.native_16 to result.native_16_on_off
+            17 -> result.native_17 to result.native_17_on_off
+            18 -> result.native_18 to result.native_18_on_off
+            19 -> result.native_19 to result.native_19_on_off
+            20 -> result.native_20 to result.native_20_on_off
+            21 -> result.native_21 to result.native_21_on_off
             else -> null to null
         }
 

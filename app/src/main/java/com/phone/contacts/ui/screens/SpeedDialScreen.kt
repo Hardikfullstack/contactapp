@@ -67,7 +67,7 @@ fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListC
     val adConfig by AppConfigStore.config.collectAsState()
     // Matches the reference app: SpeedDialActivity shows an interstitial on back.
     val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 5),
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 3),
         onBack
     )
     remember { SpeedDialPreferences.initialize(context) }

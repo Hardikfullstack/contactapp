@@ -81,7 +81,7 @@ fun CallButtonStylesScreen(onBack: () -> Unit) {
     val adConfig by AppConfigStore.config.collectAsState()
     // Matches the reference app: CallStyleActivity shows an interstitial on back.
     val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 3),
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 2),
         onBack
     )
     var currentStyle by remember { mutableStateOf(CallButtonStylePreferences.style.value) }

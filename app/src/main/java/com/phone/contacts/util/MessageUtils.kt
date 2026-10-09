@@ -20,7 +20,8 @@ object MessageUtils {
             data = Uri.parse("smsto:$number")
         }
         try {
-            context.startActivity(intent)
+            com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+            context.startActivity(Intent.createChooser(intent, null))
         } catch (e: Exception) {
             Toast.makeText(context, context.getString(R.string.toast_messaging_open_failed), Toast.LENGTH_SHORT).show()
         }

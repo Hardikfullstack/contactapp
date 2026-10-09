@@ -21,6 +21,17 @@ object CallLogRepository {
         groupConsecutiveCalls(rawEntries)
     }
 
+    suspend fun fetchGroupedCallLogsForNumber(context: Context, number: String): List<CallLogItem> = withContext(Dispatchers.IO) {
+        val resolver = context.contentResolver
+        val contactIndex = buildContactNameIndex(resolver)
+        val rawEntries = queryRawCallLogs(context, resolver, contactIndex)
+        val target = normalizeNumber(number)
+        // Group chronologically exactly like Recents, THEN filter for just this number.
+        // This ensures other callers correctly break the consecutive grouping.
+        val grouped = groupConsecutiveCalls(rawEntries)
+        grouped.filter { normalizeNumber(it.number) == target }
+    }
+
     /** Deletes only the single most-recent call log row [id] refers to — a grouped row like
      * "Parth (3)" only removes its latest entry, leaving the earlier calls in the group intact. */
     suspend fun deleteCallLog(context: Context, id: Long) = withContext(Dispatchers.IO) {

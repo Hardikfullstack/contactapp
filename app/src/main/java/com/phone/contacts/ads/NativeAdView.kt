@@ -99,7 +99,9 @@ fun NativeAdView(
     fallbackAdUnitId: String? = null,
     // Fires once the moment this ad unit (and fallbackAdUnitId, if any) fails to load — lets a
     // caller collapse/hide this slot instead of it sitting on the loading skeleton forever.
-    onFailed: () -> Unit = {}
+    onFailed: () -> Unit = {},
+    // Removes the bottom-left and bottom-right corner radii, making the bottom square.
+    bottomEdge: Boolean = false
 ) {
     val context = LocalContext.current
     val isDarkTheme = LocalIsDarkTheme.current
@@ -169,7 +171,7 @@ fun NativeAdView(
     if (ad == null) {
         when (template) {
             NativeAdTemplate.SMALL -> SmallNativeAdSkeleton(modifier, isDarkTheme)
-            NativeAdTemplate.MEDIUM -> MediumNativeAdSkeleton(modifier, compact, isDarkTheme)
+            NativeAdTemplate.MEDIUM -> MediumNativeAdSkeleton(modifier, compact, isDarkTheme, bottomEdge)
             NativeAdTemplate.LARGE -> LargeNativeAdSkeleton(modifier, isDarkTheme)
             NativeAdTemplate.EXIT -> ExitNativeAdSkeleton(modifier, isDarkTheme)
             NativeAdTemplate.STRIP -> StripNativeAdSkeleton(modifier, isDarkTheme)
@@ -203,7 +205,7 @@ fun NativeAdView(
             LayoutInflater.from(ctx).inflate(layoutRes, null) as com.google.android.gms.ads.nativead.NativeAdView
         },
         update = { adView ->
-            applyCardColors(adView, template, isDarkTheme)
+            applyCardColors(adView, template, isDarkTheme, bottomEdge)
             bindNativeAd(adView, ad, template, compact)
         }
     )
@@ -215,7 +217,8 @@ fun NativeAdView(
 private fun applyCardColors(
     adView: com.google.android.gms.ads.nativead.NativeAdView,
     template: NativeAdTemplate,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean,
+    bottomEdge: Boolean = false
 ) {
     val cardBg = if (isDarkTheme) NativeAdCardBgDark else NativeAdCardBgLight
     val titleColor = if (isDarkTheme) NativeAdTextTitleDark else NativeAdTextTitleLight
@@ -227,8 +230,12 @@ private fun applyCardColors(
             // native_ad_medium_card_bg.xml is a rounded-rect <shape>, inflated as a
             // GradientDrawable — mutate() first so recoloring this instance doesn't also
             // recolor every other view still sharing the drawable's default constant state.
-            (adView.background?.mutate() as? android.graphics.drawable.GradientDrawable)
-                ?.setColor(cardBg.toArgb())
+            val drawable = adView.background?.mutate() as? android.graphics.drawable.GradientDrawable
+            drawable?.setColor(cardBg.toArgb())
+            if (bottomEdge && drawable != null) {
+                val r = 16f * adView.resources.displayMetrics.density
+                drawable.cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+            }
         }
         // No card background — EXIT sits on the exit sheet's own surface color
         NativeAdTemplate.EXIT -> {}
@@ -284,12 +291,12 @@ fun SmallNativeAdSkeleton(modifier: Modifier = Modifier, isDarkTheme: Boolean = 
 }
 
 @Composable
-private fun MediumNativeAdSkeleton(modifier: Modifier = Modifier, compact: Boolean = false, isDarkTheme: Boolean = false) {
+private fun MediumNativeAdSkeleton(modifier: Modifier = Modifier, compact: Boolean = false, isDarkTheme: Boolean = false, bottomEdge: Boolean = false) {
     Column(
         modifier = modifier
             .fillMaxWidth()
             .height(if (compact) CompactMediumNativeAdHeight else MediumNativeAdHeight)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(if (bottomEdge) RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp) else RoundedCornerShape(16.dp))
             .background(if (isDarkTheme) NativeAdCardBgDark else NativeAdCardBgLight)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {

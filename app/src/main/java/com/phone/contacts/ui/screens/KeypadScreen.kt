@@ -17,6 +17,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -71,8 +73,15 @@ import com.phone.contacts.util.KeypadTonePreferences
 import com.phone.contacts.util.SpeedDialEntry
 import com.phone.contacts.util.SpeedDialPreferences
 
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.ui.graphics.vector.ImageVector
+
 @Composable
-fun KeypadScreen(onAddNumberClick: (String) -> Unit) {
+fun KeypadScreen(
+    onCreateNewContact: (String) -> Unit,
+    onAddToContact: (String) -> Unit,
+    onSendMessage: (String) -> Unit
+) {
     val context = LocalContext.current
     remember { SpeedDialPreferences.initialize(context) }
     val speedDialEntries by SpeedDialPreferences.entries
@@ -117,9 +126,8 @@ fun KeypadScreen(onAddNumberClick: (String) -> Unit) {
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        // Match list occupies the space above the number display + keypad, scrolling
-        // independently — matches the reference layout where results sit above "123".
-        if (dialedNumber.isNotEmpty() && matches.isNotEmpty()) {
+        // Match list or Action list occupies the space above the number display + keypad.
+        if (dialedNumber.isNotEmpty()) {
             val listState = rememberLazyListState()
             LazyColumn(
                 state = listState,
@@ -127,12 +135,34 @@ fun KeypadScreen(onAddNumberClick: (String) -> Unit) {
                     .weight(1f)
                     .verticalScrollIndicator(listState, MaterialTheme.colorScheme.primary)
             ) {
-                items(matches, key = { it.id }) { contact ->
-                    DialMatchRow(
-                        contact = contact,
-                        onCall = { CallUtils.placeCall(context, contact.number) },
-                        onMessage = { MessageUtils.sendMessage(context, contact.number) }
-                    )
+                item {
+                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        KeypadActionRow(
+                            icon = Icons.Outlined.PersonAdd,
+                            text = stringResource(R.string.create_new_contact),
+                            onClick = { onCreateNewContact(dialedNumber) }
+                        )
+                        KeypadActionRow(
+                            icon = Icons.Outlined.PersonAdd, // Using PersonAdd for "Add to a contact"
+                            flipIcon = true,
+                            text = stringResource(R.string.add_to_a_contact),
+                            onClick = { onAddToContact(dialedNumber) }
+                        )
+                        KeypadActionRow(
+                            icon = Icons.AutoMirrored.Filled.Message,
+                            text = stringResource(R.string.send_a_message),
+                            onClick = { onSendMessage(dialedNumber) }
+                        )
+                    }
+                }
+                if (matches.isNotEmpty()) {
+                    items(matches, key = { it.id }) { contact ->
+                        DialMatchRow(
+                            contact = contact,
+                            onCall = { CallUtils.placeCall(context, contact.number) },
+                            onMessage = { MessageUtils.sendMessage(context, contact.number) }
+                        )
+                    }
                 }
             }
         } else {
@@ -146,7 +176,7 @@ fun KeypadScreen(onAddNumberClick: (String) -> Unit) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(bottom = 12.dp),
+                .padding(bottom = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Always reserved (not conditionally added/removed) so typing the first digit
@@ -165,56 +195,37 @@ fun KeypadScreen(onAddNumberClick: (String) -> Unit) {
                         .height(36.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (dialedNumber.isEmpty()) {
-                        // Blinking cursor — marks where the typed number will land, so the
-                        // reserved empty space doesn't just look like a dead gap.
-                        val infiniteTransition = rememberInfiniteTransition(label = "cursor_blink")
-                        val cursorAlpha by infiniteTransition.animateFloat(
-                            initialValue = 1f,
-                            targetValue = 0f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 600),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "cursor_alpha"
-                        )
+                    val infiniteTransition = rememberInfiniteTransition(label = "cursor_blink")
+                    val cursorAlpha by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 600),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "cursor_alpha"
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        if (dialedNumber.isNotEmpty()) {
+                            Text(
+                                text = dialedNumber,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                         Box(
                             modifier = Modifier
                                 .width(2.dp)
                                 .height(28.dp)
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = cursorAlpha))
                         )
-                    } else {
-                        Text(
-                            text = dialedNumber,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
                     }
                 }
-                Text(
-                    text = stringResource(R.string.add_number_label),
-                    color = if (dialedNumber.isNotEmpty()) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        Color.Transparent
-                    },
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp)
-                        .then(
-                            if (dialedNumber.isNotEmpty()) {
-                                Modifier.clickable { onAddNumberClick(dialedNumber) }
-                            } else {
-                                Modifier
-                            }
-                        )
-                )
             }
 
             DialPad(
@@ -429,3 +440,29 @@ private fun DialMatchRow(contact: Contact, onCall: () -> Unit, onMessage: () -> 
         )
     }
 }
+
+@Composable
+private fun KeypadActionRow(icon: ImageVector, flipIcon: Boolean = false, text: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp).let { if (flipIcon) it.scale(scaleX = -1f, scaleY = 1f) else it }
+        )
+        Spacer(modifier = Modifier.width(20.dp))
+        Text(
+            text = text,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+

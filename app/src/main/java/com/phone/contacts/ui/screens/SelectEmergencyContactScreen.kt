@@ -213,7 +213,7 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
         }
 
         // Shares banner_10 with Select Speed Dial Contact — only 10 banner slots exist.
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 10)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 18)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

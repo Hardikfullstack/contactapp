@@ -1,4 +1,4 @@
-﻿package com.phone.contacts.ui.features.aftercall
+package com.phone.contacts.ui.features.aftercall
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -41,7 +41,10 @@ class AfterCallActivity : AppCompatActivity() {
                     number = number,
                     displayName = name,
                     durationSeconds = durationSeconds,
-                    onFinish = { finishAndRemoveTask() }
+                    onFinish = {
+                        com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+                        finishAndRemoveTask()
+                    }
                 )
             }
         }
@@ -51,7 +54,10 @@ class AfterCallActivity : AppCompatActivity() {
     // after-call screen — it shouldn't linger in the background or task switcher.
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (!isFinishing) finishAndRemoveTask()
+        if (!isFinishing) {
+            com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isAdPaused = true
+            finishAndRemoveTask()
+        }
     }
 
     companion object {

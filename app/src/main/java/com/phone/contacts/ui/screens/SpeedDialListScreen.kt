@@ -126,7 +126,7 @@ fun SpeedDialListScreen(onBack: () -> Unit) {
             }
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 8)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 15)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

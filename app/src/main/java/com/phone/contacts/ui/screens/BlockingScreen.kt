@@ -58,7 +58,7 @@ fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit) {
     // Matches the reference app: BlockedActivity shows an interstitial on back. Shares
     // interstitial_7 with Theme and Recycle Bin — only 7 interstitial slots exist.
     val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 7),
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 4),
         onBack
     )
     var blockUnknownCallers by remember { mutableStateOf(BlockRepository.isBlockUnknownCallersEnabled(context)) }
