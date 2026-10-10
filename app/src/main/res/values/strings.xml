@@ -316,4 +316,12 @@
     <string name="create_new_contact">Create new contact</string>
     <string name="add_to_a_contact">Add to a contact</string>
     <string name="send_a_message">Send a message</string>
+    <string name="toast_invalid_phone_number">Invalid phone number</string>
+    <string name="toast_could_not_initiate_call">Could not initiate call</string>
+    <string name="number_series_title">Number Series</string>
+    <string name="type_starts_with">Number that starts with</string>
+    <string name="type_contains">Number that contains</string>
+    <string name="type_ends_with">Number that ends with</string>
+    <string name="hint_enter_number_series">Enter number series</string>
+    <string name="add_to_blocklist">Add to blocklist</string>
 </resources>

@@ -25,11 +25,11 @@ private const val KEY_BLOCK_UNKNOWN_CALLERS = "block_unknown_callers"
 
 /** Settings > Blocking. Number-blocking itself (block/unblock a specific number) is backed by the
  * system's own [BlockedNumberContract] table, which the telephony stack already honors on its own
- * for any app holding the default-dialer role — no custom CallScreeningService is needed for that
- * part. The "Block calls from unidentified callers" toggle is UI/preference-only here: actually
- * rejecting private/unknown-number calls needs a CallScreeningService the user separately grants
- * the Caller ID & spam role to, which this app doesn't have yet — a materially bigger, separate
- * feature deliberately left out of this pass. */
+ * for any app holding the default-dialer role. The "Block calls from unidentified callers" toggle
+ * read/written here (just a preference) is actually enforced by
+ * [com.phone.contacts.service.ContactsCallScreeningService] — the user needs to separately grant
+ * this app the Caller ID & spam role in system Settings for that service to be bound at all; this
+ * screen doesn't request that role itself. */
 object BlockRepository {
 
     fun isBlockingAvailable(context: Context): Boolean =

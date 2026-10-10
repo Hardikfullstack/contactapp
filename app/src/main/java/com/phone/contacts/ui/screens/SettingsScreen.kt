@@ -92,7 +92,9 @@ fun SettingsScreen(
     onRingtoneClick: () -> Unit,
     onEmergencyContactsClick: () -> Unit,
     onSpeedDialClick: () -> Unit,
-    onQuickResponseClick: () -> Unit
+    onQuickResponseClick: () -> Unit,
+    onPrivacyPolicyClick: () -> Unit,
+    onTermsClick: () -> Unit
 ) {
     val context = LocalContext.current
     remember { KeypadTonePreferences.initialize(context) }
@@ -287,14 +289,14 @@ fun SettingsScreen(
                     icon = Icons.Filled.PrivacyTip,
                     iconBackgroundColor = Color(0xFF455A64),
                     title = stringResource(R.string.privacy_policy_title),
-                    enabled = false
+                    onClick = onPrivacyPolicyClick
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Filled.Description,
                     iconBackgroundColor = Color(0xFF02B98E),
                     title = stringResource(R.string.terms_and_conditions_title),
-                    enabled = false
+                    onClick = onTermsClick
                 )
                 SettingsDivider()
                 SettingsRow(

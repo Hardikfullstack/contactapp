@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -44,14 +45,11 @@ import com.phone.contacts.util.AppConfigStore
 import kotlinx.coroutines.launch
 
 /** Settings > Blocking — matches the reference app's own screen: a toggle for unidentified
- * callers, a "Manage block list" button, and an "Add a number" link. The toggle is a real,
- * persisted preference, but doesn't yet reject calls by itself — actually screening out private/
- * unknown-number calls needs a CallScreeningService this app doesn't have (a separate, bigger
- * feature, not part of this pass); blocking a specific number via [BlockRepository.blockNumber]
- * is real, since the system's own block list is honored by the telephony stack directly. The
- * reference app's "Number Series" range-blocking row is intentionally left out here too. */
+ * callers, a "Number Series" row, a "Manage block list" button, and an "Add a number" link.
+ * [BlockRepository.blockNumber] and the "block unidentified callers" toggle are both enforced by
+ * [com.phone.contacts.service.ContactsCallScreeningService] - see its own doc comment. */
 @Composable
-fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit) {
+fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit, onNumberSeriesClick: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val adConfig by AppConfigStore.config.collectAsState()
@@ -116,6 +114,31 @@ fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit) {
                             blockUnknownCallers = it
                             BlockRepository.setBlockUnknownCallersEnabled(context, it)
                         }
+                    )
+                }
+            }
+
+            Surface(
+                onClick = onNumberSeriesClick,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(15.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.number_series_title),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

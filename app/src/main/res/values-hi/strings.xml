@@ -301,4 +301,12 @@
     <string name="after_call_disable_dialog_message">कॉल खत्म होने के बाद आपको त्वरित विकल्प नहीं दिखेंगे। आप इसे कभी भी फिर से चालू कर सकते हैं।</string>
     <string name="after_call_turn_off">बंद करें</string>
     <string name="ad_is_loading">विज्ञापन लोड हो रहा है…</string>
+    <string name="toast_invalid_phone_number">अमान्य फ़ोन नंबर</string>
+    <string name="toast_could_not_initiate_call">कॉल शुरू नहीं कर सके</string>
+    <string name="number_series_title">नंबर सीरीज़</string>
+    <string name="type_starts_with">नंबर जो इससे शुरू होता है</string>
+    <string name="type_contains">नंबर जिसमें शामिल है</string>
+    <string name="type_ends_with">नंबर जो इस पर समाप्त होता है</string>
+    <string name="hint_enter_number_series">नंबर सीरीज़ दर्ज करें</string>
+    <string name="add_to_blocklist">ब्लॉकलिस्ट में जोड़ें</string>
 </resources>

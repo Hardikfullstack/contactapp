@@ -1,8 +1,13 @@
 package com.phone.contacts.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,10 +37,17 @@ import androidx.compose.material.icons.filled.CallMissed
 import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.AlertDialog
@@ -75,14 +87,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import com.phone.contacts.R
 import com.phone.contacts.ads.AdPlacements
 import com.phone.contacts.ads.AdType
-import com.phone.contacts.ads.BannerAdView
-import com.phone.contacts.ads.rememberBackWithInterstitial
 import com.phone.contacts.data.BlockRepository
 import com.phone.contacts.data.CallLogItem
 import com.phone.contacts.data.CallLogRepository
 import com.phone.contacts.data.CallType
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.data.FullContactData
+import com.phone.contacts.ui.components.contactTypeLabel
 import com.phone.contacts.ui.components.verticalScrollIndicator
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AnalyticsEvents
@@ -117,7 +129,7 @@ private fun normalizeForBlockMatch(number: String): String = number.filter { it.
  * contact id — but the number may still belong to a real saved contact, so it's resolved via
  * [ContactRepository.findContactByNumber] below rather than leaving Favorites/Delete permanently
  * disabled for every Recents-opened contact regardless of whether it's actually saved. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ContactDetailScreen(
     contactId: String?,
@@ -174,6 +186,12 @@ fun ContactDetailScreen(
     val whatsAppInstalled = remember { WhatsAppUtils.isInstalled(context) }
     val whatsAppIcon = ImageVector.vectorResource(id = R.drawable.ic_whatsapp)
     val meetInstalled = remember { GoogleMeetUtils.isInstalled(context) }
+    // Gates the expanded Message/Voice call/Video call via WhatsApp section - unlike
+    // whatsAppInstalled (device-level), this is per-contact: whether THIS contact actually has
+    // WhatsApp (see WhatsAppUtils.hasWhatsAppContact). Re-checked once resolvedContactId resolves.
+    val hasWhatsAppContact = remember(resolvedContactId) {
+        whatsAppInstalled && WhatsAppUtils.hasWhatsAppContact(context, resolvedContactId)
+    }
 
     // Reactive — updates immediately if the number is blocked/unblocked from anywhere (this
     // screen's own menu, or the Blocking settings screen), not just on first composition.
@@ -186,6 +204,15 @@ fun ContactDetailScreen(
 
     LaunchedEffect(number) {
         RecentlyViewedContacts.recordView(context, number)
+    }
+
+    // Email/Address/Website/Important dates/Work info/Relation/Notes - the same extra fields the
+    // Add Contact screen can save (FullContactData / ContactRepository.fetchFullContact), just not
+    // previously surfaced anywhere on this screen.
+    var fullContact by remember(resolvedContactId) { mutableStateOf<FullContactData?>(null) }
+    LaunchedEffect(resolvedContactId, contactUpdated) {
+        val id = resolvedContactId
+        fullContact = if (id != null) ContactRepository.fetchFullContact(context, id) else null
     }
 
     Column(
@@ -269,10 +296,19 @@ fun ContactDetailScreen(
         Spacer(modifier = Modifier.size(20.dp))
 
         Surface(
-            onClick = { CallUtils.placeCall(context, number) },
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .combinedClickable(
+                    onClick = { CallUtils.placeCall(context, number) },
+                    onLongClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.hint_phone_number), number))
+                        Toast.makeText(context, context.getString(R.string.toast_copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                    }
+                )
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -290,7 +326,9 @@ fun ContactDetailScreen(
             }
         }
 
-        if (whatsAppInstalled) {
+        fullContact?.let { details -> ContactExtraDetailsCard(details) }
+
+        if (hasWhatsAppContact) {
             Spacer(modifier = Modifier.size(16.dp))
             Surface(
                 shape = RoundedCornerShape(16.dp),
@@ -418,13 +456,20 @@ fun ContactDetailScreen(
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_share)) },
+                        enabled = resolvedContactId != null,
                         onClick = {
                             moreMenuExpanded = false
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, "$currentName\n$number")
+                            val id = resolvedContactId ?: return@DropdownMenuItem
+                            coroutineScope.launch {
+                                val uris = ContactRepository.getVcardUris(context, listOf(id))
+                                val uri = uris.firstOrNull() ?: return@launch
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/x-vcard"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, shareContactChooserTitle))
                             }
-                            context.startActivity(Intent.createChooser(intent, shareContactChooserTitle))
                         }
                     )
                 }
@@ -672,6 +717,109 @@ private fun DetailActionButton(
             text = label,
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+/** Email/Address/Website/Important dates/Work info/Relation/Notes - the same extra fields the Add
+ * Contact screen can save, now actually shown here too (previously silently dropped from this
+ * screen even when a contact had them). One card, one row per non-blank entry, styled like this
+ * app's own Mobile-number card above it rather than copying the reference app's look. */
+@Composable
+private fun ContactExtraDetailsCard(details: FullContactData) {
+    val dateFormatter = remember { SimpleDateFormat("d MMMM, yyyy", Locale.getDefault()) }
+    // Plain (non-composable) data gathering - the type/customLabel -> localized label resolution
+    // (contactTypeLabel, which reads a string resource) happens below in DetailFieldRow itself,
+    // not here, since this builder lambda isn't guaranteed composable-call-safe.
+    val rows = remember(details) {
+        buildList {
+            details.emails.forEach { email ->
+                if (email.value.isNotBlank()) add(DetailRowData(Icons.Filled.Email, R.string.type_email, email.value, email.type, email.customLabel))
+            }
+            details.addresses.forEach { address ->
+                if (!address.isBlank()) {
+                    val formatted = listOf(address.street, address.city, address.state, address.country, address.postcode)
+                        .filter { it.isNotBlank() }
+                        .joinToString(", ")
+                    add(DetailRowData(Icons.Filled.LocationOn, R.string.type_address, formatted, address.type, address.customLabel))
+                }
+            }
+            details.websites.forEach { website ->
+                if (website.value.isNotBlank()) add(DetailRowData(Icons.Outlined.Language, R.string.type_website, website.value, website.type, website.customLabel))
+            }
+            details.importantDates.forEach { date ->
+                add(DetailRowData(Icons.Outlined.CalendarToday, R.string.type_important_dates, dateFormatter.format(java.util.Date(date.dateMillis)), date.type, date.customLabel))
+            }
+            val workInfo = listOf(details.jobTitle, details.department, details.company).filter { it.isNotBlank() }.joinToString(", ")
+            if (workInfo.isNotBlank()) add(DetailRowData(Icons.Filled.Work, R.string.work_info_label, workInfo, null, ""))
+            details.relations.forEach { relation ->
+                if (relation.value.isNotBlank()) add(DetailRowData(Icons.Outlined.FavoriteBorder, R.string.type_relation, relation.value, relation.type, relation.customLabel))
+            }
+            if (details.notes.isNotBlank()) add(DetailRowData(Icons.Filled.Notes, R.string.hint_notes, details.notes, null, ""))
+        }
+    }
+
+    if (rows.isEmpty()) return
+
+    Spacer(modifier = Modifier.size(16.dp))
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+    ) {
+        Column {
+            rows.forEachIndexed { index, row ->
+                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                DetailFieldRow(row)
+            }
+        }
+    }
+}
+
+private data class DetailRowData(
+    val icon: ImageVector,
+    val categoryLabelRes: Int,
+    val value: String,
+    val type: String?,
+    val customLabel: String
+)
+
+@Composable
+private fun DetailFieldRow(row: DetailRowData) {
+    val subLabel = row.type?.let { type ->
+        if (type == "Custom" && row.customLabel.isNotBlank()) row.customLabel else contactTypeLabel(type)
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(row.categoryLabelRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = primaryAccentColor(),
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.size(2.dp))
+            // Same size/weight/color as the Mobile number's own value text above.
+            Text(
+                text = row.value,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            subLabel?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+        Icon(
+            imageVector = row.icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

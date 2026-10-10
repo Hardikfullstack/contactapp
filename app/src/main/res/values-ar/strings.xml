@@ -301,4 +301,12 @@
     <string name="after_call_disable_dialog_message">لن ترى الإجراءات السريعة بعد انتهاء مكالماتك. يمكنك تفعيلها مرة أخرى في أي وقت.</string>
     <string name="after_call_turn_off">إيقاف</string>
     <string name="ad_is_loading">جارٍ تحميل الإعلان…</string>
+    <string name="toast_invalid_phone_number">رقم هاتف غير صالح</string>
+    <string name="toast_could_not_initiate_call">تعذر بدء المكالمة</string>
+    <string name="number_series_title">سلسلة الأرقام</string>
+    <string name="type_starts_with">رقم يبدأ بـ</string>
+    <string name="type_contains">رقم يحتوي على</string>
+    <string name="type_ends_with">رقم ينتهي بـ</string>
+    <string name="hint_enter_number_series">أدخل سلسلة الأرقام</string>
+    <string name="add_to_blocklist">إضافة إلى قائمة الحظر</string>
 </resources>

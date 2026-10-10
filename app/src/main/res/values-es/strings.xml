@@ -301,4 +301,12 @@
     <string name="after_call_disable_dialog_message">No verás las acciones rápidas cuando termines una llamada. Puedes volver a activarla en cualquier momento.</string>
     <string name="after_call_turn_off">Desactivar</string>
     <string name="ad_is_loading">Cargando anuncio…</string>
+    <string name="toast_invalid_phone_number">Número de teléfono no válido</string>
+    <string name="toast_could_not_initiate_call">No se pudo iniciar la llamada</string>
+    <string name="number_series_title">Serie de números</string>
+    <string name="type_starts_with">Número que empieza con</string>
+    <string name="type_contains">Número que contiene</string>
+    <string name="type_ends_with">Número que termina en</string>
+    <string name="hint_enter_number_series">Introduce la serie de números</string>
+    <string name="add_to_blocklist">Añadir a la lista de bloqueo</string>
 </resources>

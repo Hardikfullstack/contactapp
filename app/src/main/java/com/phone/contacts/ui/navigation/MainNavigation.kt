@@ -66,6 +66,9 @@ import com.phone.contacts.ui.screens.SpeedDialScreen
 import com.phone.contacts.ui.screens.RingtoneScreen
 import com.phone.contacts.ui.screens.ContactDetailScreen
 import com.phone.contacts.ui.screens.ContactsScreen
+import com.phone.contacts.ui.screens.LegalWebViewScreen
+import com.phone.contacts.ui.screens.NumberSeriesScreen
+import com.phone.contacts.ui.screens.SelectFavoriteContactScreen
 import com.phone.contacts.ui.screens.FavoritesScreen
 import com.phone.contacts.ui.screens.ImportExportScreen
 import com.phone.contacts.ui.screens.KeypadScreen
@@ -100,6 +103,7 @@ sealed class MainScreen(
     object DisplayOptions : MainScreen("display_options")
     object EmergencyContacts : MainScreen("emergency_contacts")
     object SelectEmergencyContact : MainScreen("select_emergency_contact")
+    object SelectFavoriteContact : MainScreen("select_favorite_contact")
     object SpeedDial : MainScreen("speed_dial")
     object SpeedDialList : MainScreen("speed_dial_list")
     object QuickResponse : MainScreen("quick_response")
@@ -115,6 +119,11 @@ sealed class MainScreen(
     }
     object Blocking : MainScreen("blocking")
     object ManageBlockList : MainScreen("manage_block_list")
+    object NumberSeries : MainScreen("number_series")
+    object LegalWebView : MainScreen("legal_webview/{type}") {
+        /** [type] is "privacy" or "terms" - resolves which remote-config URL to load. */
+        fun createRoute(type: String) = "legal_webview/$type"
+    }
     object AddContact : MainScreen("add_contact?phone={phone}&editId={editId}") {
         fun routeWithPhone(phone: String) = "add_contact?phone=${Uri.encode(phone)}"
         fun routeForEdit(contactId: String) = "add_contact?phone=&editId=${Uri.encode(contactId)}"
@@ -331,15 +340,12 @@ fun MainNavigation() {
             }
             composable(MainScreen.Favorites.route) {
                 FavoritesScreen(
-                    onAddFavoriteClick = {
-                        navController.navigate(MainScreen.Contacts.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onAddFavoriteClick = { navController.navigate(MainScreen.SelectFavoriteContact.route) },
                     onFavoriteClick = { contact -> navController.navigate(MainScreen.ContactDetail.routeFor(contact)) }
                 )
+            }
+            composable(MainScreen.SelectFavoriteContact.route) {
+                SelectFavoriteContactScreen(onBack = { navController.popBackStack() })
             }
             composable(MainScreen.Keypad.route) {
                 KeypadScreen(
@@ -359,7 +365,7 @@ fun MainNavigation() {
                         navController.navigate(MainScreen.AddContact.routeWithPhone(number))
                     },
                     onSendMessage = { number ->
-                        com.phone.contacts.util.MessageUtils.sendMessage(context, number)
+                        com.phone.contacts.util.MessageUtils.sendMessageWithChooser(context, number)
                     }
                 )
             }
@@ -376,7 +382,18 @@ fun MainNavigation() {
                     onRingtoneClick = { navController.navigate(MainScreen.Ringtone.routeForGlobal()) },
                     onEmergencyContactsClick = { navController.navigate(MainScreen.EmergencyContacts.route) },
                     onSpeedDialClick = { navController.navigate(MainScreen.SpeedDial.route) },
-                    onQuickResponseClick = { navController.navigate(MainScreen.QuickResponse.route) }
+                    onQuickResponseClick = { navController.navigate(MainScreen.QuickResponse.route) },
+                    onPrivacyPolicyClick = { navController.navigate(MainScreen.LegalWebView.createRoute("privacy")) },
+                    onTermsClick = { navController.navigate(MainScreen.LegalWebView.createRoute("terms")) }
+                )
+            }
+            composable(
+                route = MainScreen.LegalWebView.route,
+                arguments = listOf(navArgument("type") { type = NavType.StringType; defaultValue = "privacy" })
+            ) { backStackEntry ->
+                LegalWebViewScreen(
+                    onBack = { navController.popBackStack() },
+                    type = backStackEntry.arguments?.getString("type") ?: "privacy"
                 )
             }
             composable(MainScreen.Language.route) {
@@ -456,11 +473,15 @@ fun MainNavigation() {
             composable(MainScreen.Blocking.route) {
                 BlockingScreen(
                     onBack = { navController.popBackStack() },
-                    onManageBlockList = { navController.navigate(MainScreen.ManageBlockList.route) }
+                    onManageBlockList = { navController.navigate(MainScreen.ManageBlockList.route) },
+                    onNumberSeriesClick = { navController.navigate(MainScreen.NumberSeries.route) }
                 )
             }
             composable(MainScreen.ManageBlockList.route) {
                 ManageBlockListScreen(onBack = { navController.popBackStack() })
+            }
+            composable(MainScreen.NumberSeries.route) {
+                NumberSeriesScreen(onBack = { navController.popBackStack() })
             }
         }
     }

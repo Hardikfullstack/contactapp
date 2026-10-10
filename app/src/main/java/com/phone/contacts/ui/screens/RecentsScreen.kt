@@ -120,8 +120,8 @@ import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.DefaultDialerState
+import com.phone.contacts.util.GoogleMeetUtils
 import com.phone.contacts.util.MessageUtils
-import com.phone.contacts.util.WhatsAppUtils
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -973,7 +973,7 @@ private fun CallLogRow(
             leadingIcon = { Icon(Icons.Filled.Videocam, contentDescription = null) },
             onClick = {
                 showMenu = false
-                WhatsAppUtils.openChat(context, call.number)
+                GoogleMeetUtils.launchMeetCall(context, call.number)
             }
         )
     }

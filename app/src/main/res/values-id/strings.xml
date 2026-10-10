@@ -301,4 +301,12 @@
     <string name="after_call_disable_dialog_message">Anda tidak akan melihat tindakan cepat setelah panggilan berakhir. Anda bisa menyalakannya kembali kapan saja.</string>
     <string name="after_call_turn_off">Matikan</string>
     <string name="ad_is_loading">Iklan sedang dimuat…</string>
+    <string name="toast_invalid_phone_number">Nomor telepon tidak valid</string>
+    <string name="toast_could_not_initiate_call">Tidak dapat memulai panggilan</string>
+    <string name="number_series_title">Seri Nomor</string>
+    <string name="type_starts_with">Nomor yang dimulai dengan</string>
+    <string name="type_contains">Nomor yang mengandung</string>
+    <string name="type_ends_with">Nomor yang diakhiri dengan</string>
+    <string name="hint_enter_number_series">Masukkan seri nomor</string>
+    <string name="add_to_blocklist">Tambahkan ke daftar blokir</string>
 </resources>

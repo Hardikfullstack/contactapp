@@ -66,6 +66,46 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
         AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL, slot = 1)
     )
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isFirstRun = onBack == null
+    val shouldAutoSkip = remember(isFirstRun) {
+        if (isFirstRun) {
+            val systemLocale = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                val localeManager = context.getSystemService(android.app.LocaleManager::class.java)
+                localeManager?.systemLocales?.takeIf { !it.isEmpty }?.get(0)
+                    ?: android.content.res.Resources.getSystem().configuration.locales[0]
+            } else {
+                android.content.res.Resources.getSystem().configuration.locales[0]
+            }
+            supportedLanguages.any { it.code == systemLocale.language }
+        } else {
+            false
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(shouldAutoSkip) {
+        if (shouldAutoSkip) {
+            val systemLocale = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                val localeManager = context.getSystemService(android.app.LocaleManager::class.java)
+                localeManager?.systemLocales?.takeIf { !it.isEmpty }?.get(0)
+                    ?: android.content.res.Resources.getSystem().configuration.locales[0]
+            } else {
+                android.content.res.Resources.getSystem().configuration.locales[0]
+            }
+            val matchCode = supportedLanguages.find { it.code == systemLocale.language }?.code ?: "en"
+            
+            val locales = LocaleListCompat.forLanguageTags(matchCode)
+            AppCompatDelegate.setApplicationLocales(locales)
+            
+            showDoneInterstitial { onDone() }
+        }
+    }
+
+    if (shouldAutoSkip) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -117,7 +157,10 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
                 NativeAdView(
                     adUnitId = adUnitId,
                     template = NativeAdTemplate.MEDIUM,
-                    modifier = Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.navigationBarsPadding(),
+                     compact = true,
+                    bottomEdge = true,
+                    
                 )
             }
         },
