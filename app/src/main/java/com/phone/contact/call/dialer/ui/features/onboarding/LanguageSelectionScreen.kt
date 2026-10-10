@@ -127,7 +127,6 @@ fun LanguageSelectionScreen(
     // stays null for first-run callers), so the only way forward is picking a language and Done.
     BackHandler(enabled = isFirstRun) {}
 
-    // Shares the same AppConfigViewModel instance created in MainActivity (Activity-scoped).
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
     val adConfig by appConfigViewModel.appResponse.collectAsState()
     val bigNativeAdUnitId = adConfig?.result?.let { result ->
@@ -140,6 +139,50 @@ fun LanguageSelectionScreen(
         if (result.google_ads_on_off == "on" && result.interstitial_1_on_off == "on") {
             result.interstitial_1?.takeIf { it.isNotBlank() }
         } else null
+    }
+
+    val shouldAutoSkip = remember(isFirstRun) {
+        if (isFirstRun) {
+            val systemLocale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val localeManager = context.getSystemService(LocaleManager::class.java)
+                localeManager?.systemLocales?.takeIf { !it.isEmpty }?.get(0)
+                    ?: android.content.res.Resources.getSystem().configuration.locales[0]
+            } else {
+                android.content.res.Resources.getSystem().configuration.locales[0]
+            }
+            languageCodes.contains(systemLocale.language)
+        } else {
+            false
+        }
+    }
+
+    LaunchedEffect(shouldAutoSkip) {
+        if (shouldAutoSkip) {
+            val applyLanguageAndNavigate = {
+                AnalyticsManager.logEventWithAction(
+                    "language_changed",
+                    "LanguageSelectionScreen",
+                    "system",
+                    mapOf("first_run" to isFirstRun, "auto_skipped" to true)
+                )
+                onDone()
+            }
+            val activity = context as? Activity
+            if (activity != null && languageDoneInterstitialAdUnitId != null &&
+                InterstitialAdManager.isReady(languageDoneInterstitialAdUnitId)
+            ) {
+                InterstitialAdManager.show(activity, languageDoneInterstitialAdUnitId) {
+                    applyLanguageAndNavigate()
+                }
+            } else {
+                applyLanguageAndNavigate()
+            }
+        }
+    }
+
+    if (shouldAutoSkip) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface))
+        return
     }
 
     Column(
