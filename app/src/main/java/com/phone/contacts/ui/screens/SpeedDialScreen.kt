@@ -152,15 +152,21 @@ fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListC
             title = { Text(stringResource(R.string.speed_dial_title)) },
             text = { Text(stringResource(R.string.set_speed_dial_number_message)) },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmingKey = null
-                    onAssignClick(key)
-                }) {
+                TextButton(
+                    onClick = {
+                        confirmingKey = null
+                        onAssignClick(key)
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) {
                     Text(stringResource(R.string.action_set))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingKey = null }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { confirmingKey = null },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

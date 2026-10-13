@@ -1,5 +1,7 @@
 package com.phone.contacts.ui.features.call
 
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.telecom.Call
 import android.telecom.CallAudioState
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,7 +13,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,6 +64,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -506,7 +511,7 @@ fun CallScreen(
                             icon = Icons.AutoMirrored.Filled.Message,
                             label = stringResource(R.string.action_message),
                             active = false,
-                            onClick = { MessageUtils.sendMessage(context, number) }
+                            onClick = { MessageUtils.sendMessageWithChooser(context, number) }
                         )
                     }
 
@@ -822,8 +827,28 @@ private val dtmfKeys = listOf(
     "*" to "", "0" to "+", "#" to ""
 )
 
+private fun dtmfToneFor(digit: Char): Int = when (digit) {
+    '0' -> ToneGenerator.TONE_DTMF_0
+    '1' -> ToneGenerator.TONE_DTMF_1
+    '2' -> ToneGenerator.TONE_DTMF_2
+    '3' -> ToneGenerator.TONE_DTMF_3
+    '4' -> ToneGenerator.TONE_DTMF_4
+    '5' -> ToneGenerator.TONE_DTMF_5
+    '6' -> ToneGenerator.TONE_DTMF_6
+    '7' -> ToneGenerator.TONE_DTMF_7
+    '8' -> ToneGenerator.TONE_DTMF_8
+    '9' -> ToneGenerator.TONE_DTMF_9
+    '*' -> ToneGenerator.TONE_DTMF_S
+    '#' -> ToneGenerator.TONE_DTMF_P
+    else -> ToneGenerator.TONE_DTMF_0
+}
+
 /** Live DTMF tones sent straight to the active call — distinct from KeypadScreen's own dial pad,
- * which appends digits to dial rather than sending tones on an already-connected call. */
+ * which appends digits to dial rather than sending tones on an already-connected call.
+ * [onDigit]/[onDigitReleased] only reach the network side (Call.playDtmfTone/stopDtmfTone) - that
+ * makes the far end (e.g. an IVR) hear the tone correctly, but Android's telecom stack doesn't
+ * loop it back to this device's own earpiece/speaker, so without a local ToneGenerator here too,
+ * pressing a key was completely silent on this end despite working correctly for the other party. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DtmfKeypadSheet(
@@ -832,19 +857,54 @@ private fun DtmfKeypadSheet(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
+    // Pure visual feedback for what's been pressed this sheet session - sending the tone (onDigit)
+    // already works without this, but with nothing on screen showing what you typed, it reads as
+    // if pressing a key does nothing at all.
+    var enteredDigits by remember { mutableStateOf("") }
+    // STREAM_VOICE_CALL (not STREAM_MUSIC, which KeypadScreen's own dial pad uses) - during an
+    // active call this routes the local beep through whatever audio path the call itself is using
+    // (earpiece/speaker/Bluetooth), matching a stock dialer's in-call DTMF feedback.
+    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_VOICE_CALL, ToneGenerator.MAX_VOLUME * 4 / 5) }
+    DisposableEffect(Unit) { onDispose { toneGenerator.release() } }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
+            Text(
+                text = enteredDigits,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(bottom = 16.dp),
+                textAlign = TextAlign.Center
+            )
             dtmfKeys.chunked(3).forEach { row ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     row.forEach { (digit, letters) ->
-                        DtmfKey(digit = digit, letters = letters, onDigit = onDigit, onReleased = onDigitReleased)
+                        DtmfKey(
+                            digit = digit,
+                            letters = letters,
+                            onDigit = { pressed ->
+                                enteredDigits += pressed
+                                // startTone(type) with no duration plays until stopTone() - held
+                                // for exactly as long as the key is pressed, same as a real phone.
+                                toneGenerator.startTone(dtmfToneFor(pressed))
+                                onDigit(pressed)
+                            },
+                            onReleased = {
+                                toneGenerator.stopTone()
+                                onDigitReleased()
+                            }
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.size(12.dp))

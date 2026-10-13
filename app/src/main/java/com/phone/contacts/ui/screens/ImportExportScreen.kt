@@ -1,5 +1,6 @@
 package com.phone.contacts.ui.screens
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -72,8 +73,10 @@ fun ImportExportScreen(onBack: () -> Unit) {
             importStatus = context.getString(R.string.toast_contacts_importing)
             coroutineScope.launch {
                 val count = ContactRepository.importContactsFromVcf(context, uri)
-                importStatus = if (count > 0) context.getString(R.string.toast_contacts_imported) else context.getString(R.string.toast_import_failed)
+                val resultMessage = if (count > 0) context.getString(R.string.toast_contacts_imported) else context.getString(R.string.toast_import_failed)
+                importStatus = resultMessage
                 isImporting = false
+                Toast.makeText(context, resultMessage, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -83,8 +86,10 @@ fun ImportExportScreen(onBack: () -> Unit) {
             exportStatus = context.getString(R.string.toast_contacts_exporting)
             coroutineScope.launch {
                 val count = ContactRepository.exportContactsToVcf(context, uri)
-                exportStatus = if (count > 0) context.getString(R.string.toast_contacts_exported) else context.getString(R.string.toast_export_failed)
+                val resultMessage = if (count > 0) context.getString(R.string.toast_contacts_exported) else context.getString(R.string.toast_export_failed)
+                exportStatus = resultMessage
                 isExporting = false
+                Toast.makeText(context, resultMessage, Toast.LENGTH_SHORT).show()
             }
         }
     }

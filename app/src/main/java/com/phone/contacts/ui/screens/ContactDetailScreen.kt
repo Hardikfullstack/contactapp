@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallMissed
 import androidx.compose.material.icons.filled.CallReceived
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -51,6 +53,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -499,19 +502,25 @@ fun ContactDetailScreen(
             title = { Text(stringResource(R.string.move_to_bin_title)) },
             text = { Text(stringResource(R.string.move_to_bin_message)) },
             confirmButton = {
-                TextButton(onClick = {
-                    val id = resolvedContactId
-                    showDeleteConfirm = false
-                    if (id != null) {
-                        coroutineScope.launch {
-                            ContactRepository.moveToRecycleBin(context, listOf(Contact(id = id, name = currentName, number = number, photoUri = currentPhotoUri)))
-                            onDeleted()
+                TextButton(
+                    onClick = {
+                        val id = resolvedContactId
+                        showDeleteConfirm = false
+                        if (id != null) {
+                            coroutineScope.launch {
+                                ContactRepository.moveToRecycleBin(context, listOf(Contact(id = id, name = currentName, number = number, photoUri = currentPhotoUri)))
+                                onDeleted()
+                            }
                         }
-                    }
-                }) { Text(stringResource(R.string.action_move_to_bin)) }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.action_move_to_bin)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { showDeleteConfirm = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -521,9 +530,20 @@ fun ContactDetailScreen(
 private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val adConfig by AppConfigStore.config.collectAsState()
     var calls by remember { mutableStateOf<List<CallLogItem>>(emptyList()) }
     var showClearDialog by remember { mutableStateOf(false) }
+    var showDeleteSelectedDialog by remember { mutableStateOf(false) }
     var isNumberBlocked by remember { mutableStateOf(false) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var selectedCallIds by remember { mutableStateOf(setOf<Long>()) }
+
+    // Deselecting the last remaining entry exits selection mode automatically, same as the main
+    // Contacts list's own selection mode.
+    fun toggleCallSelection(id: Long) {
+        selectedCallIds = if (selectedCallIds.contains(id)) selectedCallIds - id else selectedCallIds + id
+        if (selectedCallIds.isEmpty()) selectionMode = false
+    }
 
     LaunchedEffect(number) {
         calls = CallLogRepository.fetchCallHistoryForNumber(context, number)
@@ -545,85 +565,133 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-                Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
+            if (selectionMode) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { selectionMode = false; selectedCallIds = emptySet() }) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Cancel selection",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
                     Text(
-                        text = name,
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "${selectedCallIds.size}",
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f).padding(start = 4.dp)
                     )
-                    if (isNumberBlocked) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Block,
-                                contentDescription = null,
-                                tint = blockedCallColor(),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.blocked_label),
-                                color = blockedCallColor(),
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(start = 4.dp)
-                            )
-                        }
+                    IconButton(onClick = { showDeleteSelectedDialog = true }, enabled = selectedCallIds.isNotEmpty()) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Delete selected",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
                     }
                 }
-                IconButton(onClick = { showClearDialog = true }, enabled = calls.isNotEmpty()) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Clear call history",
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-            }
-
-            if (calls.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.no_calls_with_number),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScrollIndicator(listState, primaryAccentColor())
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    grouped.forEach { (dateLabel, callsInGroup) ->
-                        item {
-                            Text(
-                                text = dateLabel,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                            )
-                        }
-                        items(callsInGroup, key = { it.id }) { call ->
-                            Column {
-                                CallHistoryDetailRow(call, isBlocked = isNumberBlocked)
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 68.dp),
-                                    thickness = 1.dp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        if (isNumberBlocked) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.Block,
+                                    contentDescription = null,
+                                    tint = blockedCallColor(),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.blocked_label),
+                                    color = blockedCallColor(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 4.dp)
                                 )
                             }
                         }
                     }
+                    IconButton(onClick = { showClearDialog = true }, enabled = calls.isNotEmpty()) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Clear call history",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
                 }
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                if (calls.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(R.string.no_calls_with_number),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScrollIndicator(listState, primaryAccentColor())
+                    ) {
+                        grouped.forEach { (dateLabel, callsInGroup) ->
+                            item {
+                                Text(
+                                    text = dateLabel,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                )
+                            }
+                            items(callsInGroup, key = { it.id }) { call ->
+                                Column {
+                                    CallHistoryDetailRow(
+                                        call = call,
+                                        isBlocked = isNumberBlocked,
+                                        selectionMode = selectionMode,
+                                        isSelected = selectedCallIds.contains(call.id),
+                                        onClick = { if (selectionMode) toggleCallSelection(call.id) },
+                                        onLongPress = {
+                                            selectionMode = true
+                                            selectedCallIds = selectedCallIds + call.id
+                                        }
+                                    )
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 68.dp),
+                                        thickness = 1.dp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 21)?.let {
+                com.phone.contacts.ads.NativeAdView(
+                    adUnitId = it,
+                    template = com.phone.contacts.ads.NativeAdTemplate.STRIP
+                )
             }
         }
     }
@@ -635,21 +703,63 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
             title = { Text(stringResource(R.string.clear_call_history_title)) },
             text = { Text(stringResource(R.string.clear_history_confirm_message, number)) },
             confirmButton = {
-                TextButton(onClick = {
-                    showClearDialog = false
-                    coroutineScope.launch {
-                        CallLogRepository.deleteAllForNumber(context, number)
-                        AnalyticsManager.logEventWithAction(
-                            AnalyticsEvents.CALL_HISTORY_CLEARED,
-                            AnalyticsEvents.SCREEN_CONTACT_DETAIL,
-                            AnalyticsEvents.ACTION_SUCCESS
-                        )
-                        calls = emptyList()
-                    }
-                }) { Text(stringResource(R.string.action_delete)) }
+                TextButton(
+                    onClick = {
+                        showClearDialog = false
+                        coroutineScope.launch {
+                            CallLogRepository.deleteAllForNumber(context, number)
+                            AnalyticsManager.logEventWithAction(
+                                AnalyticsEvents.CALL_HISTORY_CLEARED,
+                                AnalyticsEvents.SCREEN_CONTACT_DETAIL,
+                                AnalyticsEvents.ACTION_SUCCESS
+                            )
+                            calls = emptyList()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { showClearDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+
+    if (showDeleteSelectedDialog) {
+        val selectedCount = selectedCallIds.size
+        AlertDialog(
+            onDismissRequest = { showDeleteSelectedDialog = false },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            title = { Text(stringResource(R.string.delete_call_logs_title, selectedCount)) },
+            text = { Text(stringResource(R.string.delete_call_logs_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteSelectedDialog = false
+                        val idsToDelete = selectedCallIds
+                        coroutineScope.launch {
+                            CallLogRepository.deleteCallLogs(context, idsToDelete)
+                            AnalyticsManager.logEventWithAction(
+                                AnalyticsEvents.CALL_HISTORY_CLEARED,
+                                AnalyticsEvents.SCREEN_CONTACT_DETAIL,
+                                AnalyticsEvents.ACTION_SUCCESS
+                            )
+                            calls = calls.filterNot { idsToDelete.contains(it.id) }
+                            selectedCallIds = emptySet()
+                            selectionMode = false
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.action_delete)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteSelectedDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -874,8 +984,16 @@ private fun BottomBarAction(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CallHistoryDetailRow(call: CallLogItem, isBlocked: Boolean = false) {
+private fun CallHistoryDetailRow(
+    call: CallLogItem,
+    isBlocked: Boolean = false,
+    selectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {},
+    onLongPress: () -> Unit = {}
+) {
     // A number currently on the block list always reads as "Blocked" here, regardless of what
     // CallLog itself recorded for this specific call — see CallLogRow's identical reasoning.
     val displayType = if (isBlocked) CallType.BLOCKED else call.type
@@ -903,28 +1021,51 @@ private fun CallHistoryDetailRow(call: CallLogItem, isBlocked: Boolean = false) 
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background)
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(34.dp), contentAlignment = Alignment.Center) {
-            if (displayType == CallType.OTHER) {
-                Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = badgeColor, modifier = Modifier.size(20.dp))
-            } else {
-                Icon(
-                    imageVector = Icons.Filled.Call,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-                if (directionIcon != null) {
+        if (selectionMode) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
                     Icon(
-                        imageVector = directionIcon,
+                        imageVector = Icons.Filled.Check,
                         contentDescription = null,
-                        tint = badgeColor,
-                        modifier = Modifier
-                            .offset(y = (-7).dp, x = 7.dp)
-                            .size(13.dp)
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(18.dp)
                     )
+                }
+            }
+        } else {
+            Box(modifier = Modifier.size(34.dp), contentAlignment = Alignment.Center) {
+                if (displayType == CallType.OTHER) {
+                    Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = badgeColor, modifier = Modifier.size(20.dp))
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Call,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    if (directionIcon != null) {
+                        Icon(
+                            imageVector = directionIcon,
+                            contentDescription = null,
+                            tint = badgeColor,
+                            modifier = Modifier
+                                .offset(y = (-7).dp, x = 7.dp)
+                                .size(13.dp)
+                        )
+                    }
                 }
             }
         }

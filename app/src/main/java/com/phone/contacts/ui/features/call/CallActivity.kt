@@ -174,10 +174,10 @@ class CallActivity : AppCompatActivity() {
 
                 val adConfig by com.phone.contacts.util.AppConfigStore.config.collectAsState()
                 LaunchedEffect(adConfig) {
-                    com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 20)?.let { primaryId ->
+                    com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 22)?.let { primaryId ->
                         com.phone.contacts.ads.NativeAdCache.preload(context, primaryId)
                     }
-                    com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 21)?.let { fallbackId ->
+                    com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 23)?.let { fallbackId ->
                         com.phone.contacts.ads.NativeAdCache.preload(context, fallbackId)
                     }
                 }

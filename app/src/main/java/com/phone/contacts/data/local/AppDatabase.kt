@@ -11,7 +11,7 @@ import androidx.room.RoomDatabase
  * bump; fallbackToDestructiveMigration() just recreates the database on any version change. */
 @Database(
     entities = [DeletedContactEntity::class, EmergencyContactEntity::class, ReminderEntity::class, NumberSeriesEntity::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

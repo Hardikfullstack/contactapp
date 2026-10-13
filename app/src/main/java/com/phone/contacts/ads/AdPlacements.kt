@@ -4,12 +4,13 @@ import com.phone.contacts.data.model.AppResult
 
 /**
  * The ad types the app can show. Each one reads its unit id and on/off switch from the remote
- * config (AppResult), by numbered slot: banner_1..10, native_1..16, interstitial_1..7, app_open_1..4.
+ * config (AppResult), by numbered slot: banner_1..10, native_1..23, interstitial_1..7, app_open_1..4.
  *
  * INTERSTITIAL_ON_BACK is an interstitial shown when the user leaves a screen (back / exit). It uses
- * the interstitial slots too, so pass the slot the panel gives that placement.
- *
- * Nothing in the app calls this yet — no ad type is wired to a screen.
+ * the interstitial slots too, so pass the slot the panel gives that placement. It also has its own
+ * master switch - the panel's `back_click` field - separate from each slot's own on/off flag:
+ * matches the reference "Messages" app, where `back_click == "1"` has to be true before any
+ * back-navigation interstitial shows at all, regardless of the individual slot's switch.
  */
 enum class AdType { BANNER, NATIVE, INTERSTITIAL, INTERSTITIAL_ON_BACK, APP_OPEN }
 
@@ -21,6 +22,7 @@ object AdPlacements {
     fun adUnitId(result: AppResult?, type: AdType, slot: Int = 1): String? {
 
         if (result == null || result.google_ads_on_off != "on") return null
+        if (type == AdType.INTERSTITIAL_ON_BACK && result.back_click != "1") return null
         val (adUnitId, switch) = when (type) {
             AdType.BANNER -> banner(result, slot)
             AdType.NATIVE -> native(result, slot)
@@ -72,6 +74,8 @@ object AdPlacements {
             19 -> result.native_19 to result.native_19_on_off
             20 -> result.native_20 to result.native_20_on_off
             21 -> result.native_21 to result.native_21_on_off
+            22 -> result.native_22 to result.native_22_on_off
+            23 -> result.native_23 to result.native_23_on_off
             else -> null to null
         }
 

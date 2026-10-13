@@ -11,6 +11,13 @@ data class Language(
  * Supported languages, in display order. [code] is a BCP-47 language tag consumed directly by
  * AppCompatDelegate.setApplicationLocales(). Keep this list in sync with res/values-<code>/ when
  * translations are added — an entry here with no matching values folder just falls back to English.
+ *
+ * Indonesian is the one exception: its [code] here is the correct modern BCP-47 tag "id", but its
+ * resource folder is res/values-in/, not res/values-id/ - java.util.Locale has always normalized
+ * language "id" to the old ISO 639 code "in" internally, so Android's runtime resource lookup for
+ * a Locale built from "id" resolves against an "in"-qualified folder, not an "id"-qualified one. A
+ * values-id/ folder present alongside is silently never matched (falls back to English), which is
+ * exactly what happened here before this was caught.
  */
 val supportedLanguages: List<Language> = listOf(
     Language("en", "🇺🇸", "English", "English"),

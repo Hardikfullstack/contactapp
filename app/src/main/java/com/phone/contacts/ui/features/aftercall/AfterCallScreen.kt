@@ -258,12 +258,12 @@ fun AfterCallScreen(
             }
 
             val adConfig by com.phone.contacts.util.AppConfigStore.config.collectAsState()
-            com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 20)?.let { primaryId ->
+            com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 22)?.let { primaryId ->
                 com.phone.contacts.ads.NativeAdView(
                     adUnitId = primaryId,
                     template = com.phone.contacts.ads.NativeAdTemplate.MEDIUM,
                     compact = true,
-                    fallbackAdUnitId = com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 21),
+                    fallbackAdUnitId = com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.NATIVE, slot = 23),
                     bottomEdge = true
                 )
             }

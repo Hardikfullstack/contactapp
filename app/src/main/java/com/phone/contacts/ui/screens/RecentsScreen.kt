@@ -65,6 +65,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.ViewCompat
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -116,6 +117,7 @@ import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.util.AppConfigStore
 import androidx.compose.runtime.collectAsState
 import com.phone.contacts.ui.components.highlightMatches
+import com.phone.contacts.ui.components.PermissionRequiredDialog
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.CallUtils
@@ -157,19 +159,47 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
         )
     }
+    // Gates PermissionRequiredDialog below - true once the system dialog has actually been asked
+    // and answered (either way), so that popup only shows after a real denial, not stacked on top
+    // of the system dialog's own first-ever appearance.
+    var hasRequestedCallLogPermission by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         hasCallLogPermission = results[Manifest.permission.READ_CALL_LOG] == true
+        hasRequestedCallLogPermission = true
     }
     LaunchedEffect(Unit) {
         if (!hasCallLogPermission) {
             permissionLauncher.launch(arrayOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_CONTACTS))
         }
     }
+    // Catches a permission revoked from Settings while this screen was already open (backgrounded,
+    // not recreated) - hasCallLogPermission otherwise only reflects whatever it was the one time
+    // its remember{} block first ran.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val stillGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
+                if (hasCallLogPermission && !stillGranted) hasRequestedCallLogPermission = true
+                hasCallLogPermission = stillGranted
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     if (!hasCallLogPermission) {
         PlaceholderScreen(title = stringResource(R.string.recents))
+        if (hasRequestedCallLogPermission) {
+            PermissionRequiredDialog(
+                message = stringResource(R.string.permission_required_message, stringResource(R.string.recents)),
+                permissions = listOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_CONTACTS),
+                onRequestPermission = {
+                    permissionLauncher.launch(arrayOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_CONTACTS))
+                }
+            )
+        }
         return
     }
 
@@ -655,7 +685,7 @@ private fun SearchField(
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onBackground
                     ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    cursorBrush = SolidColor(primaryAccentColor()),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -878,7 +908,7 @@ private fun CallLogRow(
                         if (call.callCount > 1) append(" (${call.callCount})")
                     },
                     highlightQuery,
-                    MaterialTheme.colorScheme.primary
+                    primaryAccentColor()
                 ),
                 color = if (displayType == CallType.MISSED) badgeColor else MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Medium
@@ -987,16 +1017,22 @@ private fun CallLogRow(
             title = { Text(stringResource(R.string.clear_call_history_title)) },
             text = { Text(stringResource(R.string.clear_history_confirm_message, call.number)) },
             confirmButton = {
-                TextButton(onClick = {
-                    showDeleteConfirm = false
-                    coroutineScope.launch {
-                        CallLogRepository.deleteAllForNumber(context, call.number)
-                        onDeleted()
-                    }
-                }) { Text(stringResource(R.string.action_delete)) }
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        coroutineScope.launch {
+                            CallLogRepository.deleteAllForNumber(context, call.number)
+                            onDeleted()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { showDeleteConfirm = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

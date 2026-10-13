@@ -341,9 +341,10 @@ fun SettingsScreen(
 
 private fun shareApp(context: Context) {
     val packageName = context.packageName
+    val playStoreLink = "https://play.google.com/store/apps/details?id=$packageName"
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=$packageName")
+        putExtra(Intent.EXTRA_TEXT, context.getString(R.string.share_app_message, playStoreLink))
     }
     context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_app_title)))
 }

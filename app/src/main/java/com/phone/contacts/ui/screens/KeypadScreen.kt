@@ -273,11 +273,14 @@ private fun playDialFeedback(toneGenerator: ToneGenerator, vibrator: Vibrator?, 
     if (KeypadTonePreferences.enabled.value) {
         toneGenerator.startTone(tone, 150)
     }
+    // 15ms at amplitude 40 was too short/weak to actually be felt on most hardware - many haptic
+    // motors have a 20-30ms spin-up latency before they produce any perceptible pulse at all, so
+    // that call technically ran but the vibration was effectively invisible to the user.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        vibrator?.vibrate(VibrationEffect.createOneShot(15, 40))
+        vibrator?.vibrate(VibrationEffect.createOneShot(25, 80))
     } else {
         @Suppress("DEPRECATION")
-        vibrator?.vibrate(15)
+        vibrator?.vibrate(25)
     }
 }
 
@@ -389,7 +392,7 @@ private fun DialButton(digit: String, letters: String, speedDialName: String?, o
                 text = speedDialName ?: letters.ifEmpty { " " },
                 fontSize = 10.sp,
                 fontWeight = if (speedDialName != null) FontWeight.Bold else FontWeight.Normal,
-                color = if (speedDialName != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (speedDialName != null) primaryAccentColor() else MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 1.5.sp,
                 maxLines = 1
             )

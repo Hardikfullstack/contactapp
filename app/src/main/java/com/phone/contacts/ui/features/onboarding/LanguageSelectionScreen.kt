@@ -52,52 +52,58 @@ import com.phone.contacts.ads.AdPlacements
 import com.phone.contacts.ads.AdType
 import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.ads.NativeAdView
-import com.phone.contacts.ads.rememberInterstitialTrigger
 import com.phone.contacts.util.AppConfigStore
+
+/** The device's own system locale language code (e.g. "hi"), independent of any per-app language
+ * override. Used both to auto-skip this screen on first run when the system locale is already
+ * supported, and as the fallback for which radio button to pre-select when no explicit per-app
+ * override has ever been made. */
+private fun systemLocaleCode(context: android.content.Context): String {
+    val systemLocale = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        val localeManager = context.getSystemService(android.app.LocaleManager::class.java)
+        localeManager?.systemLocales?.takeIf { !it.isEmpty }?.get(0)
+            ?: android.content.res.Resources.getSystem().configuration.locales[0]
+    } else {
+        android.content.res.Resources.getSystem().configuration.locales[0]
+    }
+    return systemLocale.language
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
-    var selectedCode by remember { mutableStateOf(currentAppLanguageCode().ifEmpty { "en" }) }
-    val adConfig by AppConfigStore.config.collectAsState()
-    // Matches the reference app: an interstitial after tapping Done (not on back — this screen's
-    // own back-arrow just leaves without saving, no ad for that).
-    val showDoneInterstitial = rememberInterstitialTrigger(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL, slot = 1)
-    )
-
     val context = androidx.compose.ui.platform.LocalContext.current
+    // currentAppLanguageCode() only reflects an explicit per-app override (one actually made via
+    // AppCompatDelegate.setApplicationLocales) - it's empty whenever no such override was ever
+    // made, even if the app's own text is showing in a non-English language purely because the
+    // device's system locale matches it (ordinary Android resource-qualifier fallback, unrelated
+    // to AppCompat's per-app override). Falling back to a hardcoded "en" in that case picked the
+    // wrong radio button on this screen for exactly that device: Hindi system locale, Hindi app
+    // text, but "English" shown as selected here. Fall back to the device's own system locale
+    // instead, same as the first-run auto-skip below already does.
+    var selectedCode by remember {
+        mutableStateOf(
+            currentAppLanguageCode().ifEmpty {
+                val sysCode = systemLocaleCode(context)
+                supportedLanguages.find { it.code == sysCode }?.code ?: "en"
+            }
+        )
+    }
+    val adConfig by AppConfigStore.config.collectAsState()
+
     val isFirstRun = onBack == null
     val shouldAutoSkip = remember(isFirstRun) {
-        if (isFirstRun) {
-            val systemLocale = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                val localeManager = context.getSystemService(android.app.LocaleManager::class.java)
-                localeManager?.systemLocales?.takeIf { !it.isEmpty }?.get(0)
-                    ?: android.content.res.Resources.getSystem().configuration.locales[0]
-            } else {
-                android.content.res.Resources.getSystem().configuration.locales[0]
-            }
-            supportedLanguages.any { it.code == systemLocale.language }
-        } else {
-            false
-        }
+        isFirstRun && supportedLanguages.any { it.code == systemLocaleCode(context) }
     }
 
     androidx.compose.runtime.LaunchedEffect(shouldAutoSkip) {
         if (shouldAutoSkip) {
-            val systemLocale = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                val localeManager = context.getSystemService(android.app.LocaleManager::class.java)
-                localeManager?.systemLocales?.takeIf { !it.isEmpty }?.get(0)
-                    ?: android.content.res.Resources.getSystem().configuration.locales[0]
-            } else {
-                android.content.res.Resources.getSystem().configuration.locales[0]
-            }
-            val matchCode = supportedLanguages.find { it.code == systemLocale.language }?.code ?: "en"
-            
+            val matchCode = supportedLanguages.find { it.code == systemLocaleCode(context) }?.code ?: "en"
+
             val locales = LocaleListCompat.forLanguageTags(matchCode)
             AppCompatDelegate.setApplicationLocales(locales)
-            
-            showDoneInterstitial { onDone() }
+
+            onDone()
         }
     }
 
@@ -134,7 +140,7 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
                         onClick = {
                             val locales = LocaleListCompat.forLanguageTags(selectedCode)
                             AppCompatDelegate.setApplicationLocales(locales)
-                            showDoneInterstitial { onDone() }
+                            onDone()
                         },
                         modifier = Modifier.padding(end = 8.dp),
                         shape = RoundedCornerShape(20.dp),

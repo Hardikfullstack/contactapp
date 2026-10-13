@@ -46,6 +46,23 @@ object CallLogRepository {
         }
     }
 
+    /** Deletes exactly the rows [ids] refer to - used by the Call History screen's selection-mode
+     * delete, where the user picked specific entries rather than clearing the whole history. */
+    suspend fun deleteCallLogs(context: Context, ids: Collection<Long>): Boolean = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext true
+        try {
+            val placeholders = ids.joinToString(",") { "?" }
+            context.contentResolver.delete(
+                CallLog.Calls.CONTENT_URI,
+                "${CallLog.Calls._ID} IN ($placeholders)",
+                ids.map { it.toString() }.toTypedArray()
+            )
+            true
+        } catch (_: SecurityException) {
+            false
+        }
+    }
+
     /** Every individual call to/from [number] (not collapsed like [fetchCallLogs]'s
      * "(3)"-style grouping) — used by the contact detail screen's own Call History page, where
      * each call needs its own timestamp and duration shown. */

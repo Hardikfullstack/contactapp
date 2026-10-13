@@ -176,8 +176,7 @@ fun CallButtonStylesScreen(onBack: () -> Unit) {
             }
         }
 
-        // Shares banner_5 with Display Options — only 10 banner slots exist.
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 5)?.let {
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 14)?.let {
             NativeAdView(
                 adUnitId = it,
                 template = NativeAdTemplate.STRIP

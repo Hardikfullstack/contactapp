@@ -550,13 +550,17 @@ object ContactRepository {
         var company = ""
         var notes = ""
 
-        context.contentResolver.query(
-            ContactsContract.Data.CONTENT_URI,
-            null,
-            "${ContactsContract.Data.CONTACT_ID} = ?",
-            arrayOf(contactId),
+        try {
+            context.contentResolver.query(
+                ContactsContract.Data.CONTENT_URI,
+                null,
+                "${ContactsContract.Data.CONTACT_ID} = ?",
+                arrayOf(contactId),
+                null
+            )
+        } catch (_: SecurityException) {
             null
-        )?.use { cursor ->
+        }?.use { cursor ->
             val mimeIndex = cursor.getColumnIndex(ContactsContract.Data.MIMETYPE)
             while (cursor.moveToNext()) {
                 when (cursor.getString(mimeIndex)) {

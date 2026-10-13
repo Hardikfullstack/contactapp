@@ -103,22 +103,33 @@ object BlockRepository {
         awaitClose { resolver.unregisterContentObserver(observer) }
     }.flowOn(Dispatchers.IO)
 
+    /** [BlockedNumberContract] only serves the system, the default dialer, or the default SMS app
+     * - [canCurrentUserBlockNumbers] above only says the *user* is allowed to block numbers at
+     * all, not that this *app* currently holds one of those roles. If another app takes over as
+     * default dialer while a [blockedNumbersFlow] collector is still active (e.g. this screen was
+     * open in the background when the role changed), the next query - from the ContentObserver
+     * firing, or just this flow being collected again on resume - throws SecurityException
+     * instead of returning normally, which crashed the app before this was caught here. */
     private fun queryBlockedNumbers(context: Context): List<BlockedNumberEntry> {
         val entries = mutableListOf<BlockedNumberEntry>()
-        context.contentResolver.query(
-            BlockedNumberContract.BlockedNumbers.CONTENT_URI,
-            arrayOf(
-                BlockedNumberContract.BlockedNumbers.COLUMN_ID,
-                BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER
-            ),
-            null, null, null
-        )?.use { cursor ->
-            val idIndex = cursor.getColumnIndexOrThrow(BlockedNumberContract.BlockedNumbers.COLUMN_ID)
-            val numberIndex = cursor.getColumnIndexOrThrow(BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER)
-            while (cursor.moveToNext()) {
-                val number = cursor.getString(numberIndex) ?: continue
-                entries.add(BlockedNumberEntry(cursor.getLong(idIndex), number, lookupDisplayName(context, number)))
+        try {
+            context.contentResolver.query(
+                BlockedNumberContract.BlockedNumbers.CONTENT_URI,
+                arrayOf(
+                    BlockedNumberContract.BlockedNumbers.COLUMN_ID,
+                    BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER
+                ),
+                null, null, null
+            )?.use { cursor ->
+                val idIndex = cursor.getColumnIndexOrThrow(BlockedNumberContract.BlockedNumbers.COLUMN_ID)
+                val numberIndex = cursor.getColumnIndexOrThrow(BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER)
+                while (cursor.moveToNext()) {
+                    val number = cursor.getString(numberIndex) ?: continue
+                    entries.add(BlockedNumberEntry(cursor.getLong(idIndex), number, lookupDisplayName(context, number)))
+                }
             }
+        } catch (_: SecurityException) {
+            // No longer the default dialer/SMS app - nothing to report until that changes back.
         }
         return entries
     }

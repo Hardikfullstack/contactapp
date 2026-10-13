@@ -51,13 +51,17 @@ object AppConfigStore {
      *   pinned to "1.0.0", so the update prompt never fires for this build.
      * - extra_data_1_on_off (maintenance kill switch) is forced "on", so the maintenance screen
      *   blocks the app.
+     * - back_click (the back-navigation interstitial's master switch) is forced "0", so no
+     *   back-interstitial shows anywhere for now, regardless of the panel's value or the
+     *   individual slots' own on/off flags.
      * Delete these overrides (and the call site in refresh) to let the panel control them again. */
     private fun pinLocalVersion(response: AppResponse): AppResponse {
         val result = response.result ?: return response
         return response.copy(
             result = result.copy(
                 extra_data_2_message = "1.0.0",
-                extra_data_1_on_off = "off"
+                extra_data_1_on_off = "off",
+                back_click = "0"
             )
         )
     }
@@ -102,6 +106,8 @@ object AppConfigStore {
                 native_19 = testNative, native_19_on_off = "on",
                 native_20 = testNative, native_20_on_off = "on",
                 native_21 = testNative, native_21_on_off = "on",
+                native_22 = testNative, native_22_on_off = "on",
+                native_23 = testNative, native_23_on_off = "on",
 
                 banner_1 = testBanner, banner_1_on_off = "on",
                 banner_2 = testBanner, banner_2_on_off = "on",

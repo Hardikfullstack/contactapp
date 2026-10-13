@@ -61,7 +61,7 @@ fun ThemeScreen(onBack: () -> Unit) {
     val adConfig by AppConfigStore.config.collectAsState()
     // Matches the reference app: ThemeSelectionActivity shows an interstitial on back.
     val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 5),
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 1),
         onBack
     )
     var selectedMode by remember { mutableStateOf(AppThemePreferences.themeMode.value) }

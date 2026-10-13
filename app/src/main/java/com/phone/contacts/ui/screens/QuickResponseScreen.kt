@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,6 +45,7 @@ import com.phone.contacts.ads.AdType
 import com.phone.contacts.ads.NativeAdView
 import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.ads.rememberBackWithInterstitial
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.QuickResponsePreferences
 import com.phone.contacts.util.QuickResponseTemplate
@@ -78,7 +80,7 @@ fun QuickResponseScreen(onBack: () -> Unit) {
             }
         },
         bottomBar = {
-            AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 7)?.let {
+            AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 16)?.let {
                 NativeAdView(
                     adUnitId = it,
                     template = NativeAdTemplate.STRIP
@@ -199,12 +201,19 @@ private fun TemplateEditDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(text) }, enabled = text.isNotBlank()) {
+            TextButton(
+                onClick = { onConfirm(text) },
+                enabled = text.isNotBlank(),
+                colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+            ) {
                 Text(confirmLabel)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+            ) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

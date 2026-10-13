@@ -140,6 +140,8 @@
     <string name="no_calls_with_number">No calls with this number</string>
     <string name="clear_call_history_title">Clear Call History</string>
     <string name="clear_history_confirm_message">Clear all %1$s\'s history?</string>
+    <string name="delete_call_logs_title">Delete %1$d call logs?</string>
+    <string name="delete_call_logs_message">These call log entries will be permanently deleted.</string>
     <string name="date_today">Today</string>
     <string name="date_yesterday">Yesterday</string>
     <string name="call_type_incoming">Incoming</string>
@@ -173,10 +175,12 @@
     <string name="terms_and_conditions_title">Terms and conditions</string>
     <string name="rate_us_title">Rate us</string>
     <string name="share_app_title">Share app</string>
+    <string name="share_app_message">Check out Contacts — a smart dialer with call themes, speed dial, call reminders and more! Download it here: %1$s</string>
     <string name="feedback_title">Feedback</string>
     <string name="select_all_label">Select all</string>
     <string name="clear_recently_added_label">Clear Recently Added</string>
     <string name="permission_required_title">Permission required</string>
+    <string name="permission_required_message">%1$s needs this permission to work. Grant it to continue, or turn it on from Settings if you\'ve already denied it.</string>
     <string name="move_multiple_to_bin_title">Move %1$d contacts to Bin?</string>
     <string name="move_multiple_to_bin_message">These contacts will be removed from all your synced devices.</string>
     <string name="no_favorites_yet">No favorites yet</string>

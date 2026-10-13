@@ -26,6 +26,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.phone.contacts.ui.theme.primaryAccentColor
 
 /** Shared, fixed screen title used by top-level tabs — kept outside any scrolling container so it
  * never scrolls away, matching RecentsScreen's plain title. Not used by Keypad, which has no
@@ -95,7 +96,7 @@ fun ScreenSearchField(
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onBackground
                     ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    cursorBrush = SolidColor(primaryAccentColor()),
                     modifier = Modifier.fillMaxWidth()
                 )
             }

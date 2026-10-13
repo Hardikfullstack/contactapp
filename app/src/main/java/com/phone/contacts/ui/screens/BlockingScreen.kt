@@ -175,7 +175,7 @@ fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit, onNumberSe
         // for the Language screen, native_2 for Theme. STRIP is the edge-to-edge 50/50 media-left
         // /text-right layout (no card background) - intentionally flush to the screen edges, not
         // padded like MEDIUM.
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 3)?.let { adUnitId ->
+        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 13)?.let { adUnitId ->
             NativeAdView(
                 adUnitId = adUnitId,
                 template = NativeAdTemplate.STRIP
@@ -214,11 +214,15 @@ private fun AddBlockedNumberDialog(onDismiss: () -> Unit, onBlock: (String) -> U
         confirmButton = {
             androidx.compose.material3.TextButton(
                 onClick = { onBlock(number.trim()) },
-                enabled = number.isNotBlank()
+                enabled = number.isNotBlank(),
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
             ) { Text(stringResource(R.string.action_block)) }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            androidx.compose.material3.TextButton(
+                onClick = onDismiss,
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+            ) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

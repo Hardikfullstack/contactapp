@@ -60,6 +60,7 @@ import com.phone.contacts.ads.rememberBackWithInterstitial
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.data.local.DeletedContactEntity
 import com.phone.contacts.ui.components.CustomSwitch
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AppConfigStore
 import kotlinx.coroutines.launch
 
@@ -309,18 +310,24 @@ fun RecycleBinScreen(onBack: () -> Unit) {
             title = { Text(stringResource(R.string.restore_contacts_title)) },
             text = { Text(stringResource(R.string.restore_contacts_message)) },
             confirmButton = {
-                TextButton(onClick = {
-                    val toRestore = entries.filter { it.id in selectedIds }
-                    showRestoreConfirm = false
-                    selectionMode = false
-                    selectedIds = emptySet()
-                    coroutineScope.launch {
-                        toRestore.forEach { ContactRepository.restoreFromRecycleBin(context, it) }
-                    }
-                }) { Text(stringResource(R.string.action_restore)) }
+                TextButton(
+                    onClick = {
+                        val toRestore = entries.filter { it.id in selectedIds }
+                        showRestoreConfirm = false
+                        selectionMode = false
+                        selectedIds = emptySet()
+                        coroutineScope.launch {
+                            toRestore.forEach { ContactRepository.restoreFromRecycleBin(context, it) }
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.action_restore)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRestoreConfirm = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { showRestoreConfirm = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -341,7 +348,10 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                 }) { Text(stringResource(R.string.action_remove), color = Color(0xFFE0413B)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { showDeleteConfirm = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -359,7 +369,10 @@ fun RecycleBinScreen(onBack: () -> Unit) {
                 }) { Text(stringResource(R.string.action_remove), color = Color(0xFFE0413B)) }
             },
             dismissButton = {
-                TextButton(onClick = { showEmptyBinConfirm = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { showEmptyBinConfirm = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

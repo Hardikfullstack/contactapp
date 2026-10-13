@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -62,6 +63,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,11 +97,13 @@ import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.ListRowSkeleton
+import com.phone.contacts.ui.components.PermissionRequiredDialog
 import com.phone.contacts.ui.components.ScreenSearchField
 import com.phone.contacts.ui.components.ScreenTitleBar
 import com.phone.contacts.ui.components.highlightMatches
 import com.phone.contacts.ui.components.verticalScrollIndicator
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.DefaultDialerState
 import com.phone.contacts.util.DisplayOptionsPreferences
 import com.phone.contacts.util.RecentlyAddedContacts
@@ -132,9 +136,16 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
         )
     }
+    // Gates PermissionRequiredDialog below - true once the system dialog has actually been asked
+    // and answered (either way), so that popup only shows after a real denial, not stacked on top
+    // of the system dialog's own first-ever appearance.
+    var hasRequestedPermission by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> hasPermission = granted }
+    ) { granted ->
+        hasPermission = granted
+        hasRequestedPermission = true
+    }
     LaunchedEffect(Unit) {
         if (!hasPermission) permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
     }
@@ -162,6 +173,12 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewedRefreshTrigger++
                 DefaultDialerState.refresh(context)
+                // Catches a permission revoked from Settings while this screen was already open
+                // (backgrounded, not recreated) - hasPermission otherwise only reflects whatever
+                // it was the one time this remember{} block first ran.
+                val stillGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+                if (hasPermission && !stillGranted) hasRequestedPermission = true
+                hasPermission = stillGranted
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -178,6 +195,13 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
     var selectionMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    // Deselecting the last remaining contact exits selection mode automatically, instead of
+    // leaving the selection top bar showing "0" with nothing left to act on.
+    fun toggleSelection(id: String) {
+        selectedIds = if (selectedIds.contains(id)) selectedIds - id else selectedIds + id
+        if (selectedIds.isEmpty()) selectionMode = false
+    }
 
     val filtered = remember(allContacts, query) {
         if (query.isBlank()) {
@@ -267,7 +291,12 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                     title = stringResource(R.string.contacts),
                     trailingAction = {
                         Box {
-                            IconButton(onClick = { menuExpanded = true }) {
+                            // Explicit 32dp (matches the title text's own line height) instead of
+                            // IconButton's 48dp default - at 48dp this icon was the tallest child
+                            // in the title row, making the whole row (and everything below it:
+                            // search field, filter chips) sit ~16dp lower than Recents' title,
+                            // which has no trailing icon to inflate its row height the same way.
+                            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(32.dp)) {
                                 Icon(
                                     imageVector = Icons.Filled.MoreVert,
                                     contentDescription = "More options",
@@ -319,6 +348,13 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
 
             if (!hasPermission) {
                 PlaceholderScreen(title = stringResource(R.string.permission_required_title))
+                if (hasRequestedPermission) {
+                    PermissionRequiredDialog(
+                        message = stringResource(R.string.permission_required_message, stringResource(R.string.contacts)),
+                        permissions = listOf(Manifest.permission.READ_CONTACTS),
+                        onRequestPermission = { permissionLauncher.launch(Manifest.permission.READ_CONTACTS) }
+                    )
+                }
             } else if (isLoading) {
                 ScreenSearchField(
                     value = query,
@@ -506,13 +542,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                             selectionMode = selectionMode,
                                             isSelected = selectedIds.contains(contact.id),
                                             onClick = { onContactClick(contact) },
-                                            onToggleSelect = {
-                                                selectedIds = if (selectedIds.contains(contact.id)) {
-                                                    selectedIds - contact.id
-                                                } else {
-                                                    selectedIds + contact.id
-                                                }
-                                            },
+                                            onToggleSelect = { toggleSelection(contact.id) },
                                             onLongPress = {
                                                 selectionMode = true
                                                 selectedIds = selectedIds + contact.id
@@ -544,13 +574,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                             selectionMode = selectionMode,
                                             isSelected = selectedIds.contains(contact.id),
                                             onClick = { onContactClick(contact) },
-                                            onToggleSelect = {
-                                                selectedIds = if (selectedIds.contains(contact.id)) {
-                                                    selectedIds - contact.id
-                                                } else {
-                                                    selectedIds + contact.id
-                                                }
-                                            },
+                                            onToggleSelect = { toggleSelection(contact.id) },
                                             onLongPress = {
                                                 selectionMode = true
                                                 selectedIds = selectedIds + contact.id
@@ -574,13 +598,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                         selectionMode = selectionMode,
                                         isSelected = selectedIds.contains(contact.id),
                                         onClick = { onContactClick(contact) },
-                                        onToggleSelect = {
-                                            selectedIds = if (selectedIds.contains(contact.id)) {
-                                                selectedIds - contact.id
-                                            } else {
-                                                selectedIds + contact.id
-                                            }
-                                        },
+                                        onToggleSelect = { toggleSelection(contact.id) },
                                         onLongPress = {
                                             selectionMode = true
                                             selectedIds = selectedIds + contact.id
@@ -616,6 +634,16 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                             }
                             mapping
                         }
+                        // Read inside the gesture handlers below via these instead of as pointerInput
+                        // keys - alphabetColumnHeight/initialToIndex can change on nearly every layout
+                        // pass right after this screen opens (contacts still loading, header heights
+                        // still settling), and keying pointerInput on them tore down and rebuilt the
+                        // gesture detector mid-tap, which is what made the very first tap after
+                        // opening land on the wrong letter (a few rows above where you actually
+                        // touched). pointerInput(Unit) sets the detector up once and never restarts
+                        // it; these always hand it the latest value instead.
+                        val latestColumnHeight = rememberUpdatedState(alphabetColumnHeight)
+                        val latestToIndex = rememberUpdatedState(initialToIndex)
 
                         fun scrollToCharacter(
                             y: Float,
@@ -645,24 +673,24 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                 .fillMaxHeight()
                                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(14.dp))
                                 .onGloballyPositioned { alphabetColumnHeight = it.size.height.toFloat() }
-                                .pointerInput(alphabetColumnHeight, initialToIndex) {
+                                .pointerInput(Unit) {
                                     detectDragGestures(
                                         onDragStart = { offset ->
                                             currentDragY = offset.y
-                                            scrollToCharacter(offset.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
+                                            scrollToCharacter(offset.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
                                         },
                                         onDrag = { change, _ ->
                                             currentDragY = change.position.y
-                                            scrollToCharacter(change.position.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
+                                            scrollToCharacter(change.position.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
                                         },
                                         onDragEnd = { currentDragY = null },
                                         onDragCancel = { currentDragY = null }
                                     )
                                 }
-                                .pointerInput(alphabetColumnHeight, initialToIndex) {
+                                .pointerInput(Unit) {
                                     detectTapGestures { offset ->
                                         currentDragY = offset.y
-                                        scrollToCharacter(offset.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
+                                        scrollToCharacter(offset.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
                                     }
                                 },
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -715,7 +743,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                             ),
                                             color = when {
                                                 isSelected -> MaterialTheme.colorScheme.onPrimary
-                                                hasContacts -> MaterialTheme.colorScheme.primary
+                                                hasContacts -> primaryAccentColor()
                                                 else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                                             }
                                         )
@@ -820,18 +848,24 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
             title = { Text(if (count == 1) stringResource(R.string.move_to_bin_title) else stringResource(R.string.move_multiple_to_bin_title, count)) },
             text = { Text(if (count == 1) stringResource(R.string.move_to_bin_message) else stringResource(R.string.move_multiple_to_bin_message)) },
             confirmButton = {
-                TextButton(onClick = {
-                    val toDelete = allContacts.filter { it.id in selectedIds }
-                    showDeleteConfirm = false
-                    coroutineScope.launch {
-                        ContactRepository.moveToRecycleBin(context, toDelete)
-                        selectionMode = false
-                        selectedIds = emptySet()
-                    }
-                }) { Text(stringResource(R.string.action_move_to_bin)) }
+                TextButton(
+                    onClick = {
+                        val toDelete = allContacts.filter { it.id in selectedIds }
+                        showDeleteConfirm = false
+                        coroutineScope.launch {
+                            ContactRepository.moveToRecycleBin(context, toDelete)
+                            selectionMode = false
+                            selectedIds = emptySet()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.action_move_to_bin)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { showDeleteConfirm = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -1038,7 +1072,7 @@ private fun ContactRow(
         val nameFormat by DisplayOptionsPreferences.nameFormat
         val displayName = contact.name.formattedForDisplay(nameFormat)
         Text(
-            text = highlightMatches(displayName, highlightQuery, MaterialTheme.colorScheme.primary),
+            text = highlightMatches(displayName, highlightQuery, primaryAccentColor()),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)

@@ -20,6 +20,7 @@ import java.io.File
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,6 +31,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -83,7 +87,9 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -271,6 +277,7 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
+            .imePadding()
     ) {
         Row(
             modifier = Modifier
@@ -451,10 +458,16 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
                         valueHint = stringResource(R.string.type_phone),
                         entry = entry,
                         typeOptions = PHONE_TYPES,
-                        onValueChange = { phones.replaceWith(entry.id) { e -> e.copy(value = it) } },
+                        onValueChange = { input ->
+                            // Hard filter, not just a soft-keyboard hint - also blocks letters
+                            // pasted in or typed via a hardware/Bluetooth keyboard.
+                            val digitsOnly = input.filter { it.isDigit() || it in "+*#" }
+                            phones.replaceWith(entry.id) { e -> e.copy(value = digitsOnly) }
+                        },
                         onTypeChange = { phones.replaceWith(entry.id) { e -> e.copy(type = it) } },
                         onCustomLabelChange = { phones.replaceWith(entry.id) { e -> e.copy(customLabel = it) } },
-                        onRemove = { phones.removeAll { it.id == entry.id } }
+                        onRemove = { phones.removeAll { it.id == entry.id } },
+                        keyboardType = KeyboardType.Phone
                     )
                 }
             }
@@ -574,11 +587,18 @@ fun AddContactScreen(onClose: (saved: Boolean) -> Unit, initialPhone: String = "
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
 
-        AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 6)?.let {
-            NativeAdView(
-                adUnitId = it,
-                template = NativeAdTemplate.STRIP
-            )
+        // Hidden while the keyboard is up - this ad sits inside the same imePadding()'d Column as
+        // the form fields, so it would otherwise ride up and float directly above the keyboard
+        // instead of staying at the actual bottom of the screen.
+        val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+        if (!imeVisible) {
+            AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 6)?.let {
+                NativeAdView(
+                    adUnitId = it,
+                    template = NativeAdTemplate.STRIP,
+                    cacheKey = it
+                )
+            }
         }
     }
 }
@@ -708,10 +728,16 @@ private fun RenameCustomFieldDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onRename(label) }) { Text(stringResource(R.string.action_rename)) }
+            TextButton(
+                onClick = { onRename(label) },
+                colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+            ) { Text(stringResource(R.string.action_rename)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+            ) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -893,7 +919,8 @@ private fun TypedEntryRow(
     onValueChange: (String) -> Unit,
     onTypeChange: (String) -> Unit,
     onCustomLabelChange: (String) -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    keyboardType: KeyboardType = KeyboardType.Text
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -916,7 +943,8 @@ private fun TypedEntryRow(
             onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 36.dp)
+                .padding(start = 36.dp),
+            keyboardType = keyboardType
         )
     }
 }
@@ -946,9 +974,13 @@ private fun AddressEntryRow(
         }
         Column(modifier = Modifier.padding(start = 36.dp)) {
             PlainInlineField(placeholder = stringResource(R.string.hint_street), value = entry.street, onValueChange = { onFieldChange(entry.copy(street = it)) })
+            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
             PlainInlineField(placeholder = stringResource(R.string.hint_city), value = entry.city, onValueChange = { onFieldChange(entry.copy(city = it)) })
+            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
             PlainInlineField(placeholder = stringResource(R.string.hint_state), value = entry.state, onValueChange = { onFieldChange(entry.copy(state = it)) })
+            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
             PlainInlineField(placeholder = stringResource(R.string.hint_postcode), value = entry.postcode, onValueChange = { onFieldChange(entry.copy(postcode = it)) })
+            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
             PlainInlineField(placeholder = stringResource(R.string.hint_country), value = entry.country, onValueChange = { onFieldChange(entry.copy(country = it)) })
         }
     }
@@ -1035,7 +1067,8 @@ private fun PlainInlineField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    verticalPadding: Dp = 4.dp
+    verticalPadding: Dp = 10.dp,
+    keyboardType: KeyboardType = KeyboardType.Text
 ) {
     Box(modifier = modifier.padding(vertical = verticalPadding)) {
         if (value.isEmpty()) {
@@ -1053,6 +1086,7 @@ private fun PlainInlineField(
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onBackground
             ),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             cursorBrush = SolidColor(primaryAccentColor()),
             modifier = Modifier.fillMaxWidth()
         )

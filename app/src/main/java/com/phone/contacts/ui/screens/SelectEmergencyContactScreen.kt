@@ -67,6 +67,12 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
     val adConfig by AppConfigStore.config.collectAsState()
     val dao = remember { AppDatabase.getInstance(context).emergencyContactDao() }
 
+    // Guards the Done button against a double-tap - without it, two taps landing before the first
+    // coroutine finishes each ran the save-then-popBackStack logic independently: the save inserted
+    // the same contact twice (no unique DB constraint stopped it - see EmergencyContactEntity), and
+    // popBackStack() fired twice, skipping past this screen's own parent straight to Settings.
+    var isSaving by remember { mutableStateOf(false) }
+
     var query by remember { mutableStateOf("") }
     var allContacts by remember { mutableStateOf<List<Contact>>(emptyList()) }
     LaunchedEffect(Unit) {
@@ -133,6 +139,8 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
                 modifier = Modifier.weight(1f).padding(start = 4.dp)
             )
             IconButton(onClick = {
+                if (isSaving) return@IconButton
+                isSaving = true
                 scope.launch {
                     val toAdd = selectedKeys - existingKeys
                     val toRemove = existingKeys - selectedKeys

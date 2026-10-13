@@ -178,14 +178,31 @@ fun MainNavigation() {
 
     // App-wide default-dialer state — refreshed here (not just inside Recents) so Keypad/
     // Settings' disabled state reacts no matter which tab happens to be visible when the role is
-    // actually granted (e.g. via system Settings). No forced navigation on the transition —
+    // actually granted (e.g. via system Settings). No forced navigation when it's GAINED —
     // Recents/Contacts/Favorites each gate on this themselves and simply reveal their own real
     // content once it flips true, so whichever of those three the user was already on is exactly
-    // what they land on (no jump to Recents specifically).
+    // what they land on. LOSING it is different (see the effect below): every other screen just
+    // disables itself or assumes the role's permissions are still there, so it jumps to Recents
+    // instead of leaving the user on a screen that's silently broken.
     remember { DefaultDialerState.refresh(context) }
     val isDefaultDialer by DefaultDialerState.isDefault
     LaunchedEffect(isDefaultDialer) {
         AnalyticsManager.setUserProperty(AnalyticsEvents.USER_IS_DEFAULT_DIALER, if (isDefaultDialer) "yes" else "no")
+    }
+    // Losing the default-dialer role (switched to another app, then came back) while sitting on a
+    // screen that isn't one of the three that handle this themselves (Recents/Contacts/Favorites)
+    // jumps back to Recents, which shows the "set as default" prompt - instead of leaving the user
+    // on a screen that assumed the role's permissions were still granted.
+    LaunchedEffect(isDefaultDialer, currentRoute) {
+        val selfHandled = currentRoute == MainScreen.Recents.route ||
+            currentRoute == MainScreen.Contacts.route ||
+            currentRoute == MainScreen.Favorites.route
+        if (!isDefaultDialer && !selfHandled) {
+            navController.navigate(MainScreen.Recents.route) {
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                launchSingleTop = true
+            }
+        }
     }
     val appThemeMode = AppThemePreferences.themeMode.value
     LaunchedEffect(appThemeMode) {

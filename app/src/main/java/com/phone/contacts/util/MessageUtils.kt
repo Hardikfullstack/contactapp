@@ -31,7 +31,8 @@ object MessageUtils {
     }
 
     /** Same as [sendMessage] but shows the system "Open with" chooser first - the original
-     * behavior, kept specifically for the Keypad's standalone "Send a message" row. */
+     * behavior, kept for the Keypad's standalone "Send a message" row and the in-call screen's
+     * "Message" button. */
     fun sendMessageWithChooser(context: Context, number: String) {
         if (number.isBlank()) return
 

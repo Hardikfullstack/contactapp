@@ -52,6 +52,7 @@ import com.phone.contacts.ads.NativeAdView
 import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.data.local.AppDatabase
 import com.phone.contacts.data.local.EmergencyContactEntity
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.CallUtils
 import kotlinx.coroutines.launch
@@ -176,7 +177,10 @@ fun EmergencyContactsScreen(onBack: () -> Unit, onAddClick: () -> Unit) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { removingEntry = null }) { Text(stringResource(R.string.cancel)) }
+                TextButton(
+                    onClick = { removingEntry = null },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
