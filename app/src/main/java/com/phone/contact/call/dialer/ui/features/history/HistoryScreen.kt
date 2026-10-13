@@ -368,14 +368,20 @@ fun HistoryScreen(
                 viewModel.updateContact(newName, newNumber)
             },
             onMoreDetailsClick = {
-                val intent = android.content.Intent(android.content.Intent.ACTION_EDIT).apply {
-                    val contactUri = android.content.ContentUris.withAppendedId(
-                        android.provider.ContactsContract.Contacts.CONTENT_URI,
-                        uiState.contactId.toLong()
-                    )
-                    data = contactUri
+                // contactId is "" for a call-history entry whose number isn't a saved contact
+                // (HistoryViewModel only fills it in when findContactByNumber finds a match) -
+                // toLong() on that crashed with NumberFormatException. There's no system contact
+                // to open in that case, so just no-op instead of opening the editor.
+                uiState.contactId.toLongOrNull()?.let { id ->
+                    val intent = android.content.Intent(android.content.Intent.ACTION_EDIT).apply {
+                        val contactUri = android.content.ContentUris.withAppendedId(
+                            android.provider.ContactsContract.Contacts.CONTENT_URI,
+                            id
+                        )
+                        data = contactUri
+                    }
+                    context.startActivity(intent)
                 }
-                context.startActivity(intent)
                 viewModel.showEditSheet(false)
             },
             onDismiss = { viewModel.showEditSheet(false) }

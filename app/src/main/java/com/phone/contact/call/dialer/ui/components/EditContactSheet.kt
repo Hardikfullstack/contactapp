@@ -27,6 +27,8 @@ fun EditContactSheet(
 ) {
     var name by remember { mutableStateOf(initialName) }
     var number by remember { mutableStateOf(initialNumber) }
+    var nameError by remember { mutableStateOf(false) }
+    var numberError by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -54,7 +56,9 @@ fun EditContactSheet(
                 )
                 Button(
                     onClick = {
-                        if (name.isNotBlank() && number.isNotBlank()) {
+                        nameError = name.isBlank()
+                        numberError = number.isBlank()
+                        if (!nameError && !numberError) {
                             onSave(name, number)
                         }
                     },
@@ -71,23 +75,31 @@ fun EditContactSheet(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = it; if (it.isNotBlank()) nameError = false },
                 label = { Text(stringResource(R.string.name_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                isError = nameError,
+                supportingText = if (nameError) {
+                    { Text(stringResource(R.string.field_required)) }
+                } else null
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = number,
-                onValueChange = { number = it },
+                onValueChange = { number = it; if (it.isNotBlank()) numberError = false },
                 label = { Text(stringResource(R.string.phone_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
-                )
+                ),
+                isError = numberError,
+                supportingText = if (numberError) {
+                    { Text(stringResource(R.string.field_required)) }
+                } else null
             )
 
             Spacer(modifier = Modifier.height(24.dp))

@@ -1,4 +1,4 @@
-package com.phone.contact.call.dialer.ui.features.contacts
+﻿package com.phone.contact.call.dialer.ui.features.contacts
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
@@ -54,6 +55,7 @@ fun ContactsScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    val showScrollToTop by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
 
     var currentDragY by remember { mutableStateOf<Float?>(null) }
     var alphabetColumnHeight by remember { mutableStateOf(0f) }
@@ -112,6 +114,7 @@ fun ContactsScreen(
         }
     }
 
+    @Suppress("UnusedMaterial3ScaffoldPaddingParameter")
     Scaffold(
         floatingActionButton = {
             if (!uiState.isSelectionMode) {
@@ -129,216 +132,229 @@ fun ContactsScreen(
     ) {
         // No bottom padding here — the outer MainNavigation Scaffold already reserves space for
         // the shared bottom nav bar/banner ad; applying innerPadding's bottom here would double-count it.
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-        ) {
-            if (uiState.isSelectionMode) {
-                // Selection Mode Header
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 4.dp
-                ) {
-                    Row(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+            ) {
+                if (uiState.isSelectionMode) {
+                    // Selection Mode Header
+                    Surface(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth()
+                            .height(64.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 4.dp
                     ) {
-                        IconButton(onClick = { viewModel.clearSelection() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
-                        }
-                        
-                        Text(
-                            text = stringResource(R.string.recycle_bin_selected_count, uiState.selectedIds.size),
-                            style = MaterialTheme.typography.titleLarge,
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxSize()
                                 .padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { viewModel.clearSelection() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
+                            }
                         
-                        IconButton(onClick = { viewModel.deleteSelected() }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-            } else {
-                CommonHeader(
-                    title = stringResource(R.string.contacts),
-                    actions = {
-                        HeaderActionButton(
-                            icon = Icons.Outlined.Search,
-                            onClick = onSearchClick
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        
-                        var showMenu by remember { mutableStateOf(false) }
-                        Box {
-                            HeaderActionButton(
-                                icon = Icons.Default.MoreVert,
-                                onClick = { showMenu = true }
+                            Text(
+                                text = stringResource(R.string.recycle_bin_selected_count, uiState.selectedIds.size),
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.import_contacts)) },
-                                    onClick = {
-                                        showMenu = false
-                                        importLauncher.launch("text/x-vcard")
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.export_contacts)) },
-                                    onClick = {
-                                        showMenu = false
-                                        exportLauncher.launch("contacts.vcf")
-                                    }
-                                )
+                        
+                            IconButton(onClick = { viewModel.deleteSelected() }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
-                )
-            }
-
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize().padding(top = 10.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
-                    ) {
-                        uiState.groupedContacts.forEach { (initial, contacts) ->
-                            stickyHeader(key = "header_$initial") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.background)
-                                        // start matches CommonHeader's titleStartPadding (15dp) so
-                                        // this sticky letter lines up directly under "Contacts".
-                                        .padding(start = 15.dp, end = 24.dp, top = 2.dp, bottom = 2.dp)
+                } else {
+                    CommonHeader(
+                        title = stringResource(R.string.contacts),
+                        actions = {
+                            HeaderActionButton(
+                                icon = Icons.Outlined.Search,
+                                onClick = onSearchClick
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                        
+                            var showMenu by remember { mutableStateOf(false) }
+                            Box {
+                                HeaderActionButton(
+                                    icon = Icons.Default.MoreVert,
+                                    onClick = { showMenu = true }
+                                )
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false },
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                                 ) {
-                                    Text(
-                                        text = initial.toString(),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.primary
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.import_contacts)) },
+                                        onClick = {
+                                            showMenu = false
+                                            importLauncher.launch("text/x-vcard")
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.export_contacts)) },
+                                        onClick = {
+                                            showMenu = false
+                                            exportLauncher.launch("contacts.vcf")
+                                        }
                                     )
                                 }
                             }
-                            items(
-                                items = contacts,
-                                key = { it.id }
-                            ) { contact ->
-                                ContactItem(
-                                    contact = contact,
-                                    isSelected = uiState.selectedIds.contains(contact.id),
-                                    isSelectionMode = uiState.isSelectionMode,
-                                    onClick = {
-                                        if (uiState.isSelectionMode) {
-                                            viewModel.toggleSelection(contact.id)
-                                        } else if (onNumberPicked != null) {
-                                            onNumberPicked(contact.number)
-                                        } else {
-                                            onContactClick(contact.name, contact.number)
-                                        }
-                                    },
-                                    onLongClick = {
-                                        viewModel.toggleSelection(contact.id)
-                                    },
-                                    onCallClick = {
-                                        if (onNumberPicked != null) onNumberPicked(contact.number)
-                                        else CallUtils.makeCall(context, contact.number)
+                        }
+                    )
+                }
+
+                if (uiState.isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize().padding(top = 10.dp),
+                            contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+                        ) {
+                            uiState.groupedContacts.forEach { (initial, contacts) ->
+                                stickyHeader(key = "header_$initial") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.background)
+                                            // start matches CommonHeader's titleStartPadding (15dp) so
+                                            // this sticky letter lines up directly under "Contacts".
+                                            .padding(start = 15.dp, end = 24.dp, top = 2.dp, bottom = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = initial.toString(),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
                                     }
-                                )
+                                }
+                                items(
+                                    items = contacts,
+                                    key = { it.id }
+                                ) { contact ->
+                                    ContactItem(
+                                        contact = contact,
+                                        isSelected = uiState.selectedIds.contains(contact.id),
+                                        isSelectionMode = uiState.isSelectionMode,
+                                        onClick = {
+                                            if (uiState.isSelectionMode) {
+                                                viewModel.toggleSelection(contact.id)
+                                            } else if (onNumberPicked != null) {
+                                                onNumberPicked(contact.number)
+                                            } else {
+                                                onContactClick(contact.name, contact.number)
+                                            }
+                                        },
+                                        onLongClick = {
+                                            viewModel.toggleSelection(contact.id)
+                                        },
+                                        onCallClick = {
+                                            if (onNumberPicked != null) onNumberPicked(contact.number)
+                                            else CallUtils.makeCall(context, contact.number)
+                                        }
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    // Alphabet Fast Scroller - Positioned to avoid FAB
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 16.dp, end = 4.dp, bottom = 80.dp)
-                            .fillMaxHeight()
-                            .onGloballyPositioned { alphabetColumnHeight = it.size.height.toFloat() }
-                            .pointerInput(alphabetColumnHeight, initialToIndex) {
-                                detectDragGestures(
-                                    onDragStart = { offset ->
+                        // Alphabet Fast Scroller - Positioned to avoid FAB
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 16.dp, end = 4.dp, bottom = 80.dp)
+                                .fillMaxHeight()
+                                .onGloballyPositioned { alphabetColumnHeight = it.size.height.toFloat() }
+                                .pointerInput(alphabetColumnHeight, initialToIndex) {
+                                    detectDragGestures(
+                                        onDragStart = { offset ->
+                                            currentDragY = offset.y
+                                            scrollToCharacter(offset.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
+                                        },
+                                        onDrag = { change, _ ->
+                                            currentDragY = change.position.y
+                                            scrollToCharacter(change.position.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
+                                        },
+                                        onDragEnd = { currentDragY = null },
+                                        onDragCancel = { currentDragY = null }
+                                    )
+                                }
+                                .pointerInput(alphabetColumnHeight, initialToIndex) {
+                                    detectTapGestures { offset ->
                                         currentDragY = offset.y
                                         scrollToCharacter(offset.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
-                                    },
-                                    onDrag = { change, _ ->
-                                        currentDragY = change.position.y
-                                        scrollToCharacter(change.position.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
-                                    },
-                                    onDragEnd = { currentDragY = null },
-                                    onDragCancel = { currentDragY = null }
+                                        // Reset after a short delay for smooth fade out
+                                    }
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            alphabet.forEachIndexed { index, char ->
+                                val hasContacts = initialToIndex.containsKey(char)
+                            
+                                // Distance calculation for fish-eye zoom
+                                val itemCenterY = if (alphabetColumnHeight > 0) {
+                                    (index + 0.5f) * (alphabetColumnHeight / alphabet.size)
+                                } else 0f
+                            
+                                val distance = currentDragY?.let { abs(it - itemCenterY) } ?: Float.MAX_VALUE
+                                val scale by animateFloatAsState(
+                                    targetValue = if (distance < 120f) {
+                                        1f + (1.8f * (1f - (distance / 120f).coerceIn(0f, 1f)))
+                                    } else 1f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    ),
+                                    label = "scale"
+                                )
+
+                                Text(
+                                    text = char.toString(),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = if (hasContacts) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier
+                                        .graphicsLayer {
+                                            scaleX = scale
+                                            scaleY = scale
+                                            translationX = - (scale - 1f) * 25f // Pop out effect
+                                        }
+                                        .padding(horizontal = 4.dp)
                                 )
                             }
-                            .pointerInput(alphabetColumnHeight, initialToIndex) {
-                                detectTapGestures { offset ->
-                                    currentDragY = offset.y
-                                    scrollToCharacter(offset.y, alphabet, alphabetColumnHeight, initialToIndex, listState, coroutineScope)
-                                    // Reset after a short delay for smooth fade out
-                                }
-                            },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        alphabet.forEachIndexed { index, char ->
-                            val hasContacts = initialToIndex.containsKey(char)
-                            
-                            // Distance calculation for fish-eye zoom
-                            val itemCenterY = if (alphabetColumnHeight > 0) {
-                                (index + 0.5f) * (alphabetColumnHeight / alphabet.size)
-                            } else 0f
-                            
-                            val distance = currentDragY?.let { abs(it - itemCenterY) } ?: Float.MAX_VALUE
-                            val scale by animateFloatAsState(
-                                targetValue = if (distance < 120f) {
-                                    1f + (1.8f * (1f - (distance / 120f).coerceIn(0f, 1f)))
-                                } else 1f,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                ),
-                                label = "scale"
-                            )
-
-                            Text(
-                                text = char.toString(),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = if (hasContacts) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier
-                                    .graphicsLayer {
-                                        scaleX = scale
-                                        scaleY = scale
-                                        translationX = - (scale - 1f) * 25f // Pop out effect
-                                    }
-                                    .padding(horizontal = 4.dp)
-                            )
                         }
                     }
                 }
             }
+
+            if (showScrollToTop) {
+                // Same look as this app's own HeaderActionButton (e.g. Recents' Search/Filter icons).
+                HeaderActionButton(
+                    icon = Icons.Default.KeyboardArrowUp,
+                    onClick = { coroutineScope.launch { listState.animateScrollToItem(0) } },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
+                )
+            }
         }
     }
-    
+
     // LaunchedEffect to clear drag state after tap
     LaunchedEffect(currentDragY) {
         if (currentDragY != null) {

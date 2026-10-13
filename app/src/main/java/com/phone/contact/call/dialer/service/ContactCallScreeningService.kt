@@ -32,10 +32,16 @@ class ContactCallScreeningService : CallScreeningService() {
             // silence the ring (no ringtone/vibration/heads-up notification) while still letting the
             // call through and logging it — matching how Truecaller/Google Phone handle
             // reported-but-not-blocked spam.
+            //
+            // setSkipCallLog/setSkipNotification/setRejectCall are NOT set here even for spam —
+            // CallScreeningService.respondToCall() throws IllegalStateException("Invalid response
+            // state for allowed call.") if any of those three are set while setDisallowCall is left
+            // false/unset (an "allowed" response). setSilenceCall is the only flag the framework
+            // permits on an allowed call, and it alone already suppresses the ringtone/vibration/
+            // heads-up behavior this is going for.
             val response = CallResponse.Builder().apply {
                 if (status.isSpam() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     setSilenceCall(true)
-                    setSkipNotification(true)
                 }
             }.build()
 

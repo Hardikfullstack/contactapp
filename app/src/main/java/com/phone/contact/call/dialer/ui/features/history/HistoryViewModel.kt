@@ -105,10 +105,19 @@ class HistoryViewModel @Inject constructor(
 
     fun updateContact(newName: String, newNumber: String) {
         val contactId = _uiState.value.contactId
-        if (contactId.isBlank()) return
-        
+
         viewModelScope.launch {
-            contactRepository.updateContact(contactId, newName, newNumber)
+            if (contactId.isBlank()) {
+                // This call-history entry's number has no saved contact yet (an unknown caller) -
+                // there's nothing to update, so create a new contact instead of silently no-op'ing
+                // (the old behavior: the name the user just typed was simply discarded).
+                contactRepository.saveContact(newName, newNumber)
+                // Picks up the just-created contact's id, so "More details"/future edits on this
+                // same history screen target the real contact instead of staying blank.
+                fetchContactDetails()
+            } else {
+                contactRepository.updateContact(contactId, newName, newNumber)
+            }
             _uiState.value = _uiState.value.copy(
                 name = newName,
                 number = newNumber,

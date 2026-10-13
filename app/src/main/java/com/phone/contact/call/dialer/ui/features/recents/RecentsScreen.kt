@@ -1,4 +1,4 @@
-package com.phone.contact.call.dialer.ui.features.recents
+﻿package com.phone.contact.call.dialer.ui.features.recents
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -63,6 +63,7 @@ import com.phone.contact.call.dialer.util.PreferenceManager
 import com.phone.contact.call.dialer.util.RateUsHelper
 import com.phone.contact.call.dialer.util.isRemoteVersionNewer
 import com.phone.contact.call.dialer.viewmodel.AppConfigViewModel
+import kotlinx.coroutines.launch
 
 /** One row of the flattened Recents list — a section header, a real call, or a native ad slot.
  * The first ad sits right after the very first call (position 2 overall), then repeats every 6
@@ -96,6 +97,13 @@ fun RecentsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val expandedCallId by viewModel.expandedCallId.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // Hoisted to the top of the function (not declared down at the LazyColumn itself) so the
+    // scroll-to-top FAB, which is in a separate Scaffold slot higher up in this same function, can
+    // scroll the same list instance.
+    val listState = rememberLazyListState()
+    val showScrollToTop by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
 
     LaunchedEffect(Unit) {
         viewModel.checkPermissionAndFetch()
@@ -445,6 +453,9 @@ fun RecentsScreen(
         )
     }
 
+    // innerPadding is deliberately unused below — the outer MainNavigation Scaffold already
+    // reserves space for the shared bottom nav bar/banner ad; applying it here would double-count it.
+    @Suppress("UnusedMaterial3ScaffoldPaddingParameter")
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
@@ -461,239 +472,244 @@ fun RecentsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-        ) {
-            CommonHeader(
-                title = stringResource(R.string.recents),
-                actions = {
-                    HeaderActionButton(
-                        icon = Icons.Outlined.Search,
-                        onClick = { if (isDefaultDialerState) onSearchClick() }
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    var showFilterMenu by remember { mutableStateOf(false) }
-
-                    Box {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+            ) {
+                CommonHeader(
+                    title = stringResource(R.string.recents),
+                    actions = {
                         HeaderActionButton(
-                            icon = Icons.Outlined.FilterList,
-                            onClick = { if (isDefaultDialerState) showFilterMenu = true }
+                            icon = Icons.Outlined.Search,
+                            onClick = { if (isDefaultDialerState) onSearchClick() }
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        var showFilterMenu by remember { mutableStateOf(false) }
+
+                        Box {
+                            HeaderActionButton(
+                                icon = Icons.Outlined.FilterList,
+                                onClick = { if (isDefaultDialerState) showFilterMenu = true }
+                            )
                         
-                        FilterDropdown(
-                            expanded = showFilterMenu,
-                            onDismissRequest = { showFilterMenu = false },
-                            selectedFilter = uiState.selectedFilter,
-                            onFilterSelected = { viewModel.setFilter(it) }
-                        )
+                            FilterDropdown(
+                                expanded = showFilterMenu,
+                                onDismissRequest = { showFilterMenu = false },
+                                selectedFilter = uiState.selectedFilter,
+                                onFilterSelected = { viewModel.setFilter(it) }
+                            )
+                        }
                     }
-                }
-            )
-
-            if (isDefaultDialerState && uiState.spamNumbers.isNotEmpty()) {
-                SpamBanner(
-                    count = uiState.spamNumbers.size,
-                    onClearClick = { viewModel.showClearSpamConfirmation(true) }
                 )
-            }
 
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                if (isDefaultDialerState && uiState.spamNumbers.isNotEmpty()) {
+                    SpamBanner(
+                        count = uiState.spamNumbers.size,
+                        onClearClick = { viewModel.showClearSpamConfirmation(true) }
+                    )
                 }
-            } else if (!isDefaultDialerState) {
-                // Replaces the whole list area (not just a banner above it) with a centered
-                // prompt, matching the reference app's own full-screen "Set Default" placeholder.
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    SetDefaultDialerBanner(onSetDefaultClick = { launchDefaultDialerRequest() })
-                }
-            } else if (!uiState.hasPermission) {
-                // Reached only once this app IS the default dialer, so a missing permission here
-                // means Call Log specifically still needs to be (re-)granted — e.g. revoked later
-                // from system Settings — not just an empty list, so say so and offer a fix instead
-                // of the generic "no results" text.
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                if (uiState.isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else if (!isDefaultDialerState) {
+                    // Replaces the whole list area (not just a banner above it) with a centered
+                    // prompt, matching the reference app's own full-screen "Set Default" placeholder.
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        SetDefaultDialerBanner(onSetDefaultClick = { launchDefaultDialerRequest() })
+                    }
+                } else if (!uiState.hasPermission) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = stringResource(R.string.call_log_permission_needed),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { fallbackPermissionLauncher.launch(fallbackPermissions.toTypedArray()) }) {
+                                Text(stringResource(R.string.action_grant_permission))
+                            }
+                        }
+                    }
+                } else if (uiState.groupedCalls.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            text = stringResource(R.string.call_log_permission_needed),
+                            text = stringResource(R.string.no_result_found),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 32.dp)
+                            modifier = Modifier.padding(32.dp)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { fallbackPermissionLauncher.launch(fallbackPermissions.toTypedArray()) }) {
-                            Text(stringResource(R.string.action_grant_permission))
-                        }
                     }
-                }
-            } else if (uiState.groupedCalls.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.no_result_found),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(32.dp)
-                    )
-                }
-            } else {
-                val sections = remember {
-                    listOf(
-                        "today" to R.string.today,
-                        "yesterday" to R.string.yesterday,
-                        "older" to R.string.older
-                    )
-                }
+                } else {
+                    val sections = remember {
+                        listOf(
+                            "today" to R.string.today,
+                            "yesterday" to R.string.yesterday,
+                            "older" to R.string.older
+                        )
+                    }
 
-                val listState = rememberLazyListState()
-                LaunchedEffect(uiState.selectedFilter) {
-                    listState.scrollToItem(0)
-                }
+                    // LaunchedEffect always runs on its first composition too, not just when the key
+                    // actually changes - without this comparison, returning from History (which
+                    // disposes and freshly recomposes this whole screen) re-ran this and force-scrolled
+                    // back to the top every time, even though selectedFilter never changed.
+                    var previousFilter by remember { mutableStateOf(uiState.selectedFilter) }
+                    LaunchedEffect(uiState.selectedFilter) {
+                        if (uiState.selectedFilter != previousFilter) {
+                            listState.scrollToItem(0)
+                        }
+                        previousFilter = uiState.selectedFilter
+                    }
 
-                // Flattened once per data/filter change — same section-boundary rounding as
-                // before ads existed. The first Ad row sits right after the very first call
-                // (global call #1, i.e. position 2 overall); after that, one every 6 calls
-                // (#7, #13, #19, ...), counted globally across section boundaries.
-                val rows = remember(uiState.groupedCalls, uiState.selectedFilter) {
-                    buildList {
-                        var callCount = 0
-                        sections.forEach { (key, titleRes) ->
-                            val calls = uiState.groupedCalls[key]
-                            if (!calls.isNullOrEmpty()) {
-                                add(RecentsListRow.Header(key, titleRes))
-                                calls.forEachIndexed { index, call ->
-                                    add(RecentsListRow.Call(call, index == 0, index == calls.size - 1))
-                                    callCount++
-                                    if ((callCount - 1) % 6 == 0) {
-                                        add(RecentsListRow.Ad("recents_inline_ad_$callCount"))
+                    // Flattened once per data/filter change — same section-boundary rounding as
+                    // before ads existed. The first Ad row sits right after the very first call
+                    // (global call #1, i.e. position 2 overall); after that, one every 6 calls
+                    // (#7, #13, #19, ...), counted globally across section boundaries.
+                    val rows = remember(uiState.groupedCalls, uiState.selectedFilter) {
+                        buildList {
+                            var callCount = 0
+                            sections.forEach { (key, titleRes) ->
+                                val calls = uiState.groupedCalls[key]
+                                if (!calls.isNullOrEmpty()) {
+                                    add(RecentsListRow.Header(key, titleRes))
+                                    calls.forEachIndexed { index, call ->
+                                        add(RecentsListRow.Call(call, index == 0, index == calls.size - 1))
+                                        callCount++
+                                        if ((callCount - 1) % 6 == 0) {
+                                            add(RecentsListRow.Ad("recents_inline_ad_$callCount"))
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                // Tracks a slot that genuinely failed (primary AND fallback both) so it can
-                // collapse to nothing instead of showing a shimmer skeleton forever. The ads
-                // themselves live in ListAdCache (keyed by row.id below) — not any state hoisted
-                // here — so they survive scrolling a slot off-screen and back, and even navigating
-                // away from Recents and back, instead of reloading fresh every time.
-                val failedInlineAdRowIds = remember { mutableStateMapOf<String, Boolean>() }
+                    // Tracks a slot that genuinely failed (primary AND fallback both) so it can
+                    // collapse to nothing instead of showing a shimmer skeleton forever. The ads
+                    // themselves live in ListAdCache (keyed by row.id below) — not any state hoisted
+                    // here — so they survive scrolling a slot off-screen and back, and even navigating
+                    // away from Recents and back, instead of reloading fresh every time.
+                    val failedInlineAdRowIds = remember { mutableStateMapOf<String, Boolean>() }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = listState,
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(
-                        items = rows,
-                        key = { row ->
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = listState,
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(
+                            items = rows,
+                            key = { row ->
+                                when (row) {
+                                    is RecentsListRow.Header -> "header_${row.sectionKey}"
+                                    is RecentsListRow.Call -> row.call.id
+                                    is RecentsListRow.Ad -> row.id
+                                }
+                            }
+                        ) { row ->
                             when (row) {
-                                is RecentsListRow.Header -> "header_${row.sectionKey}"
-                                is RecentsListRow.Call -> row.call.id
-                                is RecentsListRow.Ad -> row.id
-                            }
-                        }
-                    ) { row ->
-                        when (row) {
-                            is RecentsListRow.Header -> {
-                                Text(
-                                    text = stringResource(row.titleRes),
-                                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 16.dp),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else TextSecondary,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Normal
-                                )
-                            }
+                                is RecentsListRow.Header -> {
+                                    Text(
+                                        text = stringResource(row.titleRes),
+                                        modifier = Modifier.padding(horizontal = 15.dp, vertical = 16.dp),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant else TextSecondary,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Normal
+                                    )
+                                }
 
-                            is RecentsListRow.Ad -> {
-                                // Once a slot has genuinely failed (primary AND fallback both),
-                                // this whole branch stops composing — the row collapses to zero
-                                // height instead of leaving a stuck "still loading" skeleton or an
-                                // empty gap behind.
-                                if (inlineListNativeAdUnitId != null && failedInlineAdRowIds[row.id] != true) {
-                                    // Flush, no rounded corners/gap of its own — sits inside the
-                                    // same card as the surrounding calls instead of floating as a
-                                    // visually separate box. The divider above it already comes
-                                    // from the preceding call's own row; this one adds the divider
-                                    // below, matching how every other row separates from the next.
+                                is RecentsListRow.Ad -> {
+                                    // Once a slot has genuinely failed (primary AND fallback both),
+                                    // this whole branch stops composing — the row collapses to zero
+                                    // height instead of leaving a stuck "still loading" skeleton or an
+                                    // empty gap behind.
+                                    if (inlineListNativeAdUnitId != null && failedInlineAdRowIds[row.id] != true) {
+                                        // Flush, no rounded corners/gap of its own — sits inside the
+                                        // same card as the surrounding calls instead of floating as a
+                                        // visually separate box. The divider above it already comes
+                                        // from the preceding call's own row; this one adds the divider
+                                        // below, matching how every other row separates from the next.
+                                        Surface(
+                                            modifier = Modifier
+                                                .padding(horizontal = 16.dp)
+                                                .fillMaxWidth(),
+                                            shape = RoundedCornerShape(0.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            tonalElevation = 0.dp
+                                        ) {
+                                            Column {
+                                                // cacheKey = row.id is what makes this slot's ad
+                                                // survive scrolling off-screen and back (and even
+                                                // navigating away from Recents and back) instead of
+                                                // reloading fresh every time — see ListAdCache.
+                                                NativeAdView(
+                                                    adUnitId = inlineListNativeAdUnitId,
+                                                    template = NativeAdTemplate.SMALL,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    cacheKey = row.id,
+                                                    fallbackAdUnitId = inlineListFallbackAdUnitId,
+                                                    onFailed = { failedInlineAdRowIds[row.id] = true }
+                                                )
+                                                HorizontalDivider(
+                                                    modifier = Modifier.padding(start = 78.dp),
+                                                    thickness = 0.5.dp,
+                                                    color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCDCDCD)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                is RecentsListRow.Call -> {
+                                    val call = row.call
+                                    val isExpanded = expandedCallId == call.id
+                                    val shape = when {
+                                        row.isFirstInSection && row.isLastInSection -> RoundedCornerShape(16.dp)
+                                        row.isFirstInSection -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                                        row.isLastInSection -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+                                        else -> RoundedCornerShape(0.dp)
+                                    }
+
                                     Surface(
                                         modifier = Modifier
                                             .padding(horizontal = 16.dp)
                                             .fillMaxWidth(),
-                                        shape = RoundedCornerShape(0.dp),
+                                        shape = shape,
                                         color = MaterialTheme.colorScheme.surface,
                                         tonalElevation = 0.dp
                                     ) {
                                         Column {
-                                            // cacheKey = row.id is what makes this slot's ad
-                                            // survive scrolling off-screen and back (and even
-                                            // navigating away from Recents and back) instead of
-                                            // reloading fresh every time — see ListAdCache.
-                                            NativeAdView(
-                                                adUnitId = inlineListNativeAdUnitId,
-                                                template = NativeAdTemplate.SMALL,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                cacheKey = row.id,
-                                                fallbackAdUnitId = inlineListFallbackAdUnitId,
-                                                onFailed = { failedInlineAdRowIds[row.id] = true }
+                                            ExpandableCallItem(
+                                                call = call,
+                                                expanded = isExpanded,
+                                                onClick = { viewModel.onCallClicked(call.id) },
+                                                onLongClick = { viewModel.onCallLongClick(call) },
+                                                onCallClick = {
+                                                    if (onNumberPicked != null) onNumberPicked(call.number)
+                                                    else CallUtils.makeCall(context, call.number)
+                                                },
+                                                onMessageClick = { MessageUtils.sendMessage(context, call.number) },
+                                                onHistoryClick = { onHistoryClick(call.name ?: "", call.number) }
                                             )
-                                            HorizontalDivider(
-                                                modifier = Modifier.padding(start = 78.dp),
-                                                thickness = 0.5.dp,
-                                                color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCDCDCD)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
 
-                            is RecentsListRow.Call -> {
-                                val call = row.call
-                                val isExpanded = expandedCallId == call.id
-                                val shape = when {
-                                    row.isFirstInSection && row.isLastInSection -> RoundedCornerShape(16.dp)
-                                    row.isFirstInSection -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-                                    row.isLastInSection -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
-                                    else -> RoundedCornerShape(0.dp)
-                                }
-
-                                Surface(
-                                    modifier = Modifier
-                                        .padding(horizontal = 16.dp)
-                                        .fillMaxWidth(),
-                                    shape = shape,
-                                    color = MaterialTheme.colorScheme.surface,
-                                    tonalElevation = 0.dp
-                                ) {
-                                    Column {
-                                        ExpandableCallItem(
-                                            call = call,
-                                            expanded = isExpanded,
-                                            onClick = { viewModel.onCallClicked(call.id) },
-                                            onLongClick = { viewModel.onCallLongClick(call) },
-                                            onCallClick = {
-                                                if (onNumberPicked != null) onNumberPicked(call.number)
-                                                else CallUtils.makeCall(context, call.number)
-                                            },
-                                            onMessageClick = { MessageUtils.sendMessage(context, call.number) },
-                                            onHistoryClick = { onHistoryClick(call.name ?: "", call.number) }
-                                        )
-
-                                        if (!row.isLastInSection) {
-                                            // Starts under the name/desc text (16dp row padding +
-                                            // 46dp avatar + 16dp spacer from CallItem), not under
-                                            // the avatar — and runs flush to the card's right edge.
-                                            HorizontalDivider(
-                                                modifier = Modifier.padding(start = 78.dp),
-                                                thickness = 0.5.dp,
-                                                color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCDCDCD)
-                                            )
+                                            if (!row.isLastInSection) {
+                                                // Starts under the name/desc text (16dp row padding +
+                                                // 46dp avatar + 16dp spacer from CallItem), not under
+                                                // the avatar — and runs flush to the card's right edge.
+                                                HorizontalDivider(
+                                                    modifier = Modifier.padding(start = 78.dp),
+                                                    thickness = 0.5.dp,
+                                                    color = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCDCDCD)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -701,6 +717,17 @@ fun RecentsScreen(
                         }
                     }
                 }
+            }
+
+            if (showScrollToTop) {
+                // Same look as the Search/Filter icons in this screen's own CommonHeader actions.
+                HeaderActionButton(
+                    icon = Icons.Filled.KeyboardArrowUp,
+                    onClick = { coroutineScope.launch { listState.animateScrollToItem(0) } },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
+                )
             }
         }
     }
