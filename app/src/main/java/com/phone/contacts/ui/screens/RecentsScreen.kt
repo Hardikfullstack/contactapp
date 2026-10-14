@@ -112,18 +112,21 @@ import com.phone.contacts.data.CallType
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ads.AdPlacements
 import com.phone.contacts.ads.AdType
+import com.phone.contacts.ads.AppOpenCounter
 import com.phone.contacts.ads.NativeAdView
 import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.util.AppConfigStore
 import androidx.compose.runtime.collectAsState
 import com.phone.contacts.ui.components.highlightMatches
 import com.phone.contacts.ui.components.PermissionRequiredDialog
+import com.phone.contacts.ui.components.RateUsDialog
 import com.phone.contacts.ui.features.onboarding.SetDefaultScreen
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.DefaultDialerState
 import com.phone.contacts.util.GoogleMeetUtils
 import com.phone.contacts.util.MessageUtils
+import com.phone.contacts.util.RateUsHelper
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -152,6 +155,28 @@ fun RecentsScreen(onContactClick: (name: String?, number: String) -> Unit, onAdd
     if (!isDefaultDialer) {
         SetDefaultScreen(onSetAsDefault = { DefaultDialerState.refresh(context) })
         return
+    }
+
+    // Auto Rate Us - shown once, on the user's 4th cold-start open (AppOpenCounter's count,
+    // already incremented once for this cold start by MainActivity before reaching here).
+    var showAutoRateUsDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!RateUsHelper.hasAutoShown(context) &&
+            !RateUsHelper.hasInteracted(context) &&
+            AppOpenCounter.currentCount(context) == 4
+        ) {
+            showAutoRateUsDialog = true
+            RateUsHelper.markAutoShown(context)
+        }
+    }
+    if (showAutoRateUsDialog) {
+        RateUsDialog(
+            onRateClick = { stars ->
+                showAutoRateUsDialog = false
+                RateUsHelper.handleRating(context, stars)
+            },
+            onDismiss = { showAutoRateUsDialog = false }
+        )
     }
 
     var hasCallLogPermission by remember {

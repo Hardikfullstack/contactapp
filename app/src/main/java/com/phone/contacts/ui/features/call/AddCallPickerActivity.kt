@@ -2,6 +2,7 @@ package com.phone.contacts.ui.features.call
 
 import android.content.Intent
 import android.os.Bundle
+import android.telephony.PhoneNumberUtils
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.service.CallManager
 import com.phone.contacts.ui.components.ScreenSearchField
 import com.phone.contacts.ui.screens.ContactAvatar
 import com.phone.contacts.ui.theme.ContactsTheme
@@ -79,11 +82,18 @@ private fun AddCallPickerScreen(onPick: (String) -> Unit, onBack: () -> Unit) {
         ContactRepository.fetchContacts(context).collect { allContacts = it }
     }
 
-    val filtered = remember(allContacts, query) {
+    // Live - recomposes the moment a conference participant hangs up (or a new one joins), so
+    // they drop out of / reappear in this list immediately rather than needing the picker reopened.
+    val activeCallNumbers by CallManager.activeCallNumbers.collectAsState()
+
+    val filtered = remember(allContacts, query, activeCallNumbers) {
+        val notOnCall = allContacts.filter { contact ->
+            activeCallNumbers.none { PhoneNumberUtils.compare(it, contact.number) }
+        }
         if (query.isBlank()) {
-            allContacts
+            notOnCall
         } else {
-            allContacts.filter { it.name.contains(query, ignoreCase = true) || it.number.contains(query) }
+            notOnCall.filter { it.name.contains(query, ignoreCase = true) || it.number.contains(query) }
         }
     }
 

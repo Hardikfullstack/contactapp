@@ -64,7 +64,9 @@ object BlockRepository {
     suspend fun unblockNumber(context: Context, id: Long): Boolean = withContext(Dispatchers.IO) {
         try {
             val uri = android.content.ContentUris.withAppendedId(BlockedNumberContract.BlockedNumbers.CONTENT_URI, id)
-            context.contentResolver.delete(uri, null, null) > 0
+            val unblocked = context.contentResolver.delete(uri, null, null) > 0
+            if (unblocked) AnalyticsManager.logEventWithAction(AnalyticsEvents.NUMBER_BLOCKED, AnalyticsEvents.SCREEN_CONTACT_DETAIL, AnalyticsEvents.ACTION_UNBLOCK)
+            unblocked
         } catch (_: Exception) {
             false
         }
@@ -74,11 +76,13 @@ object BlockRepository {
      * number, not the block-list row id [unblockNumber] needs. */
     suspend fun unblockByNumber(context: Context, number: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            context.contentResolver.delete(
+            val unblocked = context.contentResolver.delete(
                 BlockedNumberContract.BlockedNumbers.CONTENT_URI,
                 "${BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER} = ?",
                 arrayOf(number)
             ) > 0
+            if (unblocked) AnalyticsManager.logEventWithAction(AnalyticsEvents.NUMBER_BLOCKED, AnalyticsEvents.SCREEN_CONTACT_DETAIL, AnalyticsEvents.ACTION_UNBLOCK)
+            unblocked
         } catch (_: Exception) {
             false
         }

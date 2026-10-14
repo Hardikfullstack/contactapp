@@ -4,7 +4,7 @@ import com.phone.contacts.data.model.AppResult
 
 /**
  * The ad types the app can show. Each one reads its unit id and on/off switch from the remote
- * config (AppResult), by numbered slot: banner_1..10, native_1..23, interstitial_1..7, app_open_1..4.
+ * config (AppResult), by numbered slot: banner_1..10, native_1..23, interstitial_1..9, app_open_1..4.
  *
  * INTERSTITIAL_ON_BACK is an interstitial shown when the user leaves a screen (back / exit). It uses
  * the interstitial slots too, so pass the slot the panel gives that placement. It also has its own
@@ -87,6 +87,8 @@ object AdPlacements {
             5 -> result.interstitial_5 to result.interstitial_5_on_off
             6 -> result.interstitial_6 to result.interstitial_6_on_off
             7 -> result.interstitial_7 to result.interstitial_7_on_off
+            8 -> result.interstitial_8 to result.interstitial_8_on_off
+            9 -> result.interstitial_9 to result.interstitial_9_on_off
             else -> null to null
         }
 

@@ -1,5 +1,6 @@
 package com.phone.contacts.ui.features.call
 
+import android.app.Activity
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.telecom.Call
@@ -83,6 +84,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -97,6 +99,10 @@ import com.phone.contacts.service.CallManager
 import com.phone.contacts.ui.components.CallWallpaperBackground
 import com.phone.contacts.ui.screens.ContactAvatar
 import com.phone.contacts.ui.theme.primaryAccentColor
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.phone.contacts.util.DeviceUtils
 import com.phone.contacts.util.MessageUtils
 import com.phone.contacts.util.QuickResponsePreferences
 import com.phone.contacts.util.QuickResponseTemplate
@@ -217,6 +223,11 @@ fun CallScreen(
     }
 
     var showKeypad by remember { mutableStateOf(false) }
+    // Lives here, not inside DtmfKeypadSheet itself - that composable is only in composition while
+    // the sheet is open, so its own remember{} would reset to blank every time the sheet is
+    // dismissed and reopened. Keyed on number so a new call (not just reopening the sheet) starts
+    // fresh.
+    var enteredDtmfDigits by remember(number) { mutableStateOf("") }
     var showAudioRouteSheet by remember { mutableStateOf(false) }
     var showQuickResponseSheet by remember { mutableStateOf(false) }
     var showManageCallSheet by remember { mutableStateOf(false) }
@@ -560,7 +571,11 @@ fun CallScreen(
 
     if (showKeypad) {
         DtmfKeypadSheet(
-            onDigit = onPlayDtmf,
+            enteredDigits = enteredDtmfDigits,
+            onDigit = { digit ->
+                enteredDtmfDigits += digit
+                onPlayDtmf(digit)
+            },
             onDigitReleased = onStopDtmf,
             onDismiss = { showKeypad = false }
         )
@@ -852,25 +867,43 @@ private fun dtmfToneFor(digit: Char): Int = when (digit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DtmfKeypadSheet(
+    enteredDigits: String,
     onDigit: (Char) -> Unit,
     onDigitReleased: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
-    // Pure visual feedback for what's been pressed this sheet session - sending the tone (onDigit)
-    // already works without this, but with nothing on screen showing what you typed, it reads as
-    // if pressing a key does nothing at all.
-    var enteredDigits by remember { mutableStateOf("") }
     // STREAM_VOICE_CALL (not STREAM_MUSIC, which KeypadScreen's own dial pad uses) - during an
     // active call this routes the local beep through whatever audio path the call itself is using
     // (earpiece/speaker/Bluetooth), matching a stock dialer's in-call DTMF feedback.
     val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_VOICE_CALL, ToneGenerator.MAX_VOLUME * 4 / 5) }
     DisposableEffect(Unit) { onDispose { toneGenerator.release() } }
+
+    // CallActivity hides the nav bar once up front (on 3-button-nav devices), but opening this
+    // sheet appears to make the system re-show it (either its own window not inheriting that
+    // flag, or Android auto-revealing hidden bars for a new overlay) - navigationBarsPadding()
+    // alone didn't help, since a transient system bar paints as a compositor overlay regardless of
+    // this content's own layout padding. Re-asserting the hide here, right when the sheet appears,
+    // fixes it at the source instead of trying to lay out around a bar that shouldn't be shown.
+    val view = LocalView.current
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val activity = view.context as? Activity
+        val window = activity?.window
+        val controller = if (window != null) WindowCompat.getInsetsController(window, view) else null
+        if (controller != null && !DeviceUtils.isGestureNavigationEnabled(context)) {
+            controller.hide(WindowInsetsCompat.Type.navigationBars())
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+        onDispose {}
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 8.dp)
+                .navigationBarsPadding()
         ) {
             Text(
                 text = enteredDigits,
@@ -894,7 +927,6 @@ private fun DtmfKeypadSheet(
                             digit = digit,
                             letters = letters,
                             onDigit = { pressed ->
-                                enteredDigits += pressed
                                 // startTone(type) with no duration plays until stopTone() - held
                                 // for exactly as long as the key is pressed, same as a real phone.
                                 toneGenerator.startTone(dtmfToneFor(pressed))

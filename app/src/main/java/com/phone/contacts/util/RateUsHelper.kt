@@ -9,10 +9,29 @@ import com.phone.contacts.R
 
 /** Routing for the Rate Us dialog's star tap, matching the reference app's own split: 1-3 stars
  * go to a private feedback email instead of a public store review, 4-5 go straight to the Play
- * Store listing. */
+ * Store listing. Also tracks the automatic (3rd-cold-open) prompt shown from RecentsScreen, so
+ * both that entry point and the manual Settings one stay in sync via the same prefs. */
 object RateUsHelper {
+    private const val PREFS_NAME = "rate_us_prefs"
+    private const val KEY_INTERACTED = "rate_us_interacted"
+    private const val KEY_AUTO_SHOWN = "rate_us_auto_shown"
+
+    private fun prefs(context: Context) = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    /** True once the user has tapped a star rating anywhere (Settings or the automatic prompt). */
+    fun hasInteracted(context: Context): Boolean = prefs(context).getBoolean(KEY_INTERACTED, false)
+
+    /** True once the automatic (3rd-cold-open) prompt has been shown - it only ever shows once. */
+    fun hasAutoShown(context: Context): Boolean = prefs(context).getBoolean(KEY_AUTO_SHOWN, false)
+
+    fun markAutoShown(context: Context) {
+        prefs(context).edit().putBoolean(KEY_AUTO_SHOWN, true).apply()
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.RATE_US_SHOWN, AnalyticsEvents.SCREEN_RECENTS, AnalyticsEvents.ACTION_AUTO)
+    }
 
     fun handleRating(context: Context, stars: Int) {
+        prefs(context).edit().putBoolean(KEY_INTERACTED, true).apply()
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.RATE_US_RATING_GIVEN, AnalyticsEvents.SCREEN_RATE_US, stars.toString())
         if (stars in 1..3) {
             sendFeedbackEmail(context, stars)
         } else {

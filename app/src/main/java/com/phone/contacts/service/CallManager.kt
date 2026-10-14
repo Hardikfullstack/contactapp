@@ -7,14 +7,19 @@ import android.telecom.CallAudioState
 import android.telecom.InCallService
 import android.telecom.VideoProfile
 import com.phone.contacts.data.ContactRepository
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.DefaultDialerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
@@ -77,6 +82,19 @@ object CallManager {
     private var serviceRef: WeakReference<InCallService>? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Every phone number currently part of this call — primary, secondary (call-waiting/second
+     * line), and every conference participant — combined live so the Add Call picker can exclude
+     * them from its contact list. Recombines automatically whenever any of the three source flows
+     * changes (e.g. a conference participant hangs up), so the exclusion list is always current -
+     * no separate refresh needed. */
+    val activeCallNumbers: StateFlow<Set<String>> = combine(_currentCall, _secondaryCall, _conferenceChildren) { primary, secondary, children ->
+        buildSet {
+            primary?.details?.handle?.schemeSpecificPart?.let { add(it) }
+            secondary?.details?.handle?.schemeSpecificPart?.let { add(it) }
+            children.forEach { child -> child.details?.handle?.schemeSpecificPart?.let { add(it) } }
+        }
+    }.stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     private val contactCache = java.util.concurrent.ConcurrentHashMap<String, com.phone.contacts.data.Contact>()
 
@@ -398,12 +416,14 @@ object CallManager {
 
     fun answer() {
         _currentCall.value?.answer(VideoProfile.STATE_AUDIO_ONLY)
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.INCOMING_CALL, AnalyticsEvents.SCREEN_CALL_MANAGER, AnalyticsEvents.ACTION_ANSWER)
     }
 
     /** Declines a still-ringing call. Telecom requires reject(), not disconnect(), while ringing
      *  for the network to be reliably signaled that the call was declined. */
     fun reject() {
         _currentCall.value?.reject(false, null)
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.INCOMING_CALL, AnalyticsEvents.SCREEN_CALL_MANAGER, AnalyticsEvents.ACTION_DECLINE)
     }
 
     fun disconnect() {
@@ -425,6 +445,7 @@ object CallManager {
             _currentCall.value?.hold()
         }
         secondary.answer(VideoProfile.STATE_AUDIO_ONLY)
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.INCOMING_CALL, AnalyticsEvents.SCREEN_CALL_MANAGER, AnalyticsEvents.ACTION_ANSWER_CALL_WAITING)
     }
 
     /** Ends the in-progress call outright and answers the waiting one instead — the call-waiting
@@ -434,10 +455,12 @@ object CallManager {
         val secondary = _secondaryCall.value ?: return
         _currentCall.value?.disconnect()
         secondary.answer(VideoProfile.STATE_AUDIO_ONLY)
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.INCOMING_CALL, AnalyticsEvents.SCREEN_CALL_MANAGER, AnalyticsEvents.ACTION_ANSWER_END_OTHER_CALL)
     }
 
     fun rejectSecondaryCall() {
         _secondaryCall.value?.reject(false, null)
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.INCOMING_CALL, AnalyticsEvents.SCREEN_CALL_MANAGER, AnalyticsEvents.ACTION_DECLINE_CALL_WAITING)
     }
 
     /** No dedicated Telecom "swap" API — this is just holding whichever call is currently active
@@ -461,6 +484,7 @@ object CallManager {
         val primary = _currentCall.value ?: return
         val secondary = _secondaryCall.value ?: return
         primary.conference(secondary)
+        AnalyticsManager.logEventWithAction(AnalyticsEvents.INCOMING_CALL, AnalyticsEvents.SCREEN_CALL_MANAGER, AnalyticsEvents.ACTION_MERGE_CALLS)
     }
 
     fun disconnectConferenceParticipant(call: Call) {

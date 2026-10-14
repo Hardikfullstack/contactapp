@@ -61,7 +61,7 @@ object AppConfigStore {
             result = result.copy(
                 extra_data_2_message = "1.0.0",
                 extra_data_1_on_off = "off",
-                back_click = "0"
+                back_click = "1"
             )
         )
     }

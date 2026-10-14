@@ -68,6 +68,8 @@ import com.phone.contacts.ui.components.RateUsDialog
 import com.phone.contacts.ui.components.ScreenTitleBar
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AfterCallPreferences
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import com.phone.contacts.util.KeypadTonePreferences
 import com.phone.contacts.util.RateUsHelper
 
@@ -303,7 +305,10 @@ fun SettingsScreen(
                     icon = Icons.Filled.StarRate,
                     iconBackgroundColor = Color(0xFFFBC02D),
                     title = stringResource(R.string.rate_us_title),
-                    onClick = { showRateUsDialog = true }
+                    onClick = {
+                        showRateUsDialog = true
+                        AnalyticsManager.logEventWithAction(AnalyticsEvents.RATE_US_SHOWN, AnalyticsEvents.SCREEN_RATE_US, AnalyticsEvents.ACTION_SHOWN)
+                    }
                 )
                 SettingsDivider()
                 SettingsRow(

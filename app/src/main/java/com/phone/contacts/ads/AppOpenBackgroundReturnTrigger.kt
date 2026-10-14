@@ -8,6 +8,13 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.phone.contacts.ui.features.call.CallActivity
 import com.phone.contacts.util.OnboardingPreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Shows an App Open ad when the app returns to the foreground after being backgrounded (user
@@ -33,6 +40,14 @@ object AppOpenBackgroundReturnTrigger : Application.ActivityLifecycleCallbacks, 
      * onStart fires.
      */
     var isAdPaused = false
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private val _isWaitingForAd = MutableStateFlow(false)
+    /** True while a due return-to-foreground ad is loading (bounded wait) - MainActivity collects
+     * this to show the same loading overlay the cold-start App Open ad uses, instead of this
+     * return silently showing nothing just because the ad wasn't preloaded in time. */
+    val isWaitingForAd: StateFlow<Boolean> = _isWaitingForAd.asStateFlow()
 
     fun init(application: Application, adUnitId: String) {
         this.adUnitId = adUnitId
@@ -65,8 +80,18 @@ object AppOpenBackgroundReturnTrigger : Application.ActivityLifecycleCallbacks, 
         // Don't interrupt an in-progress call screen or the after-call screen with a full-screen ad.
         if (activity is CallActivity || activity is com.phone.contacts.ui.features.aftercall.AfterCallActivity) return
 
-        if (AppOpenAdManager.isReady()) {
-            AppOpenAdManager.show(activity, unitId) {}
+        scope.launch {
+            if (!AppOpenAdManager.isReady()) {
+                // Not preloaded in time (e.g. the return happened moments after a cold start, so
+                // the first preload is still in flight) - give it the same bounded chance the
+                // cold-start path does instead of silently skipping this due return.
+                _isWaitingForAd.value = true
+                waitUntilAdReady { AppOpenAdManager.isReady() }
+                _isWaitingForAd.value = false
+            }
+            if (AppOpenAdManager.isReady()) {
+                AppOpenAdManager.show(activity, unitId) {}
+            }
         }
     }
 

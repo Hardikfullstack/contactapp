@@ -1,5 +1,6 @@
 package com.phone.contacts.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,7 +46,7 @@ import com.phone.contacts.ads.AdPlacements
 import com.phone.contacts.ads.AdType
 import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.ads.NativeAdView
-import com.phone.contacts.ads.rememberBackWithInterstitial
+import com.phone.contacts.ads.rememberInterstitialTrigger
 import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.AppThemePreferences
 import com.phone.contacts.util.ThemeMode
@@ -59,11 +60,11 @@ import com.phone.contacts.util.ThemeMode
 fun ThemeScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val adConfig by AppConfigStore.config.collectAsState()
-    // Matches the reference app: ThemeSelectionActivity shows an interstitial on back.
-    val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 1),
-        onBack
-    )
+    // Matches the reference app: ThemeSelectionActivity shows an interstitial on back - and the
+    // same ad unit is reused for the confirm checkmark, since that's the screen's other exit path.
+    val interstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 2)
+    val triggerInterstitial = rememberInterstitialTrigger(interstitialAdUnitId)
+    BackHandler { triggerInterstitial(onBack) }
     var selectedMode by remember { mutableStateOf(AppThemePreferences.themeMode.value) }
 
     Column(
@@ -76,7 +77,7 @@ fun ThemeScreen(onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = backWithAd) {
+            IconButton(onClick = { triggerInterstitial(onBack) }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
@@ -87,8 +88,10 @@ fun ThemeScreen(onBack: () -> Unit) {
                 modifier = Modifier.weight(1f).padding(start = 4.dp)
             )
             IconButton(onClick = {
-                AppThemePreferences.setThemeMode(context, selectedMode)
-                onBack()
+                triggerInterstitial {
+                    AppThemePreferences.setThemeMode(context, selectedMode)
+                    onBack()
+                }
             }) {
                 Box(
                     modifier = Modifier

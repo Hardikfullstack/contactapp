@@ -18,9 +18,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -30,6 +33,8 @@ import com.phone.contacts.ui.features.onboarding.MiuiPermissionDialog
 import com.phone.contacts.ui.features.splash.SplashScreen
 import com.phone.contacts.ui.navigation.MainNavigation
 import com.phone.contacts.ui.theme.ContactsTheme
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import com.phone.contacts.util.AppThemePreferences
 import com.phone.contacts.util.DefaultDialerState
 import com.phone.contacts.util.DeviceUtils
@@ -88,10 +93,13 @@ class MainActivity : AppCompatActivity() {
                 // not play again - the user should land back where they were, in the new language.
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var isLanguageSelected by remember { mutableStateOf(OnboardingPreferences.isLanguageSelected(context)) }
+                var showAppOpenLoader by remember { mutableStateOf(false) }
+                val coroutineScope = rememberCoroutineScope()
 
                 // Matches contactapp: shows an App Open ad whenever the app itself returns to the
-                // foreground from being backgrounded (not on every screen change, and not on cold
-                // start - AppOpenBackgroundReturnTrigger handles both of those distinctions).
+                // foreground from being backgrounded (not on every screen change). Cold start has
+                // its own separate every-3rd-launch cadence - see AppOpenCounter, wired into
+                // SplashScreen's onTimeout below.
                 val adConfig by com.phone.contacts.util.AppConfigStore.config.collectAsState()
                 LaunchedEffect(adConfig) {
                     com.phone.contacts.ads.AdPlacements.adUnitId(
@@ -151,11 +159,42 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 when {
-                    showSplash -> SplashScreen(onTimeout = { showSplash = false })
+                    showSplash -> SplashScreen(onTimeout = {
+                        // isLanguageSelected here reflects whatever it was when this cold start
+                        // began (onboarding's own onDone can't have run yet - Splash is still the
+                        // only thing on screen) - true means this is a returning user's cold
+                        // start, which is the only case AppOpenCounter should ever count.
+                        val activity = context as? android.app.Activity
+                        val adUnitId = if (isLanguageSelected) {
+                            com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.APP_OPEN, slot = 1)
+                        } else null
+                        val openCount = if (isLanguageSelected) com.phone.contacts.ads.AppOpenCounter.incrementAndGet(context) else 0
+                        if (adUnitId != null && activity != null && com.phone.contacts.ads.AppOpenCounter.shouldShowAppOpenAd(openCount)) {
+                            // The ad is still loading more often than not at this point - a cold
+                            // start is also when Mobile Ads SDK itself is still warming up, so
+                            // checking isReady() right away (no wait) almost always missed it.
+                            // Give it a real, bounded chance instead of silently skipping.
+                            coroutineScope.launch {
+                                if (!com.phone.contacts.ads.AppOpenAdManager.isReady()) {
+                                    showAppOpenLoader = true
+                                    com.phone.contacts.ads.waitUntilAdReady { com.phone.contacts.ads.AppOpenAdManager.isReady() }
+                                    showAppOpenLoader = false
+                                }
+                                if (com.phone.contacts.ads.AppOpenAdManager.isReady()) {
+                                    com.phone.contacts.ads.AppOpenAdManager.show(activity, adUnitId) { showSplash = false }
+                                } else {
+                                    showSplash = false
+                                }
+                            }
+                        } else {
+                            showSplash = false
+                        }
+                    })
                     !isLanguageSelected -> LanguageSelectionScreen(
                         onDone = {
                             OnboardingPreferences.setLanguageSelected(context)
                             isLanguageSelected = true
+                            AnalyticsManager.logEventWithAction(AnalyticsEvents.ONBOARDING_COMPLETED, AnalyticsEvents.SCREEN_LANGUAGE, AnalyticsEvents.ACTION_FINISHED)
                         }
                     )
                     else -> {
@@ -163,6 +202,23 @@ class MainActivity : AppCompatActivity() {
                         if (showMiuiPermissionDialog) {
                             MiuiPermissionDialog(onGranted = { isMiuiPermissionGranted = true })
                         }
+                    }
+                }
+
+                val isWaitingForBackgroundReturnAd by com.phone.contacts.ads.AppOpenBackgroundReturnTrigger.isWaitingForAd.collectAsState()
+                if (showAppOpenLoader || isWaitingForBackgroundReturnAd) {
+                    // A Dialog, not inline content - it needs to paint over SplashScreen's own
+                    // Window-level content regardless of composition order (same reasoning as
+                    // BackInterstitial's loading dialog).
+                    Dialog(
+                        onDismissRequest = {},
+                        properties = DialogProperties(
+                            dismissOnBackPress = false,
+                            dismissOnClickOutside = false,
+                            usePlatformDefaultWidth = false
+                        )
+                    ) {
+                        com.phone.contacts.ads.AdLoadingScreen()
                     }
                 }
             }

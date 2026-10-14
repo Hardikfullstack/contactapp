@@ -1,5 +1,6 @@
 package com.phone.contacts.ui.features.onboarding
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,9 @@ import com.phone.contacts.ads.AdPlacements
 import com.phone.contacts.ads.AdType
 import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.ads.NativeAdView
+import com.phone.contacts.ads.rememberInterstitialTrigger
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import com.phone.contacts.util.AppConfigStore
 
 /** The device's own system locale language code (e.g. "hi"), independent of any per-app language
@@ -91,6 +95,12 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
     }
     val adConfig by AppConfigStore.config.collectAsState()
 
+    // Separate ad units for the two ways to leave this screen - Done tap (slot 1) and back (slot 9).
+    val doneInterstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 1)
+    val triggerDoneInterstitial = rememberInterstitialTrigger(doneInterstitialAdUnitId)
+    val backInterstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 9)
+    val triggerBackInterstitial = rememberInterstitialTrigger(backInterstitialAdUnitId)
+
     val isFirstRun = onBack == null
     val shouldAutoSkip = remember(isFirstRun) {
         isFirstRun && supportedLanguages.any { it.code == systemLocaleCode(context) }
@@ -102,14 +112,24 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
 
             val locales = LocaleListCompat.forLanguageTags(matchCode)
             AppCompatDelegate.setApplicationLocales(locales)
+            AnalyticsManager.logEventWithAction(
+                AnalyticsEvents.LANGUAGE_CHANGED,
+                AnalyticsEvents.SCREEN_LANGUAGE,
+                AnalyticsEvents.ACTION_AUTO,
+                mapOf(AnalyticsEvents.PARAM_FIRST_RUN to isFirstRun)
+            )
 
-            onDone()
+            triggerDoneInterstitial { onDone() }
         }
     }
 
     if (shouldAutoSkip) {
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
         return
+    }
+
+    if (onBack != null) {
+        BackHandler { triggerBackInterstitial(onBack) }
     }
 
     Scaffold(
@@ -126,7 +146,7 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
                     // Only shown when reached from Settings — the first-run onboarding call site
                     // doesn't pass onBack, since there's nothing to go back to yet at that point.
                     if (onBack != null) {
-                        IconButton(onClick = onBack) {
+                        IconButton(onClick = { triggerBackInterstitial(onBack) }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
@@ -138,9 +158,17 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
                 actions = {
                     Button(
                         onClick = {
-                            val locales = LocaleListCompat.forLanguageTags(selectedCode)
-                            AppCompatDelegate.setApplicationLocales(locales)
-                            onDone()
+                            triggerDoneInterstitial {
+                                val locales = LocaleListCompat.forLanguageTags(selectedCode)
+                                AppCompatDelegate.setApplicationLocales(locales)
+                                AnalyticsManager.logEventWithAction(
+                                    AnalyticsEvents.LANGUAGE_CHANGED,
+                                    AnalyticsEvents.SCREEN_LANGUAGE,
+                                    selectedCode,
+                                    mapOf(AnalyticsEvents.PARAM_FIRST_RUN to isFirstRun)
+                                )
+                                onDone()
+                            }
                         },
                         modifier = Modifier.padding(end = 8.dp),
                         shape = RoundedCornerShape(20.dp),

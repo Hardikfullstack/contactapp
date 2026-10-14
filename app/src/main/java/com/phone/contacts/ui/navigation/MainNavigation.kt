@@ -171,6 +171,10 @@ fun MainNavigation() {
         val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
             val screenName = destination.route?.substringBefore("/")?.substringBefore("?") ?: "unknown"
             AnalyticsManager.logScreenView(screenName)
+            // Just remembers screenName locally - no extra Firebase call per navigation. The actual
+            // setUserProperty report happens once, when the app backgrounds (see
+            // AnalyticsManager.flushLastScreenProperty, called from ContactsApplication).
+            AnalyticsManager.trackLastScreen(screenName)
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose { navController.removeOnDestinationChangedListener(listener) }

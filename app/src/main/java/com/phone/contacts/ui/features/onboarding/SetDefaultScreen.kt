@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phone.contacts.R
 import com.phone.contacts.ui.theme.primaryAccentColor
+import com.phone.contacts.util.AnalyticsEvents
+import com.phone.contacts.util.AnalyticsManager
 import com.phone.contacts.util.DefaultDialerState
 
 @Composable
@@ -56,6 +58,11 @@ fun SetDefaultScreen(onSetAsDefault: () -> Unit) {
     ) { result ->
         DefaultDialerState.refresh(context)
         Log.d("SetDefaultScreen", "Role request result: resultCode=${result.resultCode}, isDefault=${DefaultDialerState.isDefault.value}")
+        AnalyticsManager.logEventWithAction(
+            AnalyticsEvents.DEFAULT_DIALER_PROMPT,
+            AnalyticsEvents.SCREEN_RECENTS,
+            if (DefaultDialerState.isDefault.value) AnalyticsEvents.ACTION_GRANTED else AnalyticsEvents.ACTION_DENIED
+        )
         if (DefaultDialerState.isDefault.value) onSetAsDefault()
     }
 
@@ -76,10 +83,12 @@ fun SetDefaultScreen(onSetAsDefault: () -> Unit) {
                 }
                 else -> {
                     Log.d("SetDefaultScreen", "Launching ROLE_DIALER request")
+                    AnalyticsManager.logEventWithAction(AnalyticsEvents.DEFAULT_DIALER_PROMPT, AnalyticsEvents.SCREEN_RECENTS, AnalyticsEvents.ACTION_SHOWN)
                     roleRequestLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER))
                 }
             }
         } else {
+            AnalyticsManager.logEventWithAction(AnalyticsEvents.DEFAULT_DIALER_PROMPT, AnalyticsEvents.SCREEN_RECENTS, AnalyticsEvents.ACTION_SHOWN)
             val intent = Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
                 .putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, context.packageName)
             roleRequestLauncher.launch(intent)
