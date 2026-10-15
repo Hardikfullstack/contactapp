@@ -141,7 +141,8 @@ fun SpeedDialScreen(onBack: () -> Unit, onAssignClick: (String) -> Unit, onListC
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 4)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "speed_dial_native"
             )
         }
     }

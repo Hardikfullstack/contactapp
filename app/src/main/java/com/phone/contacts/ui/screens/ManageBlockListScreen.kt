@@ -152,11 +152,11 @@ fun ManageBlockListScreen(onBack: () -> Unit) {
             }
         }
 
-        // Shares banner_4 with Speed Dial — only 10 banner slots exist.
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 7)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "manage_block_list_native"
             )
         }
     }

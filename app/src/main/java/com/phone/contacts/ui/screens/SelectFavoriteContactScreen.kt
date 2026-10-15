@@ -43,6 +43,8 @@ import com.phone.contacts.R
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.ScreenSearchField
+import com.phone.contacts.ui.components.highlightMatches
+import com.phone.contacts.ui.theme.primaryAccentColor
 import kotlinx.coroutines.launch
 
 /** Same style as this app's own picker screens (e.g. Emergency contacts) - a plain contact list
@@ -167,7 +169,7 @@ fun SelectFavoriteContactScreen(onBack: () -> Unit) {
                         }
                     }
                     items(favoriteContacts, key = { it.id }) { contact ->
-                        FavoriteContactPickerRow(contact = contact, selected = true, onClick = { toggle(contact.id) })
+                        FavoriteContactPickerRow(contact = contact, selected = true, query = query, onClick = { toggle(contact.id) })
                     }
                 }
 
@@ -181,7 +183,7 @@ fun SelectFavoriteContactScreen(onBack: () -> Unit) {
                         }
                     }
                     items(contactsInGroup, key = { it.id }) { contact ->
-                        FavoriteContactPickerRow(contact = contact, selected = false, onClick = { toggle(contact.id) })
+                        FavoriteContactPickerRow(contact = contact, selected = false, query = query, onClick = { toggle(contact.id) })
                     }
                 }
             }
@@ -194,7 +196,7 @@ fun SelectFavoriteContactScreen(onBack: () -> Unit) {
 private val FavoriteStarYellow = Color(0xFFFBC02D)
 
 @Composable
-private fun FavoriteContactPickerRow(contact: Contact, selected: Boolean, onClick: () -> Unit) {
+private fun FavoriteContactPickerRow(contact: Contact, selected: Boolean, query: String, onClick: () -> Unit) {
     Column {
         Row(
             modifier = Modifier
@@ -206,7 +208,7 @@ private fun FavoriteContactPickerRow(contact: Contact, selected: Boolean, onClic
             ContactAvatar(name = contact.name, photoUri = contact.photoUri, size = 40.dp)
             Spacer(modifier = Modifier.size(14.dp))
             Text(
-                text = contact.name,
+                text = highlightMatches(contact.name, query, primaryAccentColor()),
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.weight(1f)
             )

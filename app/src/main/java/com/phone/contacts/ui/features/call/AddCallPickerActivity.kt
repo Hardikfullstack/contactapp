@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,8 +44,10 @@ import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.service.CallManager
 import com.phone.contacts.ui.components.ScreenSearchField
+import com.phone.contacts.ui.components.highlightMatches
 import com.phone.contacts.ui.screens.ContactAvatar
 import com.phone.contacts.ui.theme.ContactsTheme
+import com.phone.contacts.ui.theme.primaryAccentColor
 
 /** Plain contact picker with no Telecom involvement at all — mirrors contactapp's own
  * AddCallPickerActivity exactly: it just returns a phone number via [setResult], the actual
@@ -131,6 +134,21 @@ private fun AddCallPickerScreen(onPick: (String) -> Unit, onBack: () -> Unit) {
 
         Spacer(modifier = Modifier.size(8.dp))
 
+        if (filtered.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 60.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.empty_no_contacts_found),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            return@Column
+        }
+
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(filtered, key = { it.id }) { contact ->
                 Column {
@@ -144,7 +162,7 @@ private fun AddCallPickerScreen(onPick: (String) -> Unit, onBack: () -> Unit) {
                         ContactAvatar(contact = contact, size = 40.dp)
                         Spacer(modifier = Modifier.size(14.dp))
                         Text(
-                            text = contact.name,
+                            text = highlightMatches(contact.name, query, primaryAccentColor()),
                             color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Medium
                         )

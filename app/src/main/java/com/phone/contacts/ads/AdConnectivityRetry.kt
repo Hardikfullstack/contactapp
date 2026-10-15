@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Bumps [tick] once each time connectivity comes back after being lost — NativeAdView/BannerAdView
- * observe it and retry a previously-failed load, without needing the user to navigate away from
+ * Bumps [tick] once each time connectivity comes back after being lost — NativeAdView observes it
+ * and retries a previously-failed load, without needing the user to navigate away from
  * and back to the screen (their own DisposableEffect/factory only fires once per composable
  * lifetime, so a load that failed while offline would otherwise just sit failed forever).
  *
@@ -44,5 +44,22 @@ object AdConnectivityRetry {
                 wasOnline = false
             }
         })
+    }
+
+    /** One-shot snapshot — true if there's an active network with internet capability right now.
+     * Lets a caller (e.g. the App Open ad's cold-start check) skip straight past a doomed attempt
+     * instead of showing a loading state for the full bounded-wait timeout when there's clearly
+     * no connectivity to load anything with. */
+    fun isOnline(context: Context): Boolean {
+        val connectivityManager =
+            context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                ?: return true
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        // VALIDATED (not just NET_CAPABILITY_INTERNET) — a Wi-Fi network with no actual internet
+        // behind it (captive portal, router with no WAN) reports the capability but fails Android's
+        // own connectivity check, which is what we actually care about here.
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 }

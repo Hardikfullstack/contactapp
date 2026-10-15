@@ -25,21 +25,28 @@ object NativeAdCache {
     fun preload(context: Context, adUnitId: String) {
         if (adUnitId in loadingIds || ads.containsKey(adUnitId)) return
         loadingIds += adUnitId
-        AnalyticsManager.logAdEvent("native", adUnitId, "request")
-        val adLoader = AdLoader.Builder(context, adUnitId)
-            .forNativeAd { ad ->
-                ads[adUnitId] = Entry(ad, System.currentTimeMillis())
-                loadingIds -= adUnitId
-                AnalyticsManager.logAdEvent("native", adUnitId, "loaded")
-            }
-            .withAdListener(object : AdListener() {
-                override fun onAdFailedToLoad(error: LoadAdError) {
+        // Deferred a frame — several preload() calls across the various ad managers firing
+        // back-to-back on the main thread during a cold start (building each AdLoader, Play
+        // Services binder setup, especially while MobileAds.initialize() is still running on its
+        // own background thread) can add up enough to trip Android's ANR watchdog. Posting lets
+        // each one run on its own message-queue iteration instead of stacking up.
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            AnalyticsManager.logAdEvent("native", adUnitId, "request")
+            val adLoader = AdLoader.Builder(context, adUnitId)
+                .forNativeAd { ad ->
+                    ads[adUnitId] = Entry(ad, System.currentTimeMillis())
                     loadingIds -= adUnitId
-                    AnalyticsManager.logAdEvent("native", adUnitId, "failed_to_load")
+                    AnalyticsManager.logAdEvent("native", adUnitId, "loaded")
                 }
-            })
-            .build()
-        adLoader.loadAd(AdRequest.Builder().build())
+                .withAdListener(object : AdListener() {
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        loadingIds -= adUnitId
+                        AnalyticsManager.logAdEvent("native", adUnitId, "failed_to_load")
+                    }
+                })
+                .build()
+            adLoader.loadAd(AdRequest.Builder().build())
+        }
     }
 
     /** Hands over the cached ad for [adUnitId] if one finished loading and isn't stale — consumes

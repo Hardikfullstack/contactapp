@@ -293,11 +293,11 @@ fun RecycleBinScreen(onBack: () -> Unit) {
             }
         }
 
-        // Shares banner_8 with Speed Dial List — only 10 banner slots exist.
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 8)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "recycle_bin_native"
             )
         }
     }

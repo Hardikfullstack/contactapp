@@ -45,6 +45,8 @@ import com.phone.contacts.ads.NativeAdTemplate
 import com.phone.contacts.data.Contact
 import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.ui.components.ScreenSearchField
+import com.phone.contacts.ui.components.highlightMatches
+import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AppConfigStore
 import com.phone.contacts.util.SpeedDialEntry
 import com.phone.contacts.util.SpeedDialPreferences
@@ -136,7 +138,7 @@ fun SelectSpeedDialContactScreen(dialKey: String, onBack: () -> Unit, onAssigned
                         ) {
                             ContactAvatar(name = contact.name, photoUri = contact.photoUri, size = 40.dp)
                             Spacer(modifier = Modifier.size(14.dp))
-                            Text(text = contact.name, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+                            Text(text = highlightMatches(contact.name, query, primaryAccentColor()), color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
                         }
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 74.dp),
@@ -151,7 +153,8 @@ fun SelectSpeedDialContactScreen(dialKey: String, onBack: () -> Unit, onAssigned
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 19)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "select_speed_dial_contact_native"
             )
         }
     }

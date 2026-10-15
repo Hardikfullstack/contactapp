@@ -271,7 +271,8 @@ fun MainNavigation() {
                     if (bottomAdUnitId != null) {
                         NativeAdView(
                             adUnitId = bottomAdUnitId,
-                            template = NativeAdTemplate.SMALL
+                            template = NativeAdTemplate.SMALL,
+                            cacheKey = "bottom_nav_native"
                         )
                     }
                 }

@@ -49,9 +49,11 @@ object AppOpenBackgroundReturnTrigger : Application.ActivityLifecycleCallbacks, 
      * return silently showing nothing just because the ad wasn't preloaded in time. */
     val isWaitingForAd: StateFlow<Boolean> = _isWaitingForAd.asStateFlow()
 
+    // Only registers the lifecycle/activity callbacks once; does NOT preload - this ad is only
+    // ever preloaded on an actually-due return (see onStart), not eagerly every time MainActivity
+    // happens to recompose with a fresh config.
     fun init(application: Application, adUnitId: String) {
         this.adUnitId = adUnitId
-        AppOpenAdManager.preload(application, adUnitId)
         if (isInitialized) return
         isInitialized = true
         application.registerActivityLifecycleCallbacks(this)
@@ -82,12 +84,17 @@ object AppOpenBackgroundReturnTrigger : Application.ActivityLifecycleCallbacks, 
 
         scope.launch {
             if (!AppOpenAdManager.isReady()) {
-                // Not preloaded in time (e.g. the return happened moments after a cold start, so
-                // the first preload is still in flight) - give it the same bounded chance the
-                // cold-start path does instead of silently skipping this due return.
-                _isWaitingForAd.value = true
-                waitUntilAdReady { AppOpenAdManager.isReady() }
-                _isWaitingForAd.value = false
+                // Not preloaded ahead of time (this trigger only loads on an actually-due return,
+                // not eagerly) - start the load now and give it a real but bounded chance, same as
+                // the cold-start App Open ad does. Skip the wait (and the loading overlay)
+                // entirely when there's clearly no connectivity to load an ad with in the first
+                // place.
+                if (AdConnectivityRetry.isOnline(activity)) {
+                    AppOpenAdManager.preload(activity.applicationContext, unitId)
+                    _isWaitingForAd.value = true
+                    waitUntilAdReady { AppOpenAdManager.isReady() }
+                    _isWaitingForAd.value = false
+                }
             }
             if (AppOpenAdManager.isReady()) {
                 AppOpenAdManager.show(activity, unitId) {}

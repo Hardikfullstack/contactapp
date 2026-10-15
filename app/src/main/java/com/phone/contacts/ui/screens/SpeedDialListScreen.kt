@@ -129,7 +129,8 @@ fun SpeedDialListScreen(onBack: () -> Unit) {
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 15)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "speed_dial_list_native"
             )
         }
     }

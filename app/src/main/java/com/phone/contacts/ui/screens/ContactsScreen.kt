@@ -16,7 +16,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -469,7 +468,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                     }
                 }
 
-                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         state = listState,
                         modifier = if (showLetterIndex) {
@@ -615,14 +614,14 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                     }
 
                     if (showLetterIndex) {
-                        var currentDragY by remember { mutableStateOf<Float?>(null) }
+                        var currentDragFraction by remember { mutableStateOf<Float?>(null) }
                         var clickedChar by remember { mutableStateOf<Char?>(null) }
                         var alphabetColumnHeight by remember { mutableStateOf(0f) }
                         val alphabet = remember { (('A'..'Z') + '#').toList() }
 
                         // Clear selected alphabet if user manually scrolls the list
                         LaunchedEffect(listState.isScrollInProgress) {
-                            if (listState.isScrollInProgress && currentDragY == null) {
+                            if (listState.isScrollInProgress && currentDragFraction == null) {
                                 clickedChar = null
                             }
                         }
@@ -676,20 +675,26 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                 .pointerInput(Unit) {
                                     detectDragGestures(
                                         onDragStart = { offset ->
-                                            currentDragY = offset.y
+                                            if (latestColumnHeight.value > 0f) {
+                                                currentDragFraction = offset.y / latestColumnHeight.value
+                                            }
                                             scrollToCharacter(offset.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
                                         },
                                         onDrag = { change, _ ->
-                                            currentDragY = change.position.y
+                                            if (latestColumnHeight.value > 0f) {
+                                                currentDragFraction = change.position.y / latestColumnHeight.value
+                                            }
                                             scrollToCharacter(change.position.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
                                         },
-                                        onDragEnd = { currentDragY = null },
-                                        onDragCancel = { currentDragY = null }
+                                        onDragEnd = { currentDragFraction = null },
+                                        onDragCancel = { currentDragFraction = null }
                                     )
                                 }
                                 .pointerInput(Unit) {
                                     detectTapGestures { offset ->
-                                        currentDragY = offset.y
+                                        if (latestColumnHeight.value > 0f) {
+                                            currentDragFraction = offset.y / latestColumnHeight.value
+                                        }
                                         scrollToCharacter(offset.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
                                     }
                                 },
@@ -705,7 +710,7 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                                     (index + 0.5f) * (alphabetColumnHeight / alphabet.size)
                                 } else 0f
                                 
-                                val distance = currentDragY?.let { abs(it - itemCenterY) } ?: Float.MAX_VALUE
+                                val distance = currentDragFraction?.let { abs((it * alphabetColumnHeight) - itemCenterY) } ?: Float.MAX_VALUE
                                 val scale by animateFloatAsState(
                                     targetValue = if (distance < 120f) {
                                         1f + (1.8f * (1f - (distance / 120f).coerceIn(0f, 1f)))
@@ -755,10 +760,10 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                         // Top-center letter pill
                         val displayLabel = clickedChar?.toString() ?: currentSectionLabel
                         val topPillAlpha by animateFloatAsState(
-                            targetValue = if ((listState.isScrollInProgress || currentDragY != null) && displayLabel.isNotEmpty()) 1f else 0f,
+                            targetValue = if ((listState.isScrollInProgress || currentDragFraction != null) && displayLabel.isNotEmpty()) 1f else 0f,
                             animationSpec = tween(
-                                durationMillis = if (listState.isScrollInProgress || currentDragY != null) 150 else 400,
-                                delayMillis = if (listState.isScrollInProgress || currentDragY != null) 0 else 2000
+                                durationMillis = if (listState.isScrollInProgress || currentDragFraction != null) 150 else 400,
+                                delayMillis = if (listState.isScrollInProgress || currentDragFraction != null) 0 else 2000
                             ),
                             label = "top_pill_alpha"
                         )
@@ -781,10 +786,10 @@ fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> U
                             }
                         }
                         
-                        LaunchedEffect(currentDragY) {
-                            if (currentDragY != null) {
+                        LaunchedEffect(currentDragFraction) {
+                            if (currentDragFraction != null) {
                                 kotlinx.coroutines.delay(800)
-                                currentDragY = null
+                                currentDragFraction = null
                             }
                         }
                     }

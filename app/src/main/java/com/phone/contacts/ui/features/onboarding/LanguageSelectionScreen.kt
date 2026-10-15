@@ -194,7 +194,7 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
                     modifier = Modifier.navigationBarsPadding(),
                      compact = true,
                     bottomEdge = true,
-                    
+                    cacheKey = "language_native"
                 )
             }
         },

@@ -4,7 +4,7 @@ import com.phone.contacts.data.model.AppResult
 
 /**
  * The ad types the app can show. Each one reads its unit id and on/off switch from the remote
- * config (AppResult), by numbered slot: banner_1..10, native_1..23, interstitial_1..9, app_open_1..4.
+ * config (AppResult), by numbered slot: native_1..23, interstitial_1..9, app_open_1..4.
  *
  * INTERSTITIAL_ON_BACK is an interstitial shown when the user leaves a screen (back / exit). It uses
  * the interstitial slots too, so pass the slot the panel gives that placement. It also has its own
@@ -12,7 +12,7 @@ import com.phone.contacts.data.model.AppResult
  * matches the reference "Messages" app, where `back_click == "1"` has to be true before any
  * back-navigation interstitial shows at all, regardless of the individual slot's switch.
  */
-enum class AdType { BANNER, NATIVE, INTERSTITIAL, INTERSTITIAL_ON_BACK, APP_OPEN }
+enum class AdType { NATIVE, INTERSTITIAL, INTERSTITIAL_ON_BACK, APP_OPEN }
 
 object AdPlacements {
     /**
@@ -24,7 +24,6 @@ object AdPlacements {
         if (result == null || result.google_ads_on_off != "on") return null
         if (type == AdType.INTERSTITIAL_ON_BACK && result.back_click != "1") return null
         val (adUnitId, switch) = when (type) {
-            AdType.BANNER -> banner(result, slot)
             AdType.NATIVE -> native(result, slot)
             AdType.INTERSTITIAL, AdType.INTERSTITIAL_ON_BACK -> interstitial(result, slot)
             AdType.APP_OPEN -> appOpen(result, slot)
@@ -37,20 +36,6 @@ object AdPlacements {
      * the actual panel slot for this placement before wiring it to a screen - 4 is a placeholder. */
     fun interstitialOnBackAdUnitId(result: AppResult?, slot: Int = 4): String? =
         adUnitId(result, AdType.INTERSTITIAL_ON_BACK, slot)
-
-    private fun banner(result: AppResult, slot: Int): Pair<String?, String?> = when (slot) {
-            1 -> result.banner_1 to result.banner_1_on_off
-            2 -> result.banner_2 to result.banner_2_on_off
-            3 -> result.banner_3 to result.banner_3_on_off
-            4 -> result.banner_4 to result.banner_4_on_off
-            5 -> result.banner_5 to result.banner_5_on_off
-            6 -> result.banner_6 to result.banner_6_on_off
-            7 -> result.banner_7 to result.banner_7_on_off
-            8 -> result.banner_8 to result.banner_8_on_off
-            9 -> result.banner_9 to result.banner_9_on_off
-            10 -> result.banner_10 to result.banner_10_on_off
-            else -> null to null
-        }
 
     private fun native(result: AppResult, slot: Int): Pair<String?, String?> = when (slot) {
             1 -> result.native_1 to result.native_1_on_off

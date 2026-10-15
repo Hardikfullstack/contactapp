@@ -444,7 +444,8 @@ fun RingtoneScreen(
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 17)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "ringtone_native"
             )
         }
     }

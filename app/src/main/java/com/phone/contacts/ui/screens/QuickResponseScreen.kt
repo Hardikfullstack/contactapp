@@ -83,7 +83,8 @@ fun QuickResponseScreen(onBack: () -> Unit) {
             AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 16)?.let {
                 NativeAdView(
                     adUnitId = it,
-                    template = NativeAdTemplate.STRIP
+                    template = NativeAdTemplate.STRIP,
+                    cacheKey = "quick_response_native"
                 )
             }
         }

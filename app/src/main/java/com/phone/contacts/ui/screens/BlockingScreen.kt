@@ -177,7 +177,8 @@ fun BlockingScreen(onBack: () -> Unit, onManageBlockList: () -> Unit, onNumberSe
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 13)?.let { adUnitId ->
             NativeAdView(
                 adUnitId = adUnitId,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "blocking_native"
             )
         }
     }

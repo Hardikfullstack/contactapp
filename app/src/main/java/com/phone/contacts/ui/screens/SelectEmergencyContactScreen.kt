@@ -51,6 +51,7 @@ import com.phone.contacts.data.ContactRepository
 import com.phone.contacts.data.local.AppDatabase
 import com.phone.contacts.data.local.EmergencyContactEntity
 import com.phone.contacts.ui.components.ScreenSearchField
+import com.phone.contacts.ui.components.highlightMatches
 import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.AppConfigStore
 import kotlinx.coroutines.launch
@@ -195,6 +196,7 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
                         ContactPickerRow(
                             contact = contact,
                             selected = true,
+                            query = query,
                             onClick = { toggle(contact.id) }
                         )
                     }
@@ -213,6 +215,7 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
                         ContactPickerRow(
                             contact = contact,
                             selected = false,
+                            query = query,
                             onClick = { toggle(contact.id) }
                         )
                     }
@@ -220,18 +223,18 @@ fun SelectEmergencyContactScreen(onBack: () -> Unit, onDone: () -> Unit) {
             }
         }
 
-        // Shares banner_10 with Select Speed Dial Contact — only 10 banner slots exist.
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 18)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "select_emergency_contact_native"
             )
         }
     }
 }
 
 @Composable
-private fun ContactPickerRow(contact: Contact, selected: Boolean, onClick: () -> Unit) {
+private fun ContactPickerRow(contact: Contact, selected: Boolean, query: String, onClick: () -> Unit) {
     Column {
         Row(
             modifier = Modifier
@@ -243,7 +246,7 @@ private fun ContactPickerRow(contact: Contact, selected: Boolean, onClick: () ->
             ContactAvatar(name = contact.name, photoUri = contact.photoUri, size = 40.dp)
             Spacer(modifier = Modifier.size(14.dp))
             Text(
-                text = contact.name,
+                text = highlightMatches(contact.name, query, primaryAccentColor()),
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.weight(1f)
             )

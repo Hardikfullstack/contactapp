@@ -272,7 +272,8 @@ fun CallWallpaperScreen(onBack: () -> Unit) {
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 20)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "call_wallpaper_native"
             )
         }
     }

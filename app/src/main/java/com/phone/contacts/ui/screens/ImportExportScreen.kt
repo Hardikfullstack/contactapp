@@ -161,7 +161,8 @@ fun ImportExportScreen(onBack: () -> Unit) {
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 5)?.let {
             NativeAdView(
                 adUnitId = it,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "import_export_native"
             )
         }
     }

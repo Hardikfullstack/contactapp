@@ -169,20 +169,31 @@ class MainActivity : AppCompatActivity() {
                             com.phone.contacts.ads.AdPlacements.adUnitId(adConfig?.result, com.phone.contacts.ads.AdType.APP_OPEN, slot = 1)
                         } else null
                         val openCount = if (isLanguageSelected) com.phone.contacts.ads.AppOpenCounter.incrementAndGet(context) else 0
-                        if (adUnitId != null && activity != null && com.phone.contacts.ads.AppOpenCounter.shouldShowAppOpenAd(openCount)) {
+                        val isDue = isLanguageSelected && com.phone.contacts.ads.AppOpenCounter.shouldShowAppOpenAd(context, openCount)
+                        if (adUnitId != null && activity != null && isDue) {
                             // The ad is still loading more often than not at this point - a cold
                             // start is also when Mobile Ads SDK itself is still warming up, so
                             // checking isReady() right away (no wait) almost always missed it.
                             // Give it a real, bounded chance instead of silently skipping.
                             coroutineScope.launch {
                                 if (!com.phone.contacts.ads.AppOpenAdManager.isReady()) {
-                                    showAppOpenLoader = true
-                                    com.phone.contacts.ads.waitUntilAdReady { com.phone.contacts.ads.AppOpenAdManager.isReady() }
-                                    showAppOpenLoader = false
+                                    // No point showing a loading state for the full bounded-wait
+                                    // timeout when there's clearly no connectivity to load an ad
+                                    // with — skip straight to the "didn't work" outcome instead.
+                                    if (com.phone.contacts.ads.AdConnectivityRetry.isOnline(context)) {
+                                        showAppOpenLoader = true
+                                        com.phone.contacts.ads.waitUntilAdReady { com.phone.contacts.ads.AppOpenAdManager.isReady() }
+                                        showAppOpenLoader = false
+                                    }
                                 }
                                 if (com.phone.contacts.ads.AppOpenAdManager.isReady()) {
+                                    com.phone.contacts.ads.AppOpenCounter.clearRetryPending(context)
                                     com.phone.contacts.ads.AppOpenAdManager.show(activity, adUnitId) { showSplash = false }
                                 } else {
+                                    // Still not ready after the bounded wait (e.g. no connectivity) -
+                                    // don't let this due cycle go completely unattempted; retry on
+                                    // the very next cold start regardless of the %3 cadence.
+                                    com.phone.contacts.ads.AppOpenCounter.markRetryPending(context)
                                     showSplash = false
                                 }
                             }

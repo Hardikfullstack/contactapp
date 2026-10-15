@@ -183,7 +183,8 @@ fun NumberSeriesScreen(onBack: () -> Unit) {
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 10)?.let { adUnitId ->
             NativeAdView(
                 adUnitId = adUnitId,
-                template = NativeAdTemplate.STRIP
+                template = NativeAdTemplate.STRIP,
+                cacheKey = "number_series_native"
             )
         }
     }

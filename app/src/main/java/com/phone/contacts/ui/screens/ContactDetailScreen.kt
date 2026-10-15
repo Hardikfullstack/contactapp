@@ -482,7 +482,8 @@ fun ContactDetailScreen(
         AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 3)?.let {
             com.phone.contacts.ads.NativeAdView(
                 adUnitId = it,
-                template = com.phone.contacts.ads.NativeAdTemplate.SMALL
+                template = com.phone.contacts.ads.NativeAdTemplate.SMALL,
+                cacheKey = "contact_detail_native_$resolvedContactId"
             )
         }
     }
@@ -690,7 +691,8 @@ private fun CallHistoryFullScreen(name: String, number: String, onBack: () -> Un
             AdPlacements.adUnitId(adConfig?.result, AdType.NATIVE, slot = 21)?.let {
                 com.phone.contacts.ads.NativeAdView(
                     adUnitId = it,
-                    template = com.phone.contacts.ads.NativeAdTemplate.STRIP
+                    template = com.phone.contacts.ads.NativeAdTemplate.STRIP,
+                    cacheKey = "contact_detail_history_native_$number"
                 )
             }
         }

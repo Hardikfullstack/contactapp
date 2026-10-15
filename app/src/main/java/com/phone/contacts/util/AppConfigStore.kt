@@ -67,7 +67,7 @@ object AppConfigStore {
     }
 
     /**
-     * Temporary: forces every ad slot (banner, native, interstitial, app open) onto Google's
+     * Temporary: forces every ad slot (native, interstitial, app open) onto Google's
      * official test ad unit IDs and "on", regardless of what the panel actually returns — so ad
      * placements across the app can be built and verified before this app has real, approved ad
      * units. Applied here (both [readCached] and [refresh]) instead of in each screen, so every
@@ -78,7 +78,6 @@ object AppConfigStore {
     private fun injectTestAds(response: AppResponse): AppResponse {
         val result = response.result ?: return response
         val testNative = "ca-app-pub-3940256099942544/2247696110"
-        val testBanner = "ca-app-pub-3940256099942544/6300978111"
         val testInterstitial = "ca-app-pub-3940256099942544/1033173712"
         val testAppOpen = "ca-app-pub-3940256099942544/9257395921"
         return response.copy(
@@ -109,17 +108,6 @@ object AppConfigStore {
                 native_22 = testNative, native_22_on_off = "on",
                 native_23 = testNative, native_23_on_off = "on",
 
-                banner_1 = testBanner, banner_1_on_off = "on",
-                banner_2 = testBanner, banner_2_on_off = "on",
-                banner_3 = testBanner, banner_3_on_off = "on",
-                banner_4 = testBanner, banner_4_on_off = "on",
-                banner_5 = testBanner, banner_5_on_off = "on",
-                banner_6 = testBanner, banner_6_on_off = "on",
-                banner_7 = testBanner, banner_7_on_off = "on",
-                banner_8 = testBanner, banner_8_on_off = "on",
-                banner_9 = testBanner, banner_9_on_off = "on",
-                banner_10 = testBanner, banner_10_on_off = "on",
-
                 interstitial_1 = testInterstitial, interstitial_1_on_off = "on",
                 interstitial_2 = testInterstitial, interstitial_2_on_off = "on",
                 interstitial_3 = testInterstitial, interstitial_3_on_off = "on",
@@ -127,6 +115,8 @@ object AppConfigStore {
                 interstitial_5 = testInterstitial, interstitial_5_on_off = "on",
                 interstitial_6 = testInterstitial, interstitial_6_on_off = "on",
                 interstitial_7 = testInterstitial, interstitial_7_on_off = "on",
+                interstitial_8 = testInterstitial, interstitial_8_on_off = "on",
+                interstitial_9 = testInterstitial, interstitial_9_on_off = "on",
 
                 app_open_1 = testAppOpen, app_open_1_on_off = "on",
                 app_open_2 = testAppOpen, app_open_2_on_off = "on",

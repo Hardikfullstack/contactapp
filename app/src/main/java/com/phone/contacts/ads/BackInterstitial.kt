@@ -59,6 +59,10 @@ fun rememberInterstitialTrigger(adUnitId: String?): (onFinished: () -> Unit) -> 
         } else if (InterstitialAdManager.isReady(adUnitId)) {
             // Already loaded — show it straight away, no loading screen flash.
             InterstitialAdManager.show(activity, adUnitId) { onFinished() }
+        } else if (!AdConnectivityRetry.isOnline(context)) {
+            // No point showing a loading overlay for the full bounded-wait timeout when there's
+            // clearly no connectivity to load an ad with — just continue on immediately.
+            onFinished()
         } else {
             showLoading = true
             scope.launch {

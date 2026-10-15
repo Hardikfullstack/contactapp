@@ -27,25 +27,32 @@ object AppOpenAdManager {
     fun preload(context: Context, adUnitId: String) {
         if (isLoading || isReady()) return
         isLoading = true
-        AnalyticsManager.logAdEvent("app_open", adUnitId, "request")
-        AppOpenAd.load(
-            context,
-            adUnitId,
-            AdRequest.Builder().build(),
-            object : AppOpenAd.AppOpenAdLoadCallback() {
-                override fun onAdLoaded(ad: AppOpenAd) {
-                    appOpenAd = ad
-                    loadTimeMs = System.currentTimeMillis()
-                    isLoading = false
-                    AnalyticsManager.logAdEvent("app_open", adUnitId, "loaded")
-                }
+        // Deferred a frame instead of loading inline — several preload() calls across the various
+        // ad managers firing back-to-back on the main thread during a cold start (building each
+        // AdLoader, Play Services binder setup, especially while MobileAds.initialize() is still
+        // running on its own background thread) can add up enough to trip Android's ANR watchdog.
+        // Posting lets each one run on its own message-queue iteration instead of stacking up.
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            AnalyticsManager.logAdEvent("app_open", adUnitId, "request")
+            AppOpenAd.load(
+                context,
+                adUnitId,
+                AdRequest.Builder().build(),
+                object : AppOpenAd.AppOpenAdLoadCallback() {
+                    override fun onAdLoaded(ad: AppOpenAd) {
+                        appOpenAd = ad
+                        loadTimeMs = System.currentTimeMillis()
+                        isLoading = false
+                        AnalyticsManager.logAdEvent("app_open", adUnitId, "loaded")
+                    }
 
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    isLoading = false
-                    AnalyticsManager.logAdEvent("app_open", adUnitId, "failed_to_load")
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        isLoading = false
+                        AnalyticsManager.logAdEvent("app_open", adUnitId, "failed_to_load")
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     /** Self-clears an expired ad so the next [preload] call (isLoading/isReady both now false)

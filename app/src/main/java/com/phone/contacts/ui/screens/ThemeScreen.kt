@@ -133,7 +133,8 @@ fun ThemeScreen(onBack: () -> Unit) {
             NativeAdView(
                 adUnitId = adUnitId,
                 template = NativeAdTemplate.MEDIUM,
-                modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp)
+                modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
+                cacheKey = "theme_native"
             )
         }
     }
