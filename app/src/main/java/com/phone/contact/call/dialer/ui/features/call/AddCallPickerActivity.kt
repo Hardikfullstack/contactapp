@@ -5,10 +5,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.phone.contact.call.dialer.service.CallManager
 import com.phone.contact.call.dialer.ui.features.contacts.ContactsScreen
 import com.phone.contact.call.dialer.ui.features.recents.SearchScreen
 import com.phone.contact.call.dialer.ui.theme.ContactAppTheme
@@ -40,17 +42,32 @@ class AddCallPickerActivity : ComponentActivity() {
                     finish()
                 }
 
+                // The contact(s) already on a call can't be picked again as the second call -
+                // hidden from both the list and search instead of just letting the pick silently
+                // fail or dial a duplicate. Live (collectAsState), not a one-time snapshot, so it
+                // stays correct if the active call's number changes while this picker is open.
+                val currentCall by CallManager.currentCall.collectAsState()
+                val secondaryCall by CallManager.secondaryCall.collectAsState()
+                val excludeNumbers = remember(currentCall, secondaryCall) {
+                    listOfNotNull(
+                        currentCall?.details?.handle?.schemeSpecificPart,
+                        secondaryCall?.details?.handle?.schemeSpecificPart
+                    ).toSet()
+                }
+
                 if (showSearch) {
                     SearchScreen(
                         onBack = { showSearch = false },
                         onContactClick = { _, _ -> },
-                        onNumberPicked = onPicked
+                        onNumberPicked = onPicked,
+                        excludeNumbers = excludeNumbers
                     )
                 } else {
                     ContactsScreen(
                         onContactClick = { _, _ -> },
                         onSearchClick = { showSearch = true },
-                        onNumberPicked = onPicked
+                        onNumberPicked = onPicked,
+                        excludeNumbers = excludeNumbers
                     )
                 }
             }

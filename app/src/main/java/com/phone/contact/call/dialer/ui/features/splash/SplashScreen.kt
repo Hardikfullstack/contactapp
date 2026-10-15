@@ -48,7 +48,6 @@ import com.phone.contact.call.dialer.R
 import com.phone.contact.call.dialer.ads.AdLoadingLottie
 import com.phone.contact.call.dialer.ads.AppOpenAdManager
 import com.phone.contact.call.dialer.ads.AppOpenCounter
-import com.phone.contact.call.dialer.ads.BannerAdCache
 import com.phone.contact.call.dialer.ads.ColdStartAdType
 import com.phone.contact.call.dialer.ads.InterstitialAdManager
 import com.phone.contact.call.dialer.ads.NativeAdCache
@@ -94,19 +93,24 @@ fun SplashScreen(
     val adConfig by appConfigViewModel.appResponse.collectAsState()
 
     // Preload as soon as config is available — runs in parallel with the brief wait below, so
-    // both the App Open ad and whichever screen we're about to land on are as close to ready as
-    // possible by the time navigation actually happens.
+    // both the App Open/Interstitial ad (only when this cold open is actually due - see
+    // AppOpenCounter) and whichever screen we're about to land on are as close to ready as
+    // possible by the time navigation actually happens. +1 here (not incrementAndGet) because the
+    // real increment happens in the LaunchedEffect below, moments later - this only predicts what
+    // that will produce, so the two stay in agreement without double-counting the open.
     LaunchedEffect(adConfig, isFullySetUp) {
         val result = adConfig?.result ?: return@LaunchedEffect
         if (result.google_ads_on_off != "on") return@LaunchedEffect
-        if (result.app_open_1_on_off == "on") {
+        val predictedAdType = if (isFullySetUp) {
+            AppOpenCounter.adTypeFor(context, AppOpenCounter.currentCount(context) + 1)
+        } else {
+            ColdStartAdType.NONE
+        }
+        if (predictedAdType == ColdStartAdType.APP_OPEN && result.app_open_1_on_off == "on") {
             result.app_open_1?.takeIf { it.isNotBlank() }?.let {
                 AppOpenAdManager.preload(context, it)
             }
-        }
-        // Cold-start rotation's Interstitial slot (see AppOpenCounter) — preloaded unconditionally
-        // so it's ready by the time the 3rd/6th/... cold open needs it, same as the App Open ad.
-        if (result.interstitial_2_on_off == "on") {
+        } else if (predictedAdType == ColdStartAdType.INTERSTITIAL && result.interstitial_2_on_off == "on") {
             result.interstitial_2?.takeIf { it.isNotBlank() }?.let {
                 InterstitialAdManager.preload(context, it)
             }
@@ -125,31 +129,9 @@ fun SplashScreen(
                 }
             }
         }
-        // Recents (Home) is reached either way in this same cold start — right after onboarding
-        // for a first-time user, or immediately for a returning one — so its ads are preloaded
-        // unconditionally too. Without this, a fresh install's very first Home screen had to load
-        // its banner from scratch with no head start, unlike every app open after the first.
-        if (result.banner_1_on_off == "on") {
-            result.banner_1?.takeIf { it.isNotBlank() }?.let {
-                BannerAdCache.preload(context, it)
-            }
-        }
-        // Bottom nav tries native_6 before falling back to banner_1 (see NativeOrBannerAdView) —
-        // preload it too, otherwise the native-first attempt always starts from scratch on Home.
-        if (result.native_6_on_off == "on") {
-            result.native_6?.takeIf { it.isNotBlank() }?.let {
-                NativeAdCache.preload(context, it)
-            }
-        }
-        // Recents' inline in-list ad (position 2, right after the first call) — several slots on
-        // one screen can reuse this same unit id, but only the very first one composes right when
-        // Recents opens, so this preload just gives *that* one a head start via NativeAdCache;
-        // every other slot still does its own fresh load as usual.
-        if (result.native_16_on_off == "on") {
-            result.native_16?.takeIf { it.isNotBlank() }?.let {
-                NativeAdCache.preload(context, it)
-            }
-        }
+        // banner_1 (Recents/Home banner), native_6 (bottom nav) and native_16 (Recents inline list
+        // ad) are NOT preloaded here - they load on-render instead, same as every other screen's
+        // ads that aren't given a Splash head start.
     }
 
     LaunchedEffect(Unit) {
@@ -174,9 +156,10 @@ fun SplashScreen(
             // network to load an ad with in the first place.
             val adsEnabled = result?.google_ads_on_off == "on" && appConfigViewModel.isOnline.value
 
-            // 1st/2nd cold open after setup → App Open; 3rd (and every 3rd after) → Interstitial.
+            // Only every 3rd cold open after setup is "due" at all; among due cycles, the 1st two
+            // show App Open and the 3rd shows Interstitial (see AppOpenCounter's own doc comment).
             val openCount = AppOpenCounter.incrementAndGet(context)
-            val adType = AppOpenCounter.adTypeFor(openCount)
+            val adType = AppOpenCounter.adTypeFor(context, openCount)
 
             if (adsEnabled && activity != null && adType == ColdStartAdType.APP_OPEN) {
                 val adUnitId = result?.app_open_1?.takeIf { result.app_open_1_on_off == "on" && it.isNotBlank() }
@@ -186,9 +169,14 @@ fun SplashScreen(
                         waitUntilAdReady { AppOpenAdManager.isReady() }
                     }
                     if (AppOpenAdManager.isReady()) {
+                        AppOpenCounter.clearRetryPending(context)
                         AppOpenAdManager.show(activity, adUnitId) { onTimeout() }
                         return@LaunchedEffect
                     }
+                    // Still not ready after the bounded wait (e.g. no connectivity) - don't let this
+                    // due cycle go completely unattempted; retry on the very next cold start
+                    // regardless of the cadence.
+                    AppOpenCounter.markRetryPending(context, ColdStartAdType.APP_OPEN)
                 }
             } else if (adsEnabled && activity != null && adType == ColdStartAdType.INTERSTITIAL) {
                 val interstitialAdUnitId = result?.interstitial_2?.takeIf { result.interstitial_2_on_off == "on" && it.isNotBlank() }
@@ -198,9 +186,11 @@ fun SplashScreen(
                         waitUntilAdReady { InterstitialAdManager.isReady(interstitialAdUnitId) }
                     }
                     if (InterstitialAdManager.isReady(interstitialAdUnitId)) {
+                        AppOpenCounter.clearRetryPending(context)
                         InterstitialAdManager.show(activity, interstitialAdUnitId) { onTimeout() }
                         return@LaunchedEffect
                     }
+                    AppOpenCounter.markRetryPending(context, ColdStartAdType.INTERSTITIAL)
                 }
             }
         }

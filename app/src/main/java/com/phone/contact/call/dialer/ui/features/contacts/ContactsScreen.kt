@@ -38,6 +38,7 @@ import com.phone.contact.call.dialer.ui.components.CommonHeader
 import com.phone.contact.call.dialer.ui.components.HeaderActionButton
 import com.phone.contact.call.dialer.ui.components.ContactItem
 import com.phone.contact.call.dialer.util.CallUtils
+import com.phone.contact.call.dialer.util.PhoneNumberMatcher
 import kotlin.math.abs
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -49,6 +50,9 @@ fun ContactsScreen(
     // standalone role — tapping a contact (row or call icon) then hands its number back to that
     // flow instead of navigating to History or placing an ordinary outgoing call itself.
     onNumberPicked: ((String) -> Unit)? = null,
+    // Numbers (any format — normalized internally) to hide from the list - used by the Add Call
+    // picker so a contact already on the active call can't be picked again.
+    excludeNumbers: Set<String> = emptySet(),
     viewModel: ContactsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -61,10 +65,23 @@ fun ContactsScreen(
     var alphabetColumnHeight by remember { mutableStateOf(0f) }
     val alphabet = remember { (('A'..'Z') + '#').toList() }
 
-    val initialToIndex = remember(uiState.groupedContacts) {
+    val groupedContacts = remember(uiState.groupedContacts, excludeNumbers) {
+        if (excludeNumbers.isEmpty()) {
+            uiState.groupedContacts
+        } else {
+            val normalizedExclude = excludeNumbers.map { PhoneNumberMatcher.normalize(it) }.toSet()
+            uiState.groupedContacts
+                .mapValues { (_, contacts) ->
+                    contacts.filter { PhoneNumberMatcher.normalize(it.number) !in normalizedExclude }
+                }
+                .filterValues { it.isNotEmpty() }
+        }
+    }
+
+    val initialToIndex = remember(groupedContacts) {
         val mapping = mutableMapOf<Char, Int>()
         var currentIndex = 0
-        uiState.groupedContacts.forEach { (initial, contacts) ->
+        groupedContacts.forEach { (initial, contacts) ->
             mapping[initial] = currentIndex
             currentIndex += 1 // for stickyHeader
             currentIndex += contacts.size // for items
@@ -223,7 +240,7 @@ fun ContactsScreen(
                             modifier = Modifier.fillMaxSize().padding(top = 10.dp),
                             contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
                         ) {
-                            uiState.groupedContacts.forEach { (initial, contacts) ->
+                            groupedContacts.forEach { (initial, contacts) ->
                                 stickyHeader(key = "header_$initial") {
                                     Box(
                                         modifier = Modifier

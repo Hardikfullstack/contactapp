@@ -73,14 +73,12 @@ fun CallThemeScreen(
     val appConfigViewModel: AppConfigViewModel = viewModel(context as ComponentActivity)
     val adConfig by appConfigViewModel.appResponse.collectAsState()
     // Dedicated slot for the premium-color unlock interstitial — interstitial_3 was previously
-    // unused by any screen.
+    // unused by any screen. Not preloaded - InterstitialAdManager.show() itself falls back to
+    // loading on demand (and preloading for next time) when nothing is cached yet.
     val premiumColorInterstitialAdUnitId = adConfig?.result?.let { result ->
         if (result.google_ads_on_off == "on" && result.interstitial_3_on_off == "on") {
             result.interstitial_3?.takeIf { it.isNotBlank() }
         } else null
-    }
-    LaunchedEffect(premiumColorInterstitialAdUnitId) {
-        premiumColorInterstitialAdUnitId?.let { InterstitialAdManager.preload(context, it) }
     }
 
     // Color tapped while a premium unlock is pending (dialog shown) — null when no dialog is up.

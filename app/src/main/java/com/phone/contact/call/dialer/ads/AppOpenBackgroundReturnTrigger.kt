@@ -8,6 +8,15 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.phone.contact.call.dialer.ui.features.call.InCallActivity
+import com.phone.contact.call.dialer.util.NetworkMonitor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * Shows an App Open ad when the app returns to the foreground after being backgrounded (user
@@ -32,9 +41,19 @@ object AppOpenBackgroundReturnTrigger : Application.ActivityLifecycleCallbacks, 
      */
     var isAdPaused = false
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private val _isWaitingForAd = MutableStateFlow(false)
+    /** True while a due return-to-foreground ad is loading (bounded wait) - MainActivity collects
+     * this to show a loading overlay, instead of this return silently showing nothing just
+     * because the ad wasn't preloaded in time. */
+    val isWaitingForAd: StateFlow<Boolean> = _isWaitingForAd.asStateFlow()
+
+    // Only registers the lifecycle/activity callbacks once; does NOT preload - this ad is only
+    // ever preloaded on an actually-due return (see onStart), not eagerly every time MainActivity
+    // happens to recompose with a fresh config.
     fun init(application: Application, adUnitId: String) {
         this.adUnitId = adUnitId
-        AppOpenAdManager.preload(application, adUnitId)
         if (isInitialized) return
         isInitialized = true
         application.registerActivityLifecycleCallbacks(this)
@@ -64,8 +83,23 @@ object AppOpenBackgroundReturnTrigger : Application.ActivityLifecycleCallbacks, 
         // Don't interrupt an in-progress call screen with a full-screen ad.
         if (activity is InCallActivity) return
 
-        if (AppOpenAdManager.isReady()) {
-            AppOpenAdManager.show(activity, unitId) {}
+        scope.launch {
+            if (!AppOpenAdManager.isReady()) {
+                // Not preloaded ahead of time (this trigger only loads on an actually-due return,
+                // not eagerly) - start the load now and give it a real but bounded chance, same as
+                // the cold-start App Open ad does. Skip the wait (and the loading overlay)
+                // entirely when there's clearly no connectivity to load an ad with in the first
+                // place.
+                if (NetworkMonitor(activity.applicationContext).isOnline.first()) {
+                    AppOpenAdManager.preload(activity.applicationContext, unitId)
+                    _isWaitingForAd.value = true
+                    waitUntilAdReady { AppOpenAdManager.isReady() }
+                    _isWaitingForAd.value = false
+                }
+            }
+            if (AppOpenAdManager.isReady()) {
+                AppOpenAdManager.show(activity, unitId) {}
+            }
         }
     }
 

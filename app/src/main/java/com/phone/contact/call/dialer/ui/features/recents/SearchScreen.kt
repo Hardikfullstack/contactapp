@@ -35,6 +35,7 @@ import com.phone.contact.call.dialer.R
 import com.phone.contact.call.dialer.ui.components.ContactItem
 import com.phone.contact.call.dialer.ui.theme.DmSans
 import com.phone.contact.call.dialer.util.CallUtils
+import com.phone.contact.call.dialer.util.PhoneNumberMatcher
 
 @Composable
 fun SearchScreen(
@@ -44,11 +45,23 @@ fun SearchScreen(
     // result (row or call icon) hands its number back to that flow instead of navigating to
     // History or placing an ordinary outgoing call itself.
     onNumberPicked: ((String) -> Unit)? = null,
+    // Numbers (any format — normalized internally) to hide from results - used by the Add Call
+    // picker so a contact already on the active call can't be picked again.
+    excludeNumbers: Set<String> = emptySet(),
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val query by viewModel.query.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    val results = remember(uiState.results, excludeNumbers) {
+        if (excludeNumbers.isEmpty()) {
+            uiState.results
+        } else {
+            val normalizedExclude = excludeNumbers.map { PhoneNumberMatcher.normalize(it) }.toSet()
+            uiState.results.filter { PhoneNumberMatcher.normalize(it.number) !in normalizedExclude }
+        }
+    }
 
     // The plain-String BasicTextField overload seeds its own internal TextFieldValue with the
     // cursor at position 0 whenever this composable is freshly composed (e.g. returning from a
@@ -148,7 +161,7 @@ fun SearchScreen(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        } else if (uiState.hasSearched && uiState.results.isEmpty()) {
+        } else if (uiState.hasSearched && results.isEmpty()) {
 
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -177,7 +190,7 @@ fun SearchScreen(
                     )
                 }
             }
-        } else if (uiState.results.isNotEmpty()) {
+        } else if (results.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.contacts),
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
@@ -190,7 +203,7 @@ fun SearchScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(
-                    items = uiState.results,
+                    items = results,
                     key = { it.id }
                 ) { contact ->
                     ContactItem(

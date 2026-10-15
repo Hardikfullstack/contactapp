@@ -54,6 +54,26 @@ object AnalyticsManager {
         logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
     }
 
+    private const val USER_LAST_SCREEN = "last_screen"
+
+    // Plain in-memory field, no Firebase call - updated on every navigation (cheap) so
+    // flushLastScreenProperty() has something to send on the rare occasions (app backgrounded)
+    // that actually warrant a network-bound setUserProperty call.
+    private var lastScreenSeen: String? = null
+
+    /** Remembers the current screen locally - call on every navigation. No analytics traffic by
+     * itself; [flushLastScreenProperty] is what actually reports it. */
+    fun trackLastScreen(screenName: String) {
+        lastScreenSeen = screenName
+    }
+
+    /** Reports the most recently tracked screen as a user property - call only when the app is
+     * actually leaving (backgrounded), not on every navigation, so this doesn't turn into one
+     * Firebase call per screen change. */
+    fun flushLastScreenProperty() {
+        lastScreenSeen?.let { setUserProperty(USER_LAST_SCREEN, it) }
+    }
+
     /** Logs an event with a flexible payload map. */
     fun logEventWithAction(
         eventName: String,

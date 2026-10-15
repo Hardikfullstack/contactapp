@@ -1,6 +1,9 @@
 package com.phone.contact.call.dialer
 
 import android.app.Application
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.phone.contact.call.dialer.ads.AdConnectivityRetry
 import com.phone.contact.call.dialer.service.FakeCallConnectionService
 import com.phone.contact.call.dialer.util.AfterCallState
@@ -37,6 +40,14 @@ class ContactApplication : Application() {
         // catches up and flips it to the locked "Set Default" state a moment later. A local
         // RoleManager check is fast/synchronous, safe to do here on the main thread.
         DefaultDialerState.refresh(this)
+
+        // Reports the last-seen screen as a Firebase user property only when the app actually
+        // backgrounds - one network-bound call per session-end, not one per navigation.
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) {
+                AnalyticsManager.flushLastScreenProperty()
+            }
+        })
 
         // Off the main thread — MobileAds.initialize() does blocking I/O internally.
         Thread { MobileAds.initialize(this) }.start()

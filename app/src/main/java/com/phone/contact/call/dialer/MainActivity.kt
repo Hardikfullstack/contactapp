@@ -24,8 +24,25 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.phone.contact.call.dialer.ads.AdLoadingLottie
 import com.phone.contact.call.dialer.ads.AppOpenBackgroundReturnTrigger
 import android.provider.Settings
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.phone.contact.call.dialer.ui.features.onboarding.AdvancedPermissionScreen
 import com.phone.contact.call.dialer.ui.features.onboarding.OverlayPermissionDialog
 import com.phone.contact.call.dialer.ui.features.onboarding.MiuiBackgroundPermissionDialog
@@ -234,6 +251,37 @@ class MainActivity : AppCompatActivity() {
             }
 
             ContactAppTheme(darkTheme = isDarkTheme) {
+                // Background-return App Open ad (see AppOpenBackgroundReturnTrigger) loads on
+                // demand rather than being preloaded ahead of time, so a due return that wasn't
+                // ready yet shows this instead of just silently doing nothing for up to ~3.5s.
+                val isWaitingForBackgroundAd by AppOpenBackgroundReturnTrigger.isWaitingForAd.collectAsState()
+                if (isWaitingForBackgroundAd) {
+                    Dialog(
+                        onDismissRequest = {},
+                        properties = DialogProperties(
+                            dismissOnBackPress = false,
+                            dismissOnClickOutside = false,
+                            usePlatformDefaultWidth = false
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                AdLoadingLottie(modifier = Modifier.size(200.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = stringResource(R.string.ad_is_loading),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
                 // "Display over other apps" popup: only after the app has become the default dialer.
                 if (isOnboardingCompleted && DefaultDialerState.isDefault.value && !overlayGranted) {
                     OverlayPermissionDialog(onGranted = { overlayGranted = true })

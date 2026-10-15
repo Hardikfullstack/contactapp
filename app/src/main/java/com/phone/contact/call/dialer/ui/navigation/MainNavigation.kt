@@ -59,7 +59,6 @@ import com.phone.contact.call.dialer.ui.features.callreminder.CallReminderScreen
 import com.phone.contact.call.dialer.ui.features.callreminder.CallReminderSetupScreen
 import com.phone.contact.call.dialer.ui.features.onboarding.LanguageSelectionScreen
 import com.phone.contact.call.dialer.ads.NativeOrBannerAdView
-import com.phone.contact.call.dialer.ui.components.dialogs.ExitConfirmationDialog
 import com.phone.contact.call.dialer.ui.components.dialogs.MaintenanceDialog
 import com.phone.contact.call.dialer.ui.components.dialogs.OfflineDialog
 import com.phone.contact.call.dialer.ui.components.CommonBottomBar
@@ -133,6 +132,10 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
         val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
             val screenName = destination.route?.substringBefore("/")?.substringBefore("?") ?: "unknown"
             AnalyticsManager.logScreenView(screenName)
+            // Just remembers screenName locally - no extra Firebase call per navigation. The actual
+            // setUserProperty report happens once, when the app backgrounds (see
+            // AnalyticsManager.flushLastScreenProperty, called from ContactApplication).
+            AnalyticsManager.trackLastScreen(screenName)
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose { navController.removeOnDestinationChangedListener(listener) }
@@ -193,31 +196,12 @@ fun MainNavigation(preferenceManager: PreferenceManager, startTab: String? = nul
             result.native_6?.takeIf { it.isNotBlank() }
         } else null
     }
-    // native_3 is unused elsewhere (native_1 = Language, native_2 = Recents, native_4/5 = After Call).
-    val exitNativeAdUnitId = adConfig?.result?.let { result ->
-        if (result.google_ads_on_off == "on" && result.native_3_on_off == "on") {
-            result.native_3?.takeIf { it.isNotBlank() }
-        } else null
-    }
-
-    var showExitDialog by remember { mutableStateOf(false) }
     val activity = context as? Activity
     val isOnline by appConfigViewModel.isOnline.collectAsState()
 
+    // Exits directly on back from a top-level screen - no confirmation dialog/ad in between.
     BackHandler(enabled = showBottomBar) {
-        if (isOnline) {
-            showExitDialog = true
-        } else {
-            activity?.finish()
-        }
-    }
-
-    if (showExitDialog) {
-        ExitConfirmationDialog(
-            nativeAdUnitId = exitNativeAdUnitId,
-            onExitClick = { activity?.finish() },
-            onDismiss = { showExitDialog = false }
-        )
+        activity?.finish()
     }
 
     val isMaintenanceOn = adConfig?.result?.extra_data_1_on_off == "on"
