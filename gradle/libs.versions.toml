@@ -21,10 +21,10 @@ okhttpLoggingInterceptor = "4.12.0"
 kotlinxSerializationJson = "1.7.3"
 googleServices = "4.5.0"
 firebaseCrashlyticsPlugin = "3.0.2"
-firebaseBom = "34.9.0"
+firebaseBom = "34.17.0"
 playAppUpdate = "2.1.0"
 playReview = "2.0.2"
-playServicesAds = "23.6.0"
+playServicesAds = "25.1.0"
 lottie = "6.4.0"
 
 [libraries]

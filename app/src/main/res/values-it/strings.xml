@@ -62,6 +62,7 @@
     <string name="add_contact_title">Aggiungi contatto</string>
     <string name="save">Salva</string>
     <string name="add_picture_label">Aggiungi foto</string>
+    <string name="remove_photo_label">Rimuovi foto</string>
     <string name="type_phone">Telefono</string>
     <string name="add_more_phone_number">Aggiungi numero di telefono</string>
     <string name="type_email">Email</string>
@@ -139,6 +140,8 @@
     <string name="no_calls_with_number">Nessuna chiamata con questo numero</string>
     <string name="clear_call_history_title">Cancella cronologia chiamate</string>
     <string name="clear_history_confirm_message">Cancellare tutta la cronologia di %1$s?</string>
+    <string name="delete_call_logs_title">Eliminare %1$d registri chiamate?</string>
+    <string name="delete_call_logs_message">Queste voci del registro chiamate verranno eliminate definitivamente.</string>
     <string name="date_today">Oggi</string>
     <string name="date_yesterday">Ieri</string>
     <string name="call_type_incoming">In arrivo</string>
@@ -172,10 +175,12 @@
     <string name="terms_and_conditions_title">Termini e condizioni</string>
     <string name="rate_us_title">Valutaci</string>
     <string name="share_app_title">Condividi app</string>
+    <string name="share_app_message">Scopri Contacts — un dialer intelligente con temi per le chiamate, chiamata rapida, promemoria chiamate e altro ancora! Scaricalo qui: %1$s</string>
     <string name="feedback_title">Feedback</string>
     <string name="select_all_label">Seleziona tutto</string>
     <string name="clear_recently_added_label">Cancella aggiunti di recente</string>
     <string name="permission_required_title">Autorizzazione richiesta</string>
+    <string name="permission_required_message">%1$s ha bisogno di questa autorizzazione per funzionare. Concedila per continuare, oppure attivala dalle Impostazioni se l\'hai già negata.</string>
     <string name="move_multiple_to_bin_title">Spostare %1$d contatti nel cestino?</string>
     <string name="move_multiple_to_bin_message">Questi contatti verranno rimossi da tutti i dispositivi sincronizzati.</string>
     <string name="no_favorites_yet">Nessun preferito ancora</string>
@@ -300,7 +305,21 @@
     <string name="after_call_disable_dialog_title">Disattivare la schermata Dopo la chiamata?</string>
     <string name="after_call_disable_dialog_message">Non vedrai più le azioni rapide al termine delle chiamate. Puoi riattivarla in qualsiasi momento.</string>
     <string name="after_call_turn_off">Disattiva</string>
+
+    <!-- In-app update -->
+    <string name="update_title">Aggiornamento disponibile</string>
+    <string name="update_desc">È disponibile una nuova versione dell\'app con le correzioni e i miglioramenti più recenti. Aggiorna ora per la migliore esperienza.</string>
+    <string name="update_button">Aggiorna ora</string>
+    <string name="update_later">Più tardi</string>
+
+    <!-- Maintenance (server kill switch) -->
+    <string name="maintenance_dialog_title">In manutenzione</string>
+    <string name="maintenance_dialog_desc">Stiamo apportando alcuni miglioramenti. Riprova tra poco.</string>
+    <string name="maintenance_dialog_exit_button">Esci dall\'app</string>
     <string name="ad_is_loading">Caricamento annuncio…</string>
+    <string name="create_new_contact">Crea nuovo contatto</string>
+    <string name="add_to_a_contact">Aggiungi a un contatto</string>
+    <string name="send_a_message">Invia un messaggio</string>
     <string name="toast_invalid_phone_number">Numero di telefono non valido</string>
     <string name="toast_could_not_initiate_call">Impossibile avviare la chiamata</string>
     <string name="number_series_title">Serie di numeri</string>

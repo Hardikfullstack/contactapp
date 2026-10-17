@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         // Remote config is fetched on each app open, like the sibling contactapp does.
         lifecycleScope.launch { com.phone.contacts.util.AppConfigStore.refresh(applicationContext) }
         enableEdgeToEdge()
-        
+
         com.phone.contacts.util.AppThemePreferences.initialize(applicationContext)
         val resolvedDarkAtStart = when (com.phone.contacts.util.AppThemePreferences.themeMode.value) {
             com.phone.contacts.util.ThemeMode.DARK -> true
@@ -81,6 +81,16 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = !resolvedDarkAtStart
         }
 
+        // Launched via the system's "Call" action on selected text/a notification, or any other
+        // app handing off a tel: number (we're declared for ACTION_DIAL in the manifest so the OS
+        // offers us there once we're the default dialer) - this is a quick-dial entry point, not a
+        // normal app open, so it skips the splash animation and lands straight on the Keypad tab
+        // with the number already filled in and selected, instead of flashing through Splash onto
+        // whatever tab the user last had open. Cleared from the Intent immediately so a later
+        // recreate() (e.g. a language change) on this same Activity instance doesn't replay it.
+        val dialNumberFromIntent = intent?.data?.takeIf { it.scheme == "tel" }?.schemeSpecificPart
+        intent?.data = null
+
         setContent {
             val isDarkTheme = when (com.phone.contacts.util.AppThemePreferences.themeMode.value) {
                 ThemeMode.LIGHT -> false
@@ -91,7 +101,9 @@ class MainActivity : AppCompatActivity() {
                 val context = LocalContext.current
                 // rememberSaveable: a language change recreates this activity, and the splash must
                 // not play again - the user should land back where they were, in the new language.
-                var showSplash by rememberSaveable { mutableStateOf(true) }
+                // Also skipped outright when launched with a number to dial (see dialNumberFromIntent
+                // above) - that's a quick action, not a normal app open worth animating.
+                var showSplash by rememberSaveable { mutableStateOf(dialNumberFromIntent == null) }
                 var isLanguageSelected by remember { mutableStateOf(OnboardingPreferences.isLanguageSelected(context)) }
                 var showAppOpenLoader by remember { mutableStateOf(false) }
                 val coroutineScope = rememberCoroutineScope()
@@ -181,6 +193,7 @@ class MainActivity : AppCompatActivity() {
                                     // timeout when there's clearly no connectivity to load an ad
                                     // with — skip straight to the "didn't work" outcome instead.
                                     if (com.phone.contacts.ads.AdConnectivityRetry.isOnline(context)) {
+                                        com.phone.contacts.ads.AppOpenAdManager.preload(context, adUnitId)
                                         showAppOpenLoader = true
                                         com.phone.contacts.ads.waitUntilAdReady { com.phone.contacts.ads.AppOpenAdManager.isReady() }
                                         showAppOpenLoader = false
@@ -209,7 +222,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     )
                     else -> {
-                        MainNavigation()
+                        MainNavigation(initialDialNumber = dialNumberFromIntent)
                         if (showMiuiPermissionDialog) {
                             MiuiPermissionDialog(onGranted = { isMiuiPermissionGranted = true })
                         }

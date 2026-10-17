@@ -5,21 +5,17 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,7 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,7 +41,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.phone.contacts.R
-import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.DeviceUtils
 
 private enum class MiuiStep { OVERLAY, PERMISSIONS }
@@ -104,24 +101,36 @@ fun MiuiPermissionDialog(onGranted: () -> Unit) {
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         ) {
+            // Scrollable: on a short-height phone the image + title + description + button can
+            // add up to more than the available screen height - without this, the button (always
+            // last) would get pushed off-screen and become unreachable instead of just requiring
+            // a scroll to reach, same as the rest of this dialog's "always show the action" intent.
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
+                // Matches the reference app: a screenshot of where to tap in the system settings
+                // screen this dialog is about to send the user to, instead of a generic icon -
+                // MIUI's own permission editor UI varies enough across skins/versions that a plain
+                // lock/security glyph gave no real hint of what they'd actually see.
+                // No fixed height - a hardcoded box combined with FillWidth scaling cropped the
+                // top/bottom off this (tall, portrait) illustration on every device, since the
+                // scaled image's real height never matched a one-size box. Leaving height
+                // unconstrained lets the Image lay out at its own intrinsic aspect ratio for
+                // whatever width it's given, so it always shows in full and scales correctly
+                // across different screen widths instead of a single hardcoded size.
+                Image(
+                    painter = painterResource(
+                        if (step == MiuiStep.OVERLAY) R.drawable.allow_display_over_other_apps_main else R.drawable.display_pop_up_main
+                    ),
+                    contentDescription = null,
+                    contentScale = ContentScale.FillWidth,
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Security,
-                        contentDescription = null,
-                        tint = primaryAccentColor(),
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
+                        .fillMaxWidth(0.8f)
+                        .clip(RoundedCornerShape(16.dp))
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 

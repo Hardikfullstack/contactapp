@@ -146,8 +146,15 @@ fun CallScreen(
     callerIdName: String? = null
 ) {
     val context = LocalContext.current
-    var contact by remember(number) { mutableStateOf(CallManager.cachedContact(number)) }
-    var resolvedNumber by remember(number) { mutableStateOf(contact?.number ?: number) }
+    // Not keyed on `number` - a conference dropping from 2 participants to 1 (or any other
+    // primary-call swap, e.g. promoteSecondaryToPrimary) can hand this composable a `number` that's
+    // transiently blank for a frame before Telecom settles on the real one, same as the "disconnect"
+    // case the LaunchedEffect below already guards against. Keying this on `number` would reset
+    // `contact`/`resolvedNumber` to null/blank on that same frame regardless of the guard below,
+    // flashing "Unknown Caller" (and its hash-derived avatar color) for a frame before the real
+    // name/number catches up.
+    var contact by remember { mutableStateOf(CallManager.cachedContact(number)) }
+    var resolvedNumber by remember { mutableStateOf(contact?.number ?: number) }
     LaunchedEffect(number) {
         // A call's own number can transiently go blank right as it disconnects (Telecom clears
         // call details before the call is actually removed) — re-resolving on that blank number
@@ -172,7 +179,7 @@ fun CallScreen(
     var buttonsVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { buttonsVisible = true }
 
-    remember { WallpaperPreferences.initialize(context) }
+    LaunchedEffect(context) { WallpaperPreferences.initialize(context) }
     val wallpaperSelection by WallpaperPreferences.selection
     val wallpaperBlur by WallpaperPreferences.blurEnabled
 
@@ -225,9 +232,18 @@ fun CallScreen(
     var showKeypad by remember { mutableStateOf(false) }
     // Lives here, not inside DtmfKeypadSheet itself - that composable is only in composition while
     // the sheet is open, so its own remember{} would reset to blank every time the sheet is
-    // dismissed and reopened. Keyed on number so a new call (not just reopening the sheet) starts
-    // fresh.
-    var enteredDtmfDigits by remember(number) { mutableStateOf("") }
+    // dismissed and reopened. Reset only when `number` actually changes to a different non-blank
+    // call - not keyed directly on `number` (that would also reset on the transient-blank frame
+    // Telecom can produce right as a call disconnects, same gap as contact/resolvedNumber above,
+    // AND again on the very next frame once it reappears, wiping digits the user was mid-typing
+    // into what is still the same ongoing call).
+    var enteredDtmfDigits by remember { mutableStateOf("") }
+    var lastDtmfResetNumber by remember { mutableStateOf(number) }
+    LaunchedEffect(number) {
+        if (number.isBlank() || number == lastDtmfResetNumber) return@LaunchedEffect
+        lastDtmfResetNumber = number
+        enteredDtmfDigits = ""
+    }
     var showAudioRouteSheet by remember { mutableStateOf(false) }
     var showQuickResponseSheet by remember { mutableStateOf(false) }
     var showManageCallSheet by remember { mutableStateOf(false) }
@@ -245,17 +261,26 @@ fun CallScreen(
     LaunchedEffect(conferenceChildren) {
         conferenceParticipants = conferenceChildren.map { child ->
             val childNumber = child.details?.handle?.schemeSpecificPart.orEmpty()
-            val childContact = ContactRepository.findContactByNumber(context, childNumber)
-            ConferenceParticipant(
-                call = child,
-                number = childNumber,
-                name = childContact?.name ?: childNumber.ifBlank { unknownLabel },
-                photoUri = childContact?.photoUri
-            )
+            // Telecom can transiently clear a child's own handle right as the conference's
+            // participant count changes (same gap documented above for the primary `number`) -
+            // reuse whatever was already resolved for this exact Call instead of flashing
+            // "Unknown" for a frame.
+            if (childNumber.isBlank()) {
+                conferenceParticipants.find { it.call === child }
+                    ?: ConferenceParticipant(call = child, number = "", name = unknownLabel, photoUri = null)
+            } else {
+                val childContact = ContactRepository.findContactByNumber(context, childNumber)
+                ConferenceParticipant(
+                    call = child,
+                    number = childNumber,
+                    name = childContact?.name ?: childNumber,
+                    photoUri = childContact?.photoUri
+                )
+            }
         }
     }
 
-    remember { QuickResponsePreferences.initialize(context) }
+    LaunchedEffect(context) { QuickResponsePreferences.initialize(context) }
     val quickResponseTemplates by QuickResponsePreferences.templates
     val smsPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -879,31 +904,30 @@ private fun DtmfKeypadSheet(
     val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_VOICE_CALL, ToneGenerator.MAX_VOLUME * 4 / 5) }
     DisposableEffect(Unit) { onDispose { toneGenerator.release() } }
 
-    // CallActivity hides the nav bar once up front (on 3-button-nav devices), but opening this
-    // sheet appears to make the system re-show it (either its own window not inheriting that
-    // flag, or Android auto-revealing hidden bars for a new overlay) - navigationBarsPadding()
-    // alone didn't help, since a transient system bar paints as a compositor overlay regardless of
-    // this content's own layout padding. Re-asserting the hide here, right when the sheet appears,
-    // fixes it at the source instead of trying to lay out around a bar that shouldn't be shown.
-    val view = LocalView.current
-    val context = LocalContext.current
-    DisposableEffect(Unit) {
-        val activity = view.context as? Activity
-        val window = activity?.window
-        val controller = if (window != null) WindowCompat.getInsetsController(window, view) else null
-        if (controller != null && !DeviceUtils.isGestureNavigationEnabled(context)) {
-            controller.hide(WindowInsetsCompat.Type.navigationBars())
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }
+    ) {
+        val view = LocalView.current
+        val context = LocalContext.current
+        DisposableEffect(view) {
+            val window = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+                ?: (view.context as? Activity)?.window
+            if (window != null && !DeviceUtils.isGestureNavigationEnabled(context)) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.hide(WindowInsetsCompat.Type.navigationBars())
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+            onDispose {}
         }
-        onDispose {}
-    }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 8.dp)
                 .navigationBarsPadding()
+                .padding(bottom = 16.dp)
         ) {
             Text(
                 text = enteredDigits,
@@ -1010,8 +1034,11 @@ private fun AudioRouteSheet(
     val routes = remember(supportedRouteMask) { audioRoutesFromMask(supportedRouteMask) }
     val selected = routeToAudioRoute(currentRoute)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }
+    ) {
+        Column(modifier = Modifier.navigationBarsPadding().padding(bottom = 12.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1069,8 +1096,11 @@ private fun QuickResponseSheet(
     onSelect: (QuickResponseTemplate) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }
+    ) {
+        Column(modifier = Modifier.navigationBarsPadding().padding(bottom = 12.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1321,8 +1351,11 @@ private fun ManageCallSheet(
     onAddCall: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 24.dp)) {
             Text(
                 text = stringResource(R.string.manage_call_label),
                 style = MaterialTheme.typography.titleMedium,
@@ -1381,8 +1414,11 @@ private fun ConferenceListSheet(
     onDisconnect: (Call) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 24.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,

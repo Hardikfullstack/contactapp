@@ -131,7 +131,7 @@ object CallNotificationManager {
         }
 
         val notification = NotificationCompat.Builder(context, INCOMING_CALL_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_small)
+            .setSmallIcon(R.drawable.notification_statusbar)
             .setContentTitle(callerName)
             .setContentText(number)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -181,7 +181,7 @@ object CallNotificationManager {
         }
 
         val notification = NotificationCompat.Builder(context, INCOMING_CALL_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_small)
+            .setSmallIcon(R.drawable.notification_statusbar)
             .setContentTitle(callerName)
             .setContentText(statusText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -271,7 +271,7 @@ object CallNotificationManager {
         }
 
         val notification = NotificationCompat.Builder(context, ACTIVE_CALL_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_small)
+            .setSmallIcon(R.drawable.notification_statusbar)
             .setContentTitle(displayName)
             .setContentText(statusText)
             .setPriority(NotificationCompat.PRIORITY_LOW)

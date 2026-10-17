@@ -62,6 +62,7 @@
     <string name="add_contact_title">Añadir contacto</string>
     <string name="save">Guardar</string>
     <string name="add_picture_label">Añadir foto</string>
+    <string name="remove_photo_label">Quitar foto</string>
     <string name="type_phone">Teléfono</string>
     <string name="add_more_phone_number">Añadir número de teléfono</string>
     <string name="type_email">Correo</string>
@@ -139,6 +140,8 @@
     <string name="no_calls_with_number">No hay llamadas con este número</string>
     <string name="clear_call_history_title">Borrar historial de llamadas</string>
     <string name="clear_history_confirm_message">¿Borrar todo el historial de %1$s?</string>
+    <string name="delete_call_logs_title">¿Eliminar %1$d registros de llamadas?</string>
+    <string name="delete_call_logs_message">Estas entradas del registro de llamadas se eliminarán de forma permanente.</string>
     <string name="date_today">Hoy</string>
     <string name="date_yesterday">Ayer</string>
     <string name="call_type_incoming">Entrante</string>
@@ -172,10 +175,12 @@
     <string name="terms_and_conditions_title">Términos y condiciones</string>
     <string name="rate_us_title">Valóranos</string>
     <string name="share_app_title">Compartir app</string>
+    <string name="share_app_message">Prueba Contacts: un marcador inteligente con temas de llamada, marcación rápida, recordatorios de llamadas y más. Descárgalo aquí: %1$s</string>
     <string name="feedback_title">Comentarios</string>
     <string name="select_all_label">Seleccionar todo</string>
     <string name="clear_recently_added_label">Borrar añadidos recientemente</string>
     <string name="permission_required_title">Permiso necesario</string>
+    <string name="permission_required_message">%1$s necesita este permiso para funcionar. Concédelo para continuar, o actívalo desde Ajustes si ya lo habías denegado.</string>
     <string name="move_multiple_to_bin_title">¿Mover %1$d contactos a la papelera?</string>
     <string name="move_multiple_to_bin_message">Estos contactos se eliminarán de todos tus dispositivos sincronizados.</string>
     <string name="no_favorites_yet">Aún no hay favoritos</string>
@@ -300,7 +305,21 @@
     <string name="after_call_disable_dialog_title">¿Desactivar la pantalla Después de la llamada?</string>
     <string name="after_call_disable_dialog_message">No verás las acciones rápidas cuando termines una llamada. Puedes volver a activarla en cualquier momento.</string>
     <string name="after_call_turn_off">Desactivar</string>
+
+    <!-- In-app update -->
+    <string name="update_title">Actualización disponible</string>
+    <string name="update_desc">Hay disponible una nueva versión de la app con las últimas correcciones y mejoras. Actualízala ahora para la mejor experiencia.</string>
+    <string name="update_button">Actualizar ahora</string>
+    <string name="update_later">Más tarde</string>
+
+    <!-- Maintenance (server kill switch) -->
+    <string name="maintenance_dialog_title">En mantenimiento</string>
+    <string name="maintenance_dialog_desc">Estamos realizando algunas mejoras en este momento. Vuelve a intentarlo en un rato.</string>
+    <string name="maintenance_dialog_exit_button">Salir de la app</string>
     <string name="ad_is_loading">Cargando anuncio…</string>
+    <string name="create_new_contact">Crear contacto nuevo</string>
+    <string name="add_to_a_contact">Añadir a un contacto</string>
+    <string name="send_a_message">Enviar un mensaje</string>
     <string name="toast_invalid_phone_number">Número de teléfono no válido</string>
     <string name="toast_could_not_initiate_call">No se pudo iniciar la llamada</string>
     <string name="number_series_title">Serie de números</string>

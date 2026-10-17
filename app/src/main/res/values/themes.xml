@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Contacts" parent="Theme.AppCompat.Light.NoActionBar" />
+    <style name="Theme.Contacts" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Without this, AppCompat's own default windowBackground (a dark gray, regardless of
+             system light/dark mode) briefly flashes on cold start in the gap before Compose's first
+             frame paints. @color/window_background follows the system's own light/dark setting
+             (see values-night/colors.xml), matching whatever Compose would paint next anyway. -->
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 
     <!-- uCrop's own UCropActivity extends AppCompatActivity and requires a Theme.AppCompat
          descendant to inflate its Toolbar — the plain platform Theme.Contacts above isn't one. -->

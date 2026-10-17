@@ -142,7 +142,7 @@ sealed class MainScreen(
 }
 
 @Composable
-fun MainNavigation() {
+fun MainNavigation(initialDialNumber: String? = null) {
     val context = LocalContext.current
     AppUpdatePrompt()
     val maintenanceConfig by AppConfigStore.config.collectAsState()
@@ -164,6 +164,7 @@ fun MainNavigation() {
                 ?: MainScreen.ContactDetail.routeFor(id = null, name = null, number = number)
         )
     }
+
     val currentRoute = navBackStackEntry?.destination?.route
     // Every destination change is logged as screen_view, with the route trimmed to its base
     // segment (drops query args) so the screen name stays stable — same as contactapp.
@@ -282,7 +283,11 @@ fun MainNavigation() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = MainScreen.Recents.route,
+            // Launched via the system's "Call" action with a number to dial (see MainActivity's
+            // dialNumberFromIntent) - Keypad is the actual start destination in that case, no
+            // in-app navigation/transition to it, matching the reference app's own behavior of
+            // just clearing the text selection with the screen already on Keypad.
+            startDestination = if (initialDialNumber.isNullOrBlank()) MainScreen.Recents.route else MainScreen.Keypad.route,
             modifier = Modifier.padding(bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp)
         ) {
             composable(MainScreen.Recents.route) {
@@ -371,6 +376,7 @@ fun MainNavigation() {
             }
             composable(MainScreen.Keypad.route) {
                 KeypadScreen(
+                    initialNumber = initialDialNumber,
                     onCreateNewContact = { number ->
                         val intent = android.content.Intent(android.content.Intent.ACTION_INSERT_OR_EDIT).apply {
                             type = android.provider.ContactsContract.Contacts.CONTENT_ITEM_TYPE
@@ -388,6 +394,9 @@ fun MainNavigation() {
                     },
                     onSendMessage = { number ->
                         com.phone.contacts.util.MessageUtils.sendMessageWithChooser(context, number)
+                    },
+                    onAssignSpeedDial = { dialKey ->
+                        navController.navigate(MainScreen.SelectSpeedDialContact.routeFor(dialKey))
                     }
                 )
             }

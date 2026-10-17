@@ -62,6 +62,7 @@
     <string name="add_contact_title">Kontakt hinzufügen</string>
     <string name="save">Speichern</string>
     <string name="add_picture_label">Foto hinzufügen</string>
+    <string name="remove_photo_label">Foto entfernen</string>
     <string name="type_phone">Telefon</string>
     <string name="add_more_phone_number">Telefonnummer hinzufügen</string>
     <string name="type_email">E-Mail</string>
@@ -139,6 +140,8 @@
     <string name="no_calls_with_number">Keine Anrufe mit dieser Nummer</string>
     <string name="clear_call_history_title">Anrufverlauf löschen</string>
     <string name="clear_history_confirm_message">Gesamten Verlauf von %1$s löschen?</string>
+    <string name="delete_call_logs_title">%1$d Anrufprotokolle löschen?</string>
+    <string name="delete_call_logs_message">Diese Anrufprotokoll-Einträge werden dauerhaft gelöscht.</string>
     <string name="date_today">Heute</string>
     <string name="date_yesterday">Gestern</string>
     <string name="call_type_incoming">Eingehend</string>
@@ -172,10 +175,12 @@
     <string name="terms_and_conditions_title">Nutzungsbedingungen</string>
     <string name="rate_us_title">App bewerten</string>
     <string name="share_app_title">App teilen</string>
+    <string name="share_app_message">Schau dir Contacts an — ein smarter Dialer mit Anruf-Designs, Kurzwahl, Anruferinnerungen und mehr! Hier herunterladen: %1$s</string>
     <string name="feedback_title">Feedback</string>
     <string name="select_all_label">Alle auswählen</string>
     <string name="clear_recently_added_label">Zuletzt hinzugefügte löschen</string>
     <string name="permission_required_title">Berechtigung erforderlich</string>
+    <string name="permission_required_message">%1$s benötigt diese Berechtigung, um zu funktionieren. Erteile sie, um fortzufahren, oder aktiviere sie in den Einstellungen, falls du sie bereits abgelehnt hast.</string>
     <string name="move_multiple_to_bin_title">%1$d Kontakte in den Papierkorb verschieben?</string>
     <string name="move_multiple_to_bin_message">Diese Kontakte werden von all deinen synchronisierten Geräten entfernt.</string>
     <string name="no_favorites_yet">Noch keine Favoriten</string>
@@ -300,7 +305,21 @@
     <string name="after_call_disable_dialog_title">Bildschirm „Nach dem Anruf“ deaktivieren?</string>
     <string name="after_call_disable_dialog_message">Du siehst nach deinen Anrufen keine Schnellaktionen mehr. Du kannst das jederzeit wieder aktivieren.</string>
     <string name="after_call_turn_off">Deaktivieren</string>
+
+    <!-- In-app update -->
+    <string name="update_title">Update verfügbar</string>
+    <string name="update_desc">Eine neue Version der App ist mit den neuesten Fehlerbehebungen und Verbesserungen verfügbar. Aktualisiere jetzt für die beste Erfahrung.</string>
+    <string name="update_button">Jetzt aktualisieren</string>
+    <string name="update_later">Später</string>
+
+    <!-- Maintenance (server kill switch) -->
+    <string name="maintenance_dialog_title">In Wartung</string>
+    <string name="maintenance_dialog_desc">Wir nehmen gerade ein paar Verbesserungen vor. Bitte schau in Kürze wieder vorbei.</string>
+    <string name="maintenance_dialog_exit_button">App beenden</string>
     <string name="ad_is_loading">Anzeige wird geladen…</string>
+    <string name="create_new_contact">Neuen Kontakt erstellen</string>
+    <string name="add_to_a_contact">Zu einem Kontakt hinzufügen</string>
+    <string name="send_a_message">Nachricht senden</string>
     <string name="toast_invalid_phone_number">Ungültige Telefonnummer</string>
     <string name="toast_could_not_initiate_call">Anruf konnte nicht gestartet werden</string>
     <string name="number_series_title">Nummernserie</string>

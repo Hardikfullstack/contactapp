@@ -62,7 +62,8 @@ fun ThemeScreen(onBack: () -> Unit) {
     val adConfig by AppConfigStore.config.collectAsState()
     // Matches the reference app: ThemeSelectionActivity shows an interstitial on back - and the
     // same ad unit is reused for the confirm checkmark, since that's the screen's other exit path.
-    val interstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 2)
+    // Reuses the Language screen's own back-slot (9) instead of its own dedicated slot.
+    val interstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 9)
     val triggerInterstitial = rememberInterstitialTrigger(interstitialAdUnitId)
     BackHandler { triggerInterstitial(onBack) }
     var selectedMode by remember { mutableStateOf(AppThemePreferences.themeMode.value) }
@@ -133,7 +134,7 @@ fun ThemeScreen(onBack: () -> Unit) {
             NativeAdView(
                 adUnitId = adUnitId,
                 template = NativeAdTemplate.MEDIUM,
-                modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
+                modifier = Modifier.padding(vertical = 10.dp),
                 cacheKey = "theme_native"
             )
         }

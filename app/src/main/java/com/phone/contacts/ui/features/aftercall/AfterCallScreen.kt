@@ -20,6 +20,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -174,7 +176,7 @@ fun AfterCallScreen(
                             modifier = Modifier.size(38.dp).clip(RoundedCornerShape(9.dp)).background(BrandPrimary.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Filled.Contacts, contentDescription = null, tint = acAccent(), modifier = Modifier.size(22.dp))
+                            Image(painter = painterResource(R.drawable.logo), contentDescription = null, modifier = Modifier.size(38.dp))
                         }
                     }
                     Row(

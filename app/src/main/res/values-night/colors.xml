@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches Compose's DarkColorScheme.background (ui/theme/Theme.kt) - see values/colors.xml
+         for why this exists. -->
+    <color name="window_background">#FF121212</color>
+</resources>

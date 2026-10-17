@@ -86,7 +86,7 @@ object CallReminderScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_small)
+            .setSmallIcon(R.drawable.notification_statusbar)
             .setContentTitle(context.getString(R.string.call_reminder_title, reminder.name))
             // The note is the message - show it alone; the number only when there is no note.
             .setContentText(reminder.note.ifBlank { reminder.number })

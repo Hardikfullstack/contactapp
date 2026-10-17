@@ -62,6 +62,7 @@
     <string name="add_contact_title">إضافة جهة اتصال</string>
     <string name="save">حفظ</string>
     <string name="add_picture_label">إضافة صورة</string>
+    <string name="remove_photo_label">إزالة الصورة</string>
     <string name="type_phone">هاتف</string>
     <string name="add_more_phone_number">إضافة رقم هاتف</string>
     <string name="type_email">البريد الإلكتروني</string>
@@ -139,6 +140,8 @@
     <string name="no_calls_with_number">لا توجد مكالمات مع هذا الرقم</string>
     <string name="clear_call_history_title">مسح سجل المكالمات</string>
     <string name="clear_history_confirm_message">هل تريد مسح كل سجل %1$s؟</string>
+    <string name="delete_call_logs_title">حذف %1$d من سجلات المكالمات؟</string>
+    <string name="delete_call_logs_message">سيتم حذف إدخالات سجل المكالمات هذه نهائيًا.</string>
     <string name="date_today">اليوم</string>
     <string name="date_yesterday">أمس</string>
     <string name="call_type_incoming">واردة</string>
@@ -172,10 +175,12 @@
     <string name="terms_and_conditions_title">الشروط والأحكام</string>
     <string name="rate_us_title">قيّمنا</string>
     <string name="share_app_title">مشاركة التطبيق</string>
+    <string name="share_app_message">جرّب Contacts — تطبيق اتصال ذكي بثيمات مكالمات، اتصال سريع، تذكيرات مكالمات والمزيد! حمّله من هنا: %1$s</string>
     <string name="feedback_title">ملاحظات</string>
     <string name="select_all_label">تحديد الكل</string>
     <string name="clear_recently_added_label">مسح المضاف مؤخراً</string>
     <string name="permission_required_title">الإذن مطلوب</string>
+    <string name="permission_required_message">يحتاج %1$s إلى هذا الإذن للعمل. امنحه للمتابعة، أو فعّله من الإعدادات إذا كنت قد رفضته من قبل.</string>
     <string name="move_multiple_to_bin_title">نقل %1$d من جهات الاتصال إلى سلة المحذوفات؟</string>
     <string name="move_multiple_to_bin_message">ستتم إزالة جهات الاتصال هذه من جميع أجهزتك المتزامنة.</string>
     <string name="no_favorites_yet">لا توجد مفضلات بعد</string>
@@ -300,7 +305,21 @@
     <string name="after_call_disable_dialog_title">إيقاف شاشة ما بعد المكالمة؟</string>
     <string name="after_call_disable_dialog_message">لن ترى الإجراءات السريعة بعد انتهاء مكالماتك. يمكنك تفعيلها مرة أخرى في أي وقت.</string>
     <string name="after_call_turn_off">إيقاف</string>
+
+    <!-- In-app update -->
+    <string name="update_title">يتوفر تحديث</string>
+    <string name="update_desc">تتوفر نسخة جديدة من التطبيق تحتوي على أحدث الإصلاحات والتحسينات. حدّثه الآن للحصول على أفضل تجربة.</string>
+    <string name="update_button">التحديث الآن</string>
+    <string name="update_later">لاحقًا</string>
+
+    <!-- Maintenance (server kill switch) -->
+    <string name="maintenance_dialog_title">قيد الصيانة</string>
+    <string name="maintenance_dialog_desc">نقوم حاليًا ببعض التحسينات. يُرجى المحاولة مرة أخرى بعد قليل.</string>
+    <string name="maintenance_dialog_exit_button">الخروج من التطبيق</string>
     <string name="ad_is_loading">جارٍ تحميل الإعلان…</string>
+    <string name="create_new_contact">إنشاء جهة اتصال جديدة</string>
+    <string name="add_to_a_contact">إضافة إلى جهة اتصال</string>
+    <string name="send_a_message">إرسال رسالة</string>
     <string name="toast_invalid_phone_number">رقم هاتف غير صالح</string>
     <string name="toast_could_not_initiate_call">تعذر بدء المكالمة</string>
     <string name="number_series_title">سلسلة الأرقام</string>

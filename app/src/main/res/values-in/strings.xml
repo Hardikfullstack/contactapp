@@ -62,6 +62,7 @@
     <string name="add_contact_title">Tambah kontak</string>
     <string name="save">Simpan</string>
     <string name="add_picture_label">Tambah foto</string>
+    <string name="remove_photo_label">Hapus foto</string>
     <string name="type_phone">Telepon</string>
     <string name="add_more_phone_number">Tambah nomor telepon</string>
     <string name="type_email">Email</string>
@@ -139,6 +140,8 @@
     <string name="no_calls_with_number">Tidak ada panggilan dengan nomor ini</string>
     <string name="clear_call_history_title">Hapus riwayat panggilan</string>
     <string name="clear_history_confirm_message">Hapus semua riwayat %1$s?</string>
+    <string name="delete_call_logs_title">Hapus %1$d log panggilan?</string>
+    <string name="delete_call_logs_message">Entri log panggilan ini akan dihapus secara permanen.</string>
     <string name="date_today">Hari ini</string>
     <string name="date_yesterday">Kemarin</string>
     <string name="call_type_incoming">Masuk</string>
@@ -172,10 +175,12 @@
     <string name="terms_and_conditions_title">Syarat dan ketentuan</string>
     <string name="rate_us_title">Beri nilai kami</string>
     <string name="share_app_title">Bagikan aplikasi</string>
+    <string name="share_app_message">Coba Contacts — dialer pintar dengan tema panggilan, panggilan cepat, pengingat panggilan, dan banyak lagi! Unduh di sini: %1$s</string>
     <string name="feedback_title">Masukan</string>
     <string name="select_all_label">Pilih semua</string>
     <string name="clear_recently_added_label">Hapus yang baru ditambahkan</string>
     <string name="permission_required_title">Izin diperlukan</string>
+    <string name="permission_required_message">%1$s memerlukan izin ini agar dapat berfungsi. Berikan izin untuk melanjutkan, atau aktifkan dari Setelan jika kamu sudah menolaknya.</string>
     <string name="move_multiple_to_bin_title">Pindahkan %1$d kontak ke Tempat Sampah?</string>
     <string name="move_multiple_to_bin_message">Kontak-kontak ini akan dihapus dari semua perangkat yang disinkronkan.</string>
     <string name="no_favorites_yet">Belum ada favorit</string>
@@ -300,7 +305,21 @@
     <string name="after_call_disable_dialog_title">Matikan layar Setelah Panggilan?</string>
     <string name="after_call_disable_dialog_message">Anda tidak akan melihat tindakan cepat setelah panggilan berakhir. Anda bisa menyalakannya kembali kapan saja.</string>
     <string name="after_call_turn_off">Matikan</string>
+
+    <!-- In-app update -->
+    <string name="update_title">Pembaruan tersedia</string>
+    <string name="update_desc">Versi baru aplikasi tersedia dengan perbaikan dan peningkatan terbaru. Perbarui sekarang untuk pengalaman terbaik.</string>
+    <string name="update_button">Perbarui sekarang</string>
+    <string name="update_later">Nanti</string>
+
+    <!-- Maintenance (server kill switch) -->
+    <string name="maintenance_dialog_title">Sedang pemeliharaan</string>
+    <string name="maintenance_dialog_desc">Kami sedang melakukan beberapa peningkatan. Silakan periksa kembali sebentar lagi.</string>
+    <string name="maintenance_dialog_exit_button">Keluar aplikasi</string>
     <string name="ad_is_loading">Iklan sedang dimuat…</string>
+    <string name="create_new_contact">Buat kontak baru</string>
+    <string name="add_to_a_contact">Tambahkan ke kontak</string>
+    <string name="send_a_message">Kirim pesan</string>
     <string name="toast_invalid_phone_number">Nomor telepon tidak valid</string>
     <string name="toast_could_not_initiate_call">Tidak dapat memulai panggilan</string>
     <string name="number_series_title">Seri Nomor</string>
