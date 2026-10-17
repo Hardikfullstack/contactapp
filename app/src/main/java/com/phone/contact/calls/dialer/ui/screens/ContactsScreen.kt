@@ -1,0 +1,1155 @@
+package com.phone.contact.calls.dialer.ui.screens
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.ViewCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import coil.compose.AsyncImage
+import com.phone.contact.calls.dialer.R
+import com.phone.contact.calls.dialer.data.Contact
+import com.phone.contact.calls.dialer.data.ContactRepository
+import com.phone.contact.calls.dialer.ui.components.ListRowSkeleton
+import com.phone.contact.calls.dialer.ui.components.PermissionRequiredDialog
+import com.phone.contact.calls.dialer.ui.components.ScreenSearchField
+import com.phone.contact.calls.dialer.ui.components.ScreenTitleBar
+import com.phone.contact.calls.dialer.ui.components.highlightMatches
+import com.phone.contact.calls.dialer.ui.components.verticalScrollIndicator
+import com.phone.contact.calls.dialer.ui.features.onboarding.SetDefaultScreen
+import com.phone.contact.calls.dialer.ui.theme.primaryAccentColor
+import com.phone.contact.calls.dialer.util.DefaultDialerState
+import com.phone.contact.calls.dialer.util.DisplayOptionsPreferences
+import com.phone.contact.calls.dialer.util.RecentlyAddedContacts
+import com.phone.contact.calls.dialer.util.RecentlyViewedContacts
+import com.phone.contact.calls.dialer.util.formattedForDisplay
+import com.phone.contact.calls.dialer.util.sortKey
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import kotlin.math.abs
+import kotlinx.coroutines.launch
+
+@Composable
+fun ContactsScreen(onAddContactClick: () -> Unit, onContactClick: (Contact) -> Unit) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val view = LocalView.current
+
+    // Same default-dialer gate as RecentsScreen — until the app holds ROLE_DIALER, show the
+    // set-as-default prompt here too instead of the contact list.
+    remember { DefaultDialerState.refresh(context) }
+    val isDefaultDialer by DefaultDialerState.isDefault
+    if (!isDefaultDialer) {
+        SetDefaultScreen(onSetAsDefault = { DefaultDialerState.refresh(context) })
+        return
+    }
+
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    // Gates PermissionRequiredDialog below - true once the system dialog has actually been asked
+    // and answered (either way), so that popup only shows after a real denial, not stacked on top
+    // of the system dialog's own first-ever appearance.
+    var hasRequestedPermission by remember { mutableStateOf(false) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted
+        hasRequestedPermission = true
+    }
+    LaunchedEffect(Unit) {
+        if (!hasPermission) permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+    }
+
+    var allContacts by remember { mutableStateOf<List<Contact>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    LaunchedEffect(hasPermission) {
+        if (hasPermission) {
+            ContactRepository.fetchContacts(context).collect { list ->
+                allContacts = list
+                isLoading = false
+            }
+        } else {
+            isLoading = false
+        }
+    }
+
+    // RecentlyViewedContacts is a SharedPreferences read, not a Flow — this bumps it fresh
+    // whenever the screen resumes (e.g. navigating back from the contact detail screen after
+    // recording a view), the same pattern RecentsScreen uses to re-fetch its own call log.
+    var viewedRefreshTrigger by remember { mutableStateOf(0) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewedRefreshTrigger++
+                DefaultDialerState.refresh(context)
+                // Catches a permission revoked from Settings while this screen was already open
+                // (backgrounded, not recreated) - hasPermission otherwise only reflects whatever
+                // it was the one time this remember{} block first ran.
+                val stillGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+                if (hasPermission && !stillGranted) hasRequestedPermission = true
+                hasPermission = stillGranted
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    remember { DisplayOptionsPreferences.initialize(context) }
+    val sortOrderPref by DisplayOptionsPreferences.sortOrder
+
+    var query by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf(ContactFilter.ALL) }
+    var sortDescending by remember { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<String>()) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    // Deselecting the last remaining contact exits selection mode automatically, instead of
+    // leaving the selection top bar showing "0" with nothing left to act on.
+    fun toggleSelection(id: String) {
+        selectedIds = if (selectedIds.contains(id)) selectedIds - id else selectedIds + id
+        if (selectedIds.isEmpty()) selectionMode = false
+    }
+
+    val filtered = remember(allContacts, query) {
+        if (query.isBlank()) {
+            allContacts
+        } else {
+            allContacts.filter {
+                it.name.contains(query, ignoreCase = true) || it.number.contains(query)
+            }
+        }
+    }
+
+    // "All" shows the alphabet index, sorted A-Z/Z-A. "Recent added" and "Recent viewed" are each
+    // driven by their own SharedPreferences-backed tracker ([RecentlyAddedContacts] recorded when
+    // a contact is created through this app's own Add Contact screen; [RecentlyViewedContacts]
+    // recorded whenever the contact detail screen is actually opened) — matching the reference
+    // app's own tracked lists (each with a real per-contact timestamp, date-grouped, with its own
+    // "Clear" action) instead of Android's system "last contacted" timestamp or contact-id order.
+    val addedTimestamps = remember(selectedFilter, viewedRefreshTrigger) {
+        if (selectedFilter == ContactFilter.RECENT_ADDED) RecentlyAddedContacts.addedTimestamps(context) else emptyMap()
+    }
+    val viewedTimestamps = remember(selectedFilter, viewedRefreshTrigger) {
+        if (selectedFilter == ContactFilter.RECENT_VIEWED) RecentlyViewedContacts.viewedTimestamps(context) else emptyMap()
+    }
+    val orderedContacts = remember(filtered, selectedFilter, sortDescending, addedTimestamps, viewedTimestamps, sortOrderPref) {
+        when (selectedFilter) {
+            ContactFilter.ALL -> if (sortDescending) {
+                filtered.sortedByDescending { it.sortKey(sortOrderPref) }
+            } else {
+                filtered.sortedBy { it.sortKey(sortOrderPref) }
+            }
+            ContactFilter.RECENT_ADDED -> filtered
+                .filter { addedTimestamps.containsKey(it.number) }
+                .sortedByDescending { addedTimestamps[it.number] }
+            ContactFilter.RECENT_VIEWED -> filtered
+                .filter { viewedTimestamps.containsKey(it.number) }
+                .sortedByDescending { viewedTimestamps[it.number] }
+        }
+    }
+    val showLetterIndex = selectedFilter == ContactFilter.ALL
+    val grouped = remember(orderedContacts, showLetterIndex, sortDescending, sortOrderPref) {
+        if (!showLetterIndex) {
+            emptyMap()
+        } else {
+            val map = orderedContacts.groupBy { it.sortKey(sortOrderPref).firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() } ?: '#' }
+            if (sortDescending) map.toSortedMap(compareByDescending { it }) else map.toSortedMap()
+        }
+    }
+    val groupedByAddedDate = remember(orderedContacts, selectedFilter, addedTimestamps) {
+        if (selectedFilter != ContactFilter.RECENT_ADDED) {
+            emptyList()
+        } else {
+            groupContactsByDate(orderedContacts, addedTimestamps)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+    ) {
+        // The title/selection bar stays fixed above everything below — it never scrolls.
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (selectionMode) {
+                SelectionTitleBar(
+                    count = selectedIds.size,
+                    onClose = {
+                        selectionMode = false
+                        selectedIds = emptySet()
+                    },
+                    onShare = {
+                        val ids = selectedIds.toList()
+                        coroutineScope.launch { shareContactsAsVcf(context, ids) }
+                    },
+                    onDelete = { showDeleteConfirm = true },
+                    allSelected = selectedIds.isNotEmpty() && selectedIds.size == orderedContacts.size,
+                    onToggleSelectAll = {
+                        selectedIds = if (selectedIds.size == orderedContacts.size) {
+                            emptySet()
+                        } else {
+                            orderedContacts.map { it.id }.toSet()
+                        }
+                    }
+                )
+            } else {
+                ScreenTitleBar(
+                    title = stringResource(R.string.contacts),
+                    trailingAction = {
+                        Box {
+                            // Explicit 32dp (matches the title text's own line height) instead of
+                            // IconButton's 48dp default - at 48dp this icon was the tallest child
+                            // in the title row, making the whole row (and everything below it:
+                            // search field, filter chips) sit ~16dp lower than Recents' title,
+                            // which has no trailing icon to inflate its row height the same way.
+                            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    imageVector = Icons.Filled.MoreVert,
+                                    contentDescription = "More options",
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false },
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.select)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        selectionMode = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.select_all_label)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        selectionMode = true
+                                        selectedIds = orderedContacts.map { it.id }.toSet()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (sortDescending) stringResource(R.string.action_ascending) else stringResource(R.string.action_descending)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        sortDescending = !sortDescending
+                                    }
+                                )
+                                if (selectedFilter == ContactFilter.RECENT_ADDED) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.clear_recently_added_label)) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            RecentlyAddedContacts.clear(context)
+                                            viewedRefreshTrigger++
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+
+            if (!hasPermission) {
+                PlaceholderScreen(title = stringResource(R.string.permission_required_title))
+                if (hasRequestedPermission) {
+                    PermissionRequiredDialog(
+                        message = stringResource(R.string.permission_required_message, stringResource(R.string.contacts)),
+                        permissions = listOf(Manifest.permission.READ_CONTACTS),
+                        onRequestPermission = { permissionLauncher.launch(Manifest.permission.READ_CONTACTS) }
+                    )
+                }
+            } else if (isLoading) {
+                ScreenSearchField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = stringResource(R.string.search_contacts_placeholder),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                )
+                ListRowSkeleton()
+            } else if (orderedContacts.isEmpty()) {
+                ScreenSearchField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = stringResource(R.string.search_contacts_placeholder),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ContactFilter.entries.forEach { filter ->
+                        FilterChip(
+                            label = filter.label,
+                            selected = selectedFilter == filter,
+                            onClick = { selectedFilter = filter }
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 60.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = when (selectedFilter) {
+                            ContactFilter.RECENT_VIEWED -> stringResource(R.string.empty_recently_contacted)
+                            ContactFilter.RECENT_ADDED -> stringResource(R.string.empty_recently_added)
+                            ContactFilter.ALL -> stringResource(R.string.empty_no_contacts_found)
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val listState = rememberLazyListState()
+
+                // Cumulative item-index each letter group's header sits at, so the current group
+                // can be looked up from just the first visible item index. Starts at 2 — the
+                // search field and filter row are the first two LazyColumn items, ahead of the
+                // letter groups, so they scroll away with the rest of the content.
+                val sectionStarts = remember(grouped) {
+                    val starts = mutableListOf<Int>()
+                    var index = 2
+                    grouped.forEach { (_, contactsInGroup) ->
+                        starts.add(index)
+                        index += 1 + contactsInGroup.size
+                    }
+                    starts
+                }
+                val groupedEntries = remember(grouped) { grouped.entries.toList() }
+                val currentSectionLabel by remember(groupedEntries, sectionStarts) {
+                    derivedStateOf {
+                        val firstVisible = listState.firstVisibleItemIndex
+                        val sectionIndex = sectionStarts.indexOfLast { it <= firstVisible }.coerceAtLeast(0)
+                        groupedEntries.getOrNull(sectionIndex)?.key?.toString().orEmpty()
+                    }
+                }
+                val canScrollUp by remember {
+                    derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 }
+                }
+                // Measured height of the search field + filter row so the scroll thumb's track
+                // starts right where the actual contact list begins, not at the very top of the
+                // screen (which sits behind that header before you've scrolled at all).
+                var searchFieldHeightPx by remember { mutableStateOf(0) }
+                var filterRowHeightPx by remember { mutableStateOf(0) }
+                val density = LocalDensity.current
+                val headerHeight = with(density) { (searchFieldHeightPx + filterRowHeightPx).toDp() }
+                // How much of the search field + filter row has scrolled past, in px — matches the
+                // reference app's collapsing-header behavior, where the current-letter pill slides
+                // up together with the header as it scrolls away, then sticks right below the fixed
+                // title bar once fully scrolled past, instead of staying pinned at the header's
+                // unscrolled height (which would float in empty space above the list once scrolled).
+                val headerScrolledPx by remember {
+                    derivedStateOf {
+                        val idx = listState.firstVisibleItemIndex
+                        val offset = listState.firstVisibleItemScrollOffset
+                        when {
+                            idx <= 0 -> offset
+                            idx == 1 -> searchFieldHeightPx + offset
+                            else -> searchFieldHeightPx + filterRowHeightPx
+                        }.coerceAtMost(searchFieldHeightPx + filterRowHeightPx)
+                    }
+                }
+                val pillTopPadding = with(density) {
+                    (searchFieldHeightPx + filterRowHeightPx - headerScrolledPx).coerceAtLeast(0).toDp()
+                } + 8.dp
+                // How far down the list is scrolled, as a 0..1 fraction — drives the alphabet
+                // thumb's vertical position on the right edge when the user isn't dragging it.
+                val scrollFraction by remember {
+                    derivedStateOf {
+                        val layoutInfo = listState.layoutInfo
+                        val visibleItems = layoutInfo.visibleItemsInfo
+                        val totalItems = layoutInfo.totalItemsCount
+                        if (totalItems == 0 || visibleItems.isEmpty()) return@derivedStateOf 0f
+                        val avgItemHeight = visibleItems.sumOf { it.size } / visibleItems.size.toFloat()
+                        val totalContentHeight = avgItemHeight * totalItems
+                        val viewportHeight = layoutInfo.viewportSize.height.toFloat()
+                        if (totalContentHeight <= viewportHeight) return@derivedStateOf 0f
+                        val scrollOffset = listState.firstVisibleItemIndex * avgItemHeight - visibleItems.first().offset
+                        (scrollOffset / (totalContentHeight - viewportHeight)).coerceIn(0f, 1f)
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = if (showLetterIndex) {
+                            Modifier.fillMaxSize()
+                        } else {
+                            Modifier
+                                .fillMaxSize()
+                                .verticalScrollIndicator(listState, MaterialTheme.colorScheme.primary)
+                        }
+                    ) {
+                        item {
+                            ScreenSearchField(
+                                value = query,
+                                onValueChange = { query = it },
+                                placeholder = stringResource(R.string.search_contacts_placeholder),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp)
+                                    .onGloballyPositioned { searchFieldHeightPx = it.size.height }
+                            )
+                        }
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 10.dp)
+                                    .onGloballyPositioned { filterRowHeightPx = it.size.height },
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                ContactFilter.entries.forEach { filter ->
+                                    FilterChip(
+                                        label = filter.label,
+                                        selected = selectedFilter == filter,
+                                        onClick = { selectedFilter = filter }
+                                    )
+                                }
+                            }
+                        }
+                        if (showLetterIndex) {
+                            grouped.forEach { (letter, contactsInGroup) ->
+                                item(key = "header_$letter") {
+                                    Column {
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(horizontal = 20.dp, vertical = 6.dp)
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primary),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = letter.toString(),
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp
+                                            )
+                                        }
+                                        HorizontalDivider(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            thickness = 1.dp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                        )
+                                    }
+                                }
+                                items(contactsInGroup, key = { it.id }) { contact ->
+                                    Column {
+                                        ContactRow(
+                                            contact = contact,
+                                            highlightQuery = query,
+                                            selectionMode = selectionMode,
+                                            isSelected = selectedIds.contains(contact.id),
+                                            onClick = { onContactClick(contact) },
+                                            onToggleSelect = { toggleSelection(contact.id) },
+                                            onLongPress = {
+                                                selectionMode = true
+                                                selectedIds = selectedIds + contact.id
+                                            }
+                                        )
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(start = 74.dp),
+                                            thickness = 1.dp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                        )
+                                    }
+                                }
+                            }
+                        } else if (selectedFilter == ContactFilter.RECENT_ADDED) {
+                            groupedByAddedDate.forEach { (dateLabel, contactsInGroup) ->
+                                item(key = "added_header_$dateLabel") {
+                                    Text(
+                                        text = dateLabel,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                    )
+                                }
+                                items(contactsInGroup, key = { it.id }) { contact ->
+                                    Column {
+                                        ContactRow(
+                                            contact = contact,
+                                            highlightQuery = query,
+                                            selectionMode = selectionMode,
+                                            isSelected = selectedIds.contains(contact.id),
+                                            onClick = { onContactClick(contact) },
+                                            onToggleSelect = { toggleSelection(contact.id) },
+                                            onLongPress = {
+                                                selectionMode = true
+                                                selectedIds = selectedIds + contact.id
+                                            },
+                                            trailingTime = addedTimestamps[contact.number]?.let { formatAddedTime(it) }
+                                        )
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(start = 74.dp),
+                                            thickness = 1.dp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            items(orderedContacts, key = { it.id }) { contact ->
+                                Column {
+                                    ContactRow(
+                                        contact = contact,
+                                        highlightQuery = query,
+                                        selectionMode = selectionMode,
+                                        isSelected = selectedIds.contains(contact.id),
+                                        onClick = { onContactClick(contact) },
+                                        onToggleSelect = { toggleSelection(contact.id) },
+                                        onLongPress = {
+                                            selectionMode = true
+                                            selectedIds = selectedIds + contact.id
+                                        }
+                                    )
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 74.dp),
+                                        thickness = 1.dp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (showLetterIndex) {
+                        var currentDragFraction by remember { mutableStateOf<Float?>(null) }
+                        var clickedChar by remember { mutableStateOf<Char?>(null) }
+                        var alphabetColumnHeight by remember { mutableStateOf(0f) }
+                        val alphabet = remember { (('A'..'Z') + '#').toList() }
+
+                        // Clear selected alphabet if user manually scrolls the list
+                        LaunchedEffect(listState.isScrollInProgress) {
+                            if (listState.isScrollInProgress && currentDragFraction == null) {
+                                clickedChar = null
+                            }
+                        }
+
+                        val initialToIndex = remember(groupedEntries, sectionStarts) {
+                            val mapping = mutableMapOf<Char, Int>()
+                            groupedEntries.forEachIndexed { i, entry ->
+                                mapping[entry.key] = sectionStarts[i]
+                            }
+                            mapping
+                        }
+                        // Read inside the gesture handlers below via these instead of as pointerInput
+                        // keys - alphabetColumnHeight/initialToIndex can change on nearly every layout
+                        // pass right after this screen opens (contacts still loading, header heights
+                        // still settling), and keying pointerInput on them tore down and rebuilt the
+                        // gesture detector mid-tap, which is what made the very first tap after
+                        // opening land on the wrong letter (a few rows above where you actually
+                        // touched). pointerInput(Unit) sets the detector up once and never restarts
+                        // it; these always hand it the latest value instead.
+                        val latestColumnHeight = rememberUpdatedState(alphabetColumnHeight)
+                        val latestToIndex = rememberUpdatedState(initialToIndex)
+
+                        fun scrollToCharacter(
+                            y: Float,
+                            alphabet: List<Char>,
+                            height: Float,
+                            mapping: Map<Char, Int>,
+                            listState: androidx.compose.foundation.lazy.LazyListState,
+                            scope: kotlinx.coroutines.CoroutineScope
+                        ) {
+                            if (height <= 0f) return
+                            val index = (y / height * alphabet.size).toInt().coerceIn(0, alphabet.size - 1)
+                            val char = alphabet[index]
+                            mapping[char]?.let { targetIndex ->
+                                clickedChar = char
+                                scope.launch {
+                                    listState.scrollToItem(targetIndex)
+                                }
+                            }
+                        }
+
+                        // Alphabet Fast Scroller
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = pillTopPadding + 8.dp, end = 4.dp, bottom = 80.dp)
+                                .width(28.dp)
+                                .fillMaxHeight()
+                                .background(MaterialTheme.colorScheme.background, RoundedCornerShape(14.dp))
+                                .onGloballyPositioned { alphabetColumnHeight = it.size.height.toFloat() }
+                                .pointerInput(Unit) {
+                                    detectDragGestures(
+                                        onDragStart = { offset ->
+                                            if (latestColumnHeight.value > 0f) {
+                                                currentDragFraction = offset.y / latestColumnHeight.value
+                                            }
+                                            scrollToCharacter(offset.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
+                                        },
+                                        onDrag = { change, _ ->
+                                            if (latestColumnHeight.value > 0f) {
+                                                currentDragFraction = change.position.y / latestColumnHeight.value
+                                            }
+                                            scrollToCharacter(change.position.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
+                                        },
+                                        onDragEnd = { currentDragFraction = null },
+                                        onDragCancel = { currentDragFraction = null }
+                                    )
+                                }
+                                .pointerInput(Unit) {
+                                    detectTapGestures { offset ->
+                                        if (latestColumnHeight.value > 0f) {
+                                            currentDragFraction = offset.y / latestColumnHeight.value
+                                        }
+                                        scrollToCharacter(offset.y, alphabet, latestColumnHeight.value, latestToIndex.value, listState, coroutineScope)
+                                    }
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            alphabet.forEachIndexed { index, char ->
+                                val hasContacts = initialToIndex.containsKey(char)
+                                val isSelected = char == clickedChar
+                                
+                                // Distance calculation for fish-eye zoom
+                                val itemCenterY = if (alphabetColumnHeight > 0) {
+                                    (index + 0.5f) * (alphabetColumnHeight / alphabet.size)
+                                } else 0f
+                                
+                                val distance = currentDragFraction?.let { abs((it * alphabetColumnHeight) - itemCenterY) } ?: Float.MAX_VALUE
+                                val scale by animateFloatAsState(
+                                    targetValue = if (distance < 120f) {
+                                        1f + (1.8f * (1f - (distance / 120f).coerceIn(0f, 1f)))
+                                    } else 1f,
+                                    animationSpec = androidx.compose.animation.core.spring(
+                                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
+                                        stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                                    ),
+                                    label = "scale"
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .graphicsLayer {
+                                            scaleX = scale
+                                            scaleY = scale
+                                            translationX = - (scale - 1f) * 25f // Pop out effect
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = char.toString(),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            color = when {
+                                                isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                hasContacts -> primaryAccentColor()
+                                                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Top-center letter pill
+                        val displayLabel = clickedChar?.toString() ?: currentSectionLabel
+                        val topPillAlpha by animateFloatAsState(
+                            targetValue = if ((listState.isScrollInProgress || currentDragFraction != null) && displayLabel.isNotEmpty()) 1f else 0f,
+                            animationSpec = tween(
+                                durationMillis = if (listState.isScrollInProgress || currentDragFraction != null) 150 else 400,
+                                delayMillis = if (listState.isScrollInProgress || currentDragFraction != null) 0 else 2000
+                            ),
+                            label = "top_pill_alpha"
+                        )
+                        if (topPillAlpha > 0f) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                tonalElevation = 2.dp,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = pillTopPadding)
+                                    .alpha(topPillAlpha)
+                            ) {
+                                Text(
+                                    text = displayLabel,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                        
+                        LaunchedEffect(currentDragFraction) {
+                            if (currentDragFraction != null) {
+                                kotlinx.coroutines.delay(800)
+                                currentDragFraction = null
+                            }
+                        }
+                    }
+
+                    // Jump-to-top button — same behavior and placement as RecentsScreen's.
+                    val topButtonAlpha by animateFloatAsState(
+                        targetValue = if (canScrollUp) 1f else 0f,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "top_button_alpha"
+                    )
+                    if (topButtonAlpha > 0f) {
+                        Surface(
+                            onClick = { coroutineScope.launch { listState.animateScrollToItem(0) } },
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 20.dp)
+                                .size(48.dp)
+                                .alpha(topButtonAlpha)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.KeyboardDoubleArrowUp,
+                                    contentDescription = "Scroll to top",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (hasPermission && !selectionMode) {
+            Surface(
+                onClick = onAddContactClick,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp)
+                    .size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Add contact",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+    }
+
+    if (showDeleteConfirm) {
+        val count = selectedIds.size
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            title = { Text(if (count == 1) stringResource(R.string.move_to_bin_title) else stringResource(R.string.move_multiple_to_bin_title, count)) },
+            text = { Text(if (count == 1) stringResource(R.string.move_to_bin_message) else stringResource(R.string.move_multiple_to_bin_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val toDelete = allContacts.filter { it.id in selectedIds }
+                        showDeleteConfirm = false
+                        coroutineScope.launch {
+                            ContactRepository.moveToRecycleBin(context, toDelete)
+                            selectionMode = false
+                            selectedIds = emptySet()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.action_move_to_bin)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirm = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = primaryAccentColor())
+                ) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+
+}
+
+/** Shares one or more contacts as real .vcf files via the system share sheet — matching the
+ * reference app's own selection-mode Share action exactly (it shares a genuine "Name.vcf", not
+ * plain text), using Android's built-in `CONTENT_VCARD_URI` instead of hand-building vCard text. */
+private suspend fun shareContactsAsVcf(context: android.content.Context, ids: List<String>) {
+    val uris = ContactRepository.getVcardUris(context, ids)
+    if (uris.isEmpty()) return
+    val intent = if (uris.size == 1) {
+        Intent(Intent.ACTION_SEND).apply {
+            type = "text/x-vcard"
+            putExtra(Intent.EXTRA_STREAM, uris.first())
+        }
+    } else {
+        Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "text/x-vcard"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList<Uri>(uris))
+        }
+    }
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    context.startActivity(Intent.createChooser(intent, "Share contact"))
+}
+
+private enum class ContactFilter(val label: String) {
+    ALL("All"),
+    RECENT_ADDED("Recent added"),
+    RECENT_VIEWED("Recent viewed")
+}
+
+private fun formatAddedTime(timestamp: Long): String =
+    SimpleDateFormat("h:mm a", Locale.getDefault()).format(timestamp)
+
+/** Groups contacts by the date they were added (via [RecentlyAddedContacts]'s timestamps),
+ * newest group first — mirrors RecentsScreen's own "Today"/"Yesterday"/date call-log grouping. */
+private fun groupContactsByDate(contacts: List<Contact>, timestamps: Map<String, Long>): List<Pair<String, List<Contact>>> {
+    val today = Calendar.getInstance()
+    val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+    val cal = Calendar.getInstance()
+
+    fun isSameDay(a: Calendar, b: Calendar) =
+        a.get(Calendar.YEAR) == b.get(Calendar.YEAR) && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
+
+    fun labelFor(timestamp: Long): String {
+        cal.timeInMillis = timestamp
+        return when {
+            isSameDay(cal, today) -> "Today"
+            isSameDay(cal, yesterday) -> "Yesterday"
+            else -> SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(timestamp)
+        }
+    }
+
+    val result = LinkedHashMap<String, MutableList<Contact>>()
+    contacts.forEach { contact ->
+        val timestamp = timestamps[contact.number] ?: return@forEach
+        result.getOrPut(labelFor(timestamp)) { mutableListOf() }.add(contact)
+    }
+    return result.map { it.key to it.value }
+}
+
+@Composable
+private fun SelectionTitleBar(
+    count: Int,
+    onClose: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit,
+    allSelected: Boolean,
+    onToggleSelectAll: () -> Unit
+) {
+    var moreMenuExpanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onClose) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Cancel selection",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
+        Text(
+            text = "$count",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)
+        )
+        IconButton(onClick = onShare, enabled = count > 0) {
+            Icon(
+                imageVector = Icons.Filled.Share,
+                contentDescription = "Share selected",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
+        IconButton(onClick = onDelete, enabled = count > 0) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = "Delete selected",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
+        Box {
+            IconButton(onClick = { moreMenuExpanded = true }) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            DropdownMenu(
+                expanded = moreMenuExpanded,
+                onDismissRequest = { moreMenuExpanded = false },
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(if (allSelected) stringResource(R.string.action_deselect_all) else stringResource(R.string.select_all_label)) },
+                    onClick = {
+                        moreMenuExpanded = false
+                        onToggleSelectAll()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ContactRow(
+    contact: Contact,
+    selectionMode: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onToggleSelect: () -> Unit,
+    onLongPress: () -> Unit,
+    trailingTime: String? = null,
+    highlightQuery: String = ""
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background)
+            .combinedClickable(
+                onClick = if (selectionMode) onToggleSelect else onClick,
+                onLongClick = { if (!selectionMode) onLongPress() }
+            )
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (selectionMode) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Text(
+                        text = contact.name.firstOrNull()?.uppercaseChar()?.toString() ?: "#",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        } else {
+            ContactAvatar(contact = contact, size = 40.dp)
+        }
+        Spacer(modifier = Modifier.size(14.dp))
+        val nameFormat by DisplayOptionsPreferences.nameFormat
+        val displayName = contact.name.formattedForDisplay(nameFormat)
+        Text(
+            text = highlightMatches(displayName, highlightQuery, primaryAccentColor()),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+        if (trailingTime != null) {
+            Text(
+                text = trailingTime,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** Shows the contact's real photo when the provider has one, otherwise a colored initial. */
+@Composable
+fun ContactAvatar(contact: Contact, size: Dp) {
+    ContactAvatar(name = contact.name, photoUri = contact.photoUri, size = size)
+}
+
+/** Same as the [Contact] overload, but takes the name/photo directly — for call sites (like the
+ * contact detail screen) that only have a caller's name/number, not a full [Contact]. */
+@Composable
+fun ContactAvatar(name: String, photoUri: String?, size: Dp) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(avatarColorFor(name)),
+        contentAlignment = Alignment.Center
+    ) {
+        val firstChar = name.firstOrNull() ?: '#'
+        if (firstChar.isLetter()) {
+            Text(
+                text = firstChar.uppercaseChar().toString(),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                // Scales with the avatar itself — a 40dp row avatar and a 120dp call-screen
+                // avatar shouldn't show the same fixed-size letter.
+                fontSize = (size.value * 0.4f).sp
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Filled.Person,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(size * 0.6f)
+            )
+        }
+        if (photoUri != null) {
+            AsyncImage(
+                model = photoUri,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+private val avatarPalette = listOf(
+    Color(0xFFE85C88),
+    Color(0xFF1DA463),
+    Color(0xFFE0413B),
+    Color(0xFF9C27B0),
+    Color(0xFFFF9800),
+    Color(0xFF1CBFD5),
+    Color(0xFF5BD902),
+    Color(0xFF3F51B5),
+    Color(0xFFFFC107),
+    Color(0xFF2196F3)
+)
+
+private fun avatarColorFor(name: String): Color =
+    avatarPalette[abs(name.hashCode()) % avatarPalette.size]

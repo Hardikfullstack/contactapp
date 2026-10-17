@@ -19,7 +19,7 @@
 // action_mute/action_unmute/action_speaker_on/action_speaker_off string resources this version
 // needs for its addAction() labels.
 
-package com.phone.contacts.service
+package com.phone.contact.calls.dialer.service
 
 import android.Manifest
 import android.app.Notification
@@ -39,9 +39,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.IconCompat
-import com.phone.contacts.R
-import com.phone.contacts.ui.features.call.CallActivity
-import com.phone.contacts.util.NotificationAvatarUtils
+import com.phone.contact.calls.dialer.R
+import com.phone.contact.calls.dialer.ui.features.call.CallActivity
+import com.phone.contact.calls.dialer.util.NotificationAvatarUtils
 
 /** Plain `object` (this project has no Hilt/DI). Built on [NotificationCompat.CallStyle] -
  * Android's own dedicated call-notification template (API 31+, gracefully degraded below that) -
@@ -59,17 +59,17 @@ object CallNotificationManager {
     // ongoing-call notification instead of replacing it.
     const val CALL_WAITING_NOTIFICATION_ID = 2002
 
-    const val ACTION_ANSWER = "com.phone.contacts.ACTION_ANSWER"
-    const val ACTION_DECLINE = "com.phone.contacts.ACTION_DECLINE"
-    const val ACTION_ANSWER_WAITING = "com.phone.contacts.ACTION_ANSWER_WAITING"
-    const val ACTION_DECLINE_WAITING = "com.phone.contacts.ACTION_DECLINE_WAITING"
-    const val ACTION_HANGUP = "com.phone.contacts.ACTION_HANGUP"
-    const val ACTION_TOGGLE_MUTE = "com.phone.contacts.ACTION_TOGGLE_MUTE"
-    const val ACTION_TOGGLE_SPEAKER = "com.phone.contacts.ACTION_TOGGLE_SPEAKER"
+    const val ACTION_ANSWER = "com.phone.contact.calls.dialer.ACTION_ANSWER"
+    const val ACTION_DECLINE = "com.phone.contact.calls.dialer.ACTION_DECLINE"
+    const val ACTION_ANSWER_WAITING = "com.phone.contact.calls.dialer.ACTION_ANSWER_WAITING"
+    const val ACTION_DECLINE_WAITING = "com.phone.contact.calls.dialer.ACTION_DECLINE_WAITING"
+    const val ACTION_HANGUP = "com.phone.contact.calls.dialer.ACTION_HANGUP"
+    const val ACTION_TOGGLE_MUTE = "com.phone.contact.calls.dialer.ACTION_TOGGLE_MUTE"
+    const val ACTION_TOGGLE_SPEAKER = "com.phone.contact.calls.dialer.ACTION_TOGGLE_SPEAKER"
     // Fired via setDeleteIntent() if this notification is ever dismissed anyway (CallStyle's
     // non-dismissible guarantee isn't identically enforced on every OEM skin) - delivered as a
     // plain broadcast, so it reaches this receiver (and can re-notify) even if the app is dead.
-    const val ACTION_NOTIFICATION_DISMISSED = "com.phone.contacts.ACTION_NOTIFICATION_DISMISSED"
+    const val ACTION_NOTIFICATION_DISMISSED = "com.phone.contact.calls.dialer.ACTION_NOTIFICATION_DISMISSED"
 
     private var lastNotification: Notification? = null
     fun currentNotificationOrNull(): Notification? = lastNotification

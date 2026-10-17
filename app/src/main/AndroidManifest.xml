@@ -52,7 +52,7 @@
             android:value="true" />
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-2993497974642512~7842403057" />
+            android:value="ca-app-pub-2874047397258653~7376694964" />
         <meta-data
             android:name="firebase_analytics_collection_enabled"
             android:value="true" />
