@@ -60,12 +60,13 @@ import com.phone.contacts.util.ThemeMode
 fun ThemeScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val adConfig by AppConfigStore.config.collectAsState()
-    // Matches the reference app: ThemeSelectionActivity shows an interstitial on back - and the
-    // same ad unit is reused for the confirm checkmark, since that's the screen's other exit path.
-    // Reuses the Language screen's own back-slot (9) instead of its own dedicated slot.
-    val interstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 9)
-    val triggerInterstitial = rememberInterstitialTrigger(interstitialAdUnitId)
-    BackHandler { triggerInterstitial(onBack) }
+    // Separate ad units for the two ways to leave this screen - back (slot 3) and the confirm
+    // checkmark (slot 4), matching the Language screen's own back/Done split.
+    val backInterstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 3)
+    val triggerBackInterstitial = rememberInterstitialTrigger(backInterstitialAdUnitId)
+    val doneInterstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 4)
+    val triggerDoneInterstitial = rememberInterstitialTrigger(doneInterstitialAdUnitId)
+    BackHandler { triggerBackInterstitial(onBack) }
     var selectedMode by remember { mutableStateOf(AppThemePreferences.themeMode.value) }
 
     Column(
@@ -78,7 +79,7 @@ fun ThemeScreen(onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { triggerInterstitial(onBack) }) {
+            IconButton(onClick = { triggerBackInterstitial(onBack) }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
@@ -89,7 +90,7 @@ fun ThemeScreen(onBack: () -> Unit) {
                 modifier = Modifier.weight(1f).padding(start = 4.dp)
             )
             IconButton(onClick = {
-                triggerInterstitial {
+                triggerDoneInterstitial {
                     AppThemePreferences.setThemeMode(context, selectedMode)
                     onBack()
                 }

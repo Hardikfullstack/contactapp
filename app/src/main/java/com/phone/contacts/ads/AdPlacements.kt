@@ -74,6 +74,7 @@ object AdPlacements {
             7 -> result.interstitial_7 to result.interstitial_7_on_off
             8 -> result.interstitial_8 to result.interstitial_8_on_off
             9 -> result.interstitial_9 to result.interstitial_9_on_off
+            10 -> result.interstitial_10 to result.interstitial_10_on_off
             else -> null to null
         }
 

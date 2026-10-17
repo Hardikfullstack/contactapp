@@ -15,7 +15,7 @@ object ApiClient {
     private const val BASE_URL = "https://panel.aavakar.com/"
 
     // Panel package identifier used to fetch this app's remote config.
-    private const val API_PACKAGE_NAME = "common_dev"
+    private const val API_PACKAGE_NAME = "Contacts.1.0.0"
 
     private val json = Json {
         ignoreUnknownKeys = true

@@ -233,8 +233,8 @@ fun MainNavigation(initialDialNumber: String? = null) {
         listOf(
             MainScreen.Recents,
             MainScreen.Contacts,
-            MainScreen.Favorites,
             MainScreen.Keypad,
+            MainScreen.Favorites,
             MainScreen.Settings
         )
     }

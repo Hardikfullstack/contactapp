@@ -78,7 +78,7 @@ fun RecycleBinScreen(onBack: () -> Unit) {
     val adConfig by AppConfigStore.config.collectAsState()
     // Matches the reference app: RecycleBinActivity shows an interstitial on back.
     val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 8),
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 6),
         onBack
     )
     var entries by remember { mutableStateOf<List<DeletedContactEntity>>(emptyList()) }

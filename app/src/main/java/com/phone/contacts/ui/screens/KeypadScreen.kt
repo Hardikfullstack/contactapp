@@ -78,7 +78,6 @@ import com.phone.contacts.ui.theme.primaryAccentColor
 import com.phone.contacts.util.CallUtils
 import com.phone.contacts.util.MessageUtils
 import com.phone.contacts.util.KeypadTonePreferences
-import com.phone.contacts.util.SpeedDialEntry
 import com.phone.contacts.util.SpeedDialPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -336,7 +335,6 @@ fun KeypadScreen(
 
             DialPad(
                 showBackspace = dialedNumber.isNotEmpty(),
-                speedDialEntries = speedDialEntries,
                 onDigit = { digit ->
                     playDialFeedback(toneGenerator, vibrator, digit)
                     dialedNumberField = insertAtCursor(dialedNumberField, digit)
@@ -458,7 +456,6 @@ private val dialKeys = listOf(
 @Composable
 private fun DialPad(
     showBackspace: Boolean,
-    speedDialEntries: Map<String, SpeedDialEntry>,
     onDigit: (String) -> Unit,
     onLongPressDigit: (String) -> Unit,
     onBackspace: () -> Unit,
@@ -481,7 +478,6 @@ private fun DialPad(
                         DialButton(
                             digit = digit,
                             letters = letters,
-                            speedDialName = speedDialEntries[digit]?.name?.substringBefore(" "),
                             onClick = { onDigit(digit) },
                             onLongClick = { onLongPressDigit(digit) }
                         )
@@ -546,7 +542,7 @@ private fun DialPad(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DialButton(digit: String, letters: String, speedDialName: String?, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun DialButton(digit: String, letters: String, onClick: () -> Unit, onLongClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(60.dp)
@@ -567,15 +563,13 @@ private fun DialButton(digit: String, letters: String, speedDialName: String?, o
                 modifier = if (digit == "*") Modifier.offset(y = 4.dp) else Modifier
             )
             // Always reserve this line (even blank) so every digit sits at the same height —
-            // otherwise a button with no letters/assignment centers on one line while its
-            // neighbors center on two, making its digit look shifted down relative to them.
-            // A speed-dial assignment takes over this line (in the primary color) instead of the
-            // normal ABC/DEF hint, so there's a standing visual cue of what long-press does here.
+            // otherwise a button with no letters centers on one line while its neighbors center on
+            // two, making its digit look shifted down relative to them.
             Text(
-                text = speedDialName ?: letters.ifEmpty { " " },
+                text = letters.ifEmpty { " " },
                 fontSize = 10.sp,
-                fontWeight = if (speedDialName != null) FontWeight.Bold else FontWeight.Normal,
-                color = if (speedDialName != null) primaryAccentColor() else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 1.5.sp,
                 maxLines = 1
             )

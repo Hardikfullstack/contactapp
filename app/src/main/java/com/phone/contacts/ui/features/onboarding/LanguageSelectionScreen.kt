@@ -95,11 +95,11 @@ fun LanguageSelectionScreen(onDone: () -> Unit, onBack: (() -> Unit)? = null) {
     }
     val adConfig by AppConfigStore.config.collectAsState()
 
-    // Separate ad units for the two ways to leave this screen - Done tap (slot 1) and back (slot 9).
-    val doneInterstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 1)
-    val triggerDoneInterstitial = rememberInterstitialTrigger(doneInterstitialAdUnitId)
-    val backInterstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 9)
+    // Separate ad units for the two ways to leave this screen - back (slot 1) and Done tap (slot 2).
+    val backInterstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 1)
     val triggerBackInterstitial = rememberInterstitialTrigger(backInterstitialAdUnitId)
+    val doneInterstitialAdUnitId = AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 2)
+    val triggerDoneInterstitial = rememberInterstitialTrigger(doneInterstitialAdUnitId)
 
     val isFirstRun = onBack == null
     val shouldAutoSkip = remember(isFirstRun) {

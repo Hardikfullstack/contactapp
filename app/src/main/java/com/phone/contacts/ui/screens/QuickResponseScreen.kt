@@ -60,7 +60,7 @@ fun QuickResponseScreen(onBack: () -> Unit) {
     val adConfig by AppConfigStore.config.collectAsState()
     // Matches the reference app: QuickResponseActivity shows an interstitial on back.
     val backWithAd = rememberBackWithInterstitial(
-        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 3),
+        AdPlacements.adUnitId(adConfig?.result, AdType.INTERSTITIAL_ON_BACK, slot = 10),
         onBack
     )
     remember { QuickResponsePreferences.initialize(context) }
